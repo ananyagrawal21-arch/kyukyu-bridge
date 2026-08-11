@@ -1,0 +1,22 @@
+# Virtual environments (recreate with: pip install -r requirements.txt)
+.venv/
+.venv312/
+
+# Converted OpenVINO models - ~2.9 GB, and regenerable with benchmark/convert_slm.py.
+# GitHub rejects files over 100 MB, so these can never be committed anyway.
+models/
+
+# PRIVACY: profile.json holds a real home address, real names, and medical conditions.
+# It is deliberately local-only - data/profile.example.json is the committed template.
+data/profile.json
+
+# LICENSING: L2-ARCTIC accent samples are gated access under CC BY-NC 4.0.
+# Redistributing them here would breach that license. Downloaded separately per-machine.
+data/accent_test/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# macOS
+.DS_Store

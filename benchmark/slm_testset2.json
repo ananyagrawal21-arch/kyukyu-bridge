@@ -1,0 +1,298 @@
+{
+  "_note": "HELD-OUT test set #2 - harder, more idiomatic/indirect phrasings. The model was NOT tuned against these, so this is the honest generalization check. Same labeling rule: excluded binary statuses (conscious/unconscious/not_breathing) are never expected. A few labels are judgement calls on idioms.",
+  "cases": [
+    {
+      "transcript": "he keeps grabbing at his chest and wincing",
+      "expected": [
+        "chest_pain"
+      ]
+    },
+    {
+      "transcript": "she says it feels like an elephant is sitting on her chest",
+      "expected": [
+        "chest_pain"
+      ]
+    },
+    {
+      "transcript": "he's puffing and panting and can't get enough air",
+      "expected": [
+        "difficulty_breathing"
+      ]
+    },
+    {
+      "transcript": "she's turning blue and can barely breathe",
+      "expected": [
+        "difficulty_breathing"
+      ],
+      "acceptable": [
+        "pale_complexion"
+      ]
+    },
+    {
+      "transcript": "grandpa just keeled over in the garden",
+      "expected": [
+        "collapsed"
+      ]
+    },
+    {
+      "transcript": "she went limp and slid off the chair onto the floor",
+      "expected": [
+        "collapsed"
+      ]
+    },
+    {
+      "transcript": "he's gagging and can't get the food down",
+      "expected": [
+        "choking"
+      ]
+    },
+    {
+      "transcript": "the kid swallowed a coin and is coughing really hard",
+      "expected": [
+        "choking"
+      ]
+    },
+    {
+      "transcript": "his arms and legs are thrashing and he's frothing at the mouth",
+      "expected": [
+        "seizure"
+      ]
+    },
+    {
+      "transcript": "she stiffened up and started jerking all over",
+      "expected": [
+        "seizure"
+      ]
+    },
+    {
+      "transcript": "he took a tumble and clonked his head on the pavement",
+      "expected": [
+        "head_injury"
+      ],
+      "acceptable": [
+        "collapsed"
+      ]
+    },
+    {
+      "transcript": "he cracked his skull hard on the pavement",
+      "expected": [
+        "head_injury"
+      ]
+    },
+    {
+      "transcript": "she's doubled over holding her belly and screaming",
+      "expected": [
+        "severe_abdominal_pain"
+      ]
+    },
+    {
+      "transcript": "his tummy is in absolute agony",
+      "expected": [
+        "severe_abdominal_pain"
+      ]
+    },
+    {
+      "transcript": "the baby is roasting hot to the touch",
+      "expected": [
+        "high_fever"
+      ]
+    },
+    {
+      "transcript": "she's running a temperature through the roof",
+      "expected": [
+        "high_fever"
+      ]
+    },
+    {
+      "transcript": "half of his face has suddenly sagged",
+      "expected": [
+        "face_drooping"
+      ]
+    },
+    {
+      "transcript": "her smile has gone lopsided all of a sudden",
+      "expected": [
+        "face_drooping"
+      ]
+    },
+    {
+      "transcript": "his words are all coming out garbled",
+      "expected": [
+        "slurred_speech"
+      ]
+    },
+    {
+      "transcript": "she sounds drunk but she hasn't been drinking",
+      "expected": [
+        "slurred_speech"
+      ]
+    },
+    {
+      "transcript": "his right arm just hangs there useless",
+      "expected": [
+        "one_sided_weakness"
+      ]
+    },
+    {
+      "transcript": "she can't grip anything with her left hand anymore",
+      "expected": [
+        "one_sided_weakness"
+      ]
+    },
+    {
+      "transcript": "he's talking gibberish and doesn't know where he is",
+      "expected": [
+        "confused"
+      ]
+    },
+    {
+      "transcript": "she keeps asking the same question over and over, all disoriented",
+      "expected": [
+        "confused"
+      ]
+    },
+    {
+      "transcript": "his mouth drooped and he can't lift his arm",
+      "expected": [
+        "face_drooping",
+        "one_sided_weakness"
+      ]
+    },
+    {
+      "transcript": "she clutched her chest and hit the floor",
+      "expected": [
+        "chest_pain",
+        "collapsed"
+      ]
+    },
+    {
+      "transcript": "he's convulsing after he fell and hit his head",
+      "expected": [
+        "seizure",
+        "head_injury",
+        "collapsed"
+      ]
+    },
+    {
+      "transcript": "she's gasping for air and clutching at her chest",
+      "expected": [
+        "difficulty_breathing",
+        "chest_pain"
+      ]
+    },
+    {
+      "transcript": "there's blood everywhere and he's not moving",
+      "expected": [
+        "heavy_bleeding"
+      ]
+    },
+    {
+      "transcript": "her speech is slurred and one side of her face is drooping",
+      "expected": [
+        "slurred_speech",
+        "face_drooping"
+      ]
+    },
+    {
+      "transcript": "he's got a splitting headache",
+      "expected": [
+        "headache"
+      ]
+    },
+    {
+      "transcript": "she keeps throwing up everything she eats",
+      "expected": [
+        "vomiting"
+      ]
+    },
+    {
+      "transcript": "he's broken out in hives all over",
+      "expected": []
+    },
+    {
+      "transcript": "she feels really nauseous and dizzy",
+      "expected": [
+        "dizziness",
+        "nausea"
+      ]
+    },
+    {
+      "transcript": "he sprained his wrist playing tennis",
+      "expected": []
+    },
+    {
+      "transcript": "she's out cold and won't respond to anything",
+      "expected": []
+    },
+    {
+      "transcript": "he's stopped breathing completely",
+      "expected": []
+    },
+    {
+      "transcript": "he's unconscious but there's a deep cut gushing blood on his leg",
+      "expected": [
+        "heavy_bleeding"
+      ]
+    },
+    {
+      "transcript": "she's not breathing and she collapsed a minute ago",
+      "expected": [
+        "collapsed"
+      ]
+    },
+    {
+      "transcript": "he's drenched in a clammy sweat",
+      "expected": [
+        "cold_sweat"
+      ]
+    },
+    {
+      "transcript": "all the colour has drained from her face",
+      "expected": [
+        "pale_complexion"
+      ]
+    },
+    {
+      "transcript": "his head is pounding, worst headache of his life",
+      "expected": [
+        "headache"
+      ]
+    },
+    {
+      "transcript": "her heart keeps fluttering strangely",
+      "expected": [
+        "palpitations"
+      ]
+    },
+    {
+      "transcript": "there's a tearing pain between his shoulder blades",
+      "expected": [
+        "back_pain"
+      ]
+    },
+    {
+      "transcript": "she has pins and needles down her leg",
+      "expected": [
+        "numbness"
+      ]
+    },
+    {
+      "transcript": "his heart has stopped, there's no pulse",
+      "expected": [
+        "no_pulse"
+      ]
+    },
+    {
+      "transcript": "we pulled grandma out of the water",
+      "expected": [
+        "drowning"
+      ]
+    },
+    {
+      "transcript": "she's very queasy and feels like she might be sick",
+      "expected": [
+        "nausea"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,315 @@
+{
+  "_note": "Labeled test set for SLM classification. 'expected' lists ONLY the ids the SLM should return - the excluded binary statuses (conscious/unconscious/not_breathing) are NEVER expected, even when the transcript mentions them (they are handled by deterministic confirmation). Labels are the author's judgement; a few are genuinely borderline and flagged.",
+  "cases": [
+    {
+      "transcript": "he's clutching his chest and grimacing in pain",
+      "expected": [
+        "chest_pain"
+      ]
+    },
+    {
+      "transcript": "my wife keeps saying her chest feels really tight",
+      "expected": [
+        "chest_pain"
+      ]
+    },
+    {
+      "transcript": "he can't seem to breathe properly, gasping for air",
+      "expected": [
+        "difficulty_breathing"
+      ]
+    },
+    {
+      "transcript": "she's wheezing really badly and struggling for breath",
+      "expected": [
+        "difficulty_breathing"
+      ]
+    },
+    {
+      "transcript": "grandpa just collapsed on the kitchen floor",
+      "expected": [
+        "collapsed"
+      ]
+    },
+    {
+      "transcript": "she suddenly crumpled and went straight down",
+      "expected": [
+        "collapsed"
+      ]
+    },
+    {
+      "transcript": "there's blood pouring from his leg and it won't stop",
+      "expected": [
+        "heavy_bleeding"
+      ]
+    },
+    {
+      "transcript": "she's bleeding heavily from a deep cut on her arm",
+      "expected": [
+        "heavy_bleeding"
+      ]
+    },
+    {
+      "transcript": "he's choking on a piece of mochi",
+      "expected": [
+        "choking"
+      ]
+    },
+    {
+      "transcript": "something is stuck in her throat and she can't clear it",
+      "expected": [
+        "choking"
+      ]
+    },
+    {
+      "transcript": "the child is convulsing, his whole body is jerking",
+      "expected": [
+        "seizure"
+      ]
+    },
+    {
+      "transcript": "she's having a fit, shaking uncontrollably",
+      "expected": [
+        "seizure"
+      ]
+    },
+    {
+      "transcript": "he slipped and smacked his head hard on the floor",
+      "expected": [
+        "head_injury"
+      ],
+      "acceptable": [
+        "collapsed"
+      ]
+    },
+    {
+      "transcript": "she banged her head against the shelf",
+      "expected": [
+        "head_injury"
+      ]
+    },
+    {
+      "transcript": "her stomach is killing her, she's doubled over",
+      "expected": [
+        "severe_abdominal_pain"
+      ]
+    },
+    {
+      "transcript": "he's got terrible pain in his belly",
+      "expected": [
+        "severe_abdominal_pain"
+      ]
+    },
+    {
+      "transcript": "the toddler is burning up with a really high fever",
+      "expected": [
+        "high_fever"
+      ]
+    },
+    {
+      "transcript": "she feels boiling hot to the touch",
+      "expected": [
+        "high_fever"
+      ]
+    },
+    {
+      "transcript": "one side of his face is drooping",
+      "expected": [
+        "face_drooping"
+      ]
+    },
+    {
+      "transcript": "her mouth looks crooked and twisted on one side",
+      "expected": [
+        "face_drooping"
+      ]
+    },
+    {
+      "transcript": "his speech is all slurred, I can't make out his words",
+      "expected": [
+        "slurred_speech"
+      ]
+    },
+    {
+      "transcript": "she's slurring her words really badly",
+      "expected": [
+        "slurred_speech"
+      ]
+    },
+    {
+      "transcript": "his left arm has gone limp and won't move",
+      "expected": [
+        "one_sided_weakness"
+      ]
+    },
+    {
+      "transcript": "she can't move the whole right side of her body",
+      "expected": [
+        "one_sided_weakness"
+      ]
+    },
+    {
+      "transcript": "he keeps giving strange answers and isn't making any sense",
+      "expected": [
+        "confused"
+      ]
+    },
+    {
+      "transcript": "her face is drooping and she can't move her left arm",
+      "expected": [
+        "face_drooping",
+        "one_sided_weakness"
+      ]
+    },
+    {
+      "transcript": "he's got bad chest pain and then he collapsed",
+      "expected": [
+        "chest_pain",
+        "collapsed"
+      ]
+    },
+    {
+      "transcript": "he collapsed and now he's convulsing on the floor",
+      "expected": [
+        "collapsed",
+        "seizure"
+      ]
+    },
+    {
+      "transcript": "she has chest pain and she's struggling to breathe",
+      "expected": [
+        "chest_pain",
+        "difficulty_breathing"
+      ]
+    },
+    {
+      "transcript": "his face is drooping and his speech is slurred",
+      "expected": [
+        "face_drooping",
+        "slurred_speech"
+      ]
+    },
+    {
+      "transcript": "he has a bad itchy rash all over his arms",
+      "expected": []
+    },
+    {
+      "transcript": "she's been vomiting all morning",
+      "expected": [
+        "vomiting"
+      ]
+    },
+    {
+      "transcript": "he says he feels dizzy and a bit lightheaded",
+      "expected": [
+        "dizziness"
+      ]
+    },
+    {
+      "transcript": "she twisted her ankle and it really hurts",
+      "expected": []
+    },
+    {
+      "transcript": "he's just really anxious and panicking about work",
+      "expected": []
+    },
+    {
+      "transcript": "he's not breathing at all",
+      "expected": []
+    },
+    {
+      "transcript": "she's completely unconscious and won't wake up",
+      "expected": []
+    },
+    {
+      "transcript": "he's awake and talking to me normally",
+      "expected": []
+    },
+    {
+      "transcript": "she's unconscious and blood is gushing from a cut on her arm",
+      "expected": [
+        "heavy_bleeding"
+      ]
+    },
+    {
+      "transcript": "he's not breathing and his chest was hurting badly before",
+      "expected": [
+        "chest_pain"
+      ]
+    },
+    {
+      "transcript": "he's broken out in a cold sweat",
+      "expected": [
+        "cold_sweat"
+      ]
+    },
+    {
+      "transcript": "her face has gone completely pale",
+      "expected": [
+        "pale_complexion"
+      ]
+    },
+    {
+      "transcript": "he has a terrible headache",
+      "expected": [
+        "headache"
+      ]
+    },
+    {
+      "transcript": "her heart is racing and pounding",
+      "expected": [
+        "palpitations"
+      ]
+    },
+    {
+      "transcript": "he has severe pain in his back",
+      "expected": [
+        "back_pain"
+      ]
+    },
+    {
+      "transcript": "her lower back is hurting badly",
+      "expected": [
+        "lower_back_pain"
+      ]
+    },
+    {
+      "transcript": "his arm has gone numb and tingly",
+      "expected": [
+        "numbness"
+      ]
+    },
+    {
+      "transcript": "I can't find a pulse on him",
+      "expected": [
+        "no_pulse"
+      ]
+    },
+    {
+      "transcript": "his body has gone cold to the touch",
+      "expected": [
+        "body_cold"
+      ]
+    },
+    {
+      "transcript": "my son fell into the bath and was underwater",
+      "expected": [
+        "drowning"
+      ]
+    },
+    {
+      "transcript": "he's clutching his chest, pale and sweating coldly",
+      "expected": [
+        "chest_pain",
+        "pale_complexion",
+        "cold_sweat"
+      ]
+    },
+    {
+      "transcript": "he feels really sick to his stomach but hasn't thrown up",
+      "expected": [
+        "nausea"
+      ]
+    }
+  ]
+}

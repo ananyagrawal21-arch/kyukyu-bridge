@@ -1,0 +1,20 @@
+{
+  "address": {
+    "prefecture": "東京都",
+    "city_ward": "江東区〇〇",
+    "street_block": "1-2-3",
+    "building": "〇〇マンション",
+    "room": "402"
+  },
+  "patient": {
+    "name": "山田花子",
+    "age": 72,
+    "sex": "female",
+    "known_conditions": ["高血圧"]
+  },
+  "caller": {
+    "name": "山田太郎",
+    "native_language": "en",
+    "japanese_fluency": "limited"
+  }
+}

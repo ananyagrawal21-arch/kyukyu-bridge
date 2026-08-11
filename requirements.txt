@@ -1,0 +1,23 @@
+# Week 1 — the core pipeline.
+# transformers is pinned: optimum-intel (below) requires <=4.55.x, and 4.55.4 is the
+# version verified to still run our Whisper STT. Do not bump without re-testing STT.
+transformers==4.55.4
+torch
+torchaudio
+sounddevice
+soundfile
+streamlit
+numpy
+
+# Week 2 — Intel OpenVINO conversion + quantization, and the SLM structurer.
+#
+# PINNED EXACTLY. Leaving these open broke the Windows/Intel machine (2026-08-10): it installed
+# a NEWER optimum-intel that expects a newer transformers than the 4.55.4 we pin above, and the
+# model export crashed deep inside optimum's own code. transformers and optimum-intel must move
+# together - pinning one and not the other guarantees they drift apart on a fresh install.
+# These are the versions verified working end-to-end.
+openvino==2025.3.0
+openvino-tokenizers==2025.3.0.0
+optimum==2.0.0
+optimum-intel==1.26.1
+nncf==2.18.0
