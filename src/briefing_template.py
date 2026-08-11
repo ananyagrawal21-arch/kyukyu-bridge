@@ -10,10 +10,15 @@
 # Patient details (age/sex/conditions) are omitted unless the caller confirmed the
 # emergency is about the person in profile.json - a wrong age is worse than none.
 #
-# VERIFICATION TODO (founder): the observed terms are stored in plain/dictionary form
-# (倒れた, 意識がある) while reported terms end politely (痛いと言っています). Spoken together
-# the register is uneven. Deciding the consistent spoken form of each term is a
-# Japanese-language call and part of the verification pass.
+# REGISTER RULE (settled 2026-08-12). The two frames need DIFFERENT forms, because one is
+# quoted and the other is not:
+#   observed -> polite (です/ます). Stated as a standalone sentence to the dispatcher:
+#               「冷や汗をかいています。」「倒れました。」
+#   reported -> PLAIN form, because it gets wrapped in と言っています, and quoted speech
+#               takes plain form: 「頭が痛いと言っています」, never 「頭が痛いですと言っています」.
+# Four terms taken from the protocol's dispatcher-side question phrasing (「吐き気がありますか？」)
+# were stored polite and produced 「吐き気がありますと言っています」; fixed to plain form.
+# When adding a reported-frame term, store the PLAIN form.
 
 # Location is the single most critical field: a wrong address sends the ambulance to the
 # wrong place. So we only state the home address when the caller confirms they are there.

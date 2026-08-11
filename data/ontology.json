@@ -151,7 +151,7 @@
     {
       "id": "palpitations",
       "trigger_phrases_en": ["heart is racing", "palpitations", "heart pounding", "heart is fluttering", "irregular heartbeat"],
-      "japanese_term": "動悸がします",
+      "japanese_term": "動悸がする",
       "frame": "reported",
       "verified": false,
       "note": "Protocol lists 動悸 as HIGH-URGENCY. Their 通報内容: 「どきどきする」「動悸がする」. NEEDS FOUNDER CHECK."
@@ -175,7 +175,7 @@
     {
       "id": "dizziness",
       "trigger_phrases_en": ["dizzy", "lightheaded", "feels faint", "room is spinning", "vertigo", "woozy"],
-      "japanese_term": "めまいがします",
+      "japanese_term": "めまいがする",
       "frame": "reported",
       "verified": false,
       "note": "Protocol lists めまい as a 症候. We previously treated 'dizzy' as out-of-scope - that was wrong. NEEDS FOUNDER CHECK."
@@ -191,7 +191,7 @@
     {
       "id": "nausea",
       "trigger_phrases_en": ["nauseous", "feels sick", "feels like throwing up", "queasy", "sick to his stomach", "sick to her stomach"],
-      "japanese_term": "吐き気があります",
+      "japanese_term": "吐き気がある",
       "frame": "reported",
       "verified": false,
       "note": "OFFICIAL: protocol asks 「吐き気がありますか？」 and lists 「吐き気が強い」 in 通報内容. Deliberately separate from `vomiting` - saying 吐いています when they have only felt sick would fabricate a symptom."
@@ -199,7 +199,7 @@
     {
       "id": "numbness",
       "trigger_phrases_en": ["numb", "numbness", "pins and needles", "can't feel his arm", "can't feel her leg", "tingling"],
-      "japanese_term": "しびれがあります",
+      "japanese_term": "しびれがある",
       "frame": "reported",
       "verified": false,
       "note": "Protocol lists しびれ as a 症候. Distinct from one_sided_weakness (can't move). NEEDS FOUNDER CHECK."
