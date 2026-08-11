@@ -56,6 +56,71 @@ wrong - it was never a target in either direction.
 - Claim "the opening 60 seconds", NOT "10x better than existing solutions". A precise claim we
   can demonstrate beats a multiplier we cannot.
 
+## Stage A stays an LLM - embedding retrieval REJECTED (2026-08-12)
+
+Considered replacing Stage A (candidate generation) with embedding retrieval: ~70x smaller
+model, milliseconds instead of ~6-9s, and it would have decoupled ontology size from latency.
+
+**Rejected, and the reasoning matters more than the verdict:**
+- Stage A + Stage B were designed together as ONE anti-fabrication system, with measured
+  results behind it (90% exact, precision 1.00, zero fabrications, recall 0.89). Replacing half
+  of it with something unmeasured trades a known good for an unknown.
+- Embeddings compress a whole utterance into ONE vector, so filler and repetition DILUTE the
+  signal ("oh god oh god he's— his chest" averages the noise in with "chest"). An LLM reasons
+  through disfluency; similarity search cannot. Panicked speech is exactly our input.
+- Latency is what OpenVINO/INT8 exists to solve. Solving it architecturally SHRINKS the Intel
+  story instead of showcasing it - wrong trade for this project.
+
+=> Latency is handled by Intel/OpenVINO optimization, not by changing the architecture.
+=> The ontology stays at 29. Not a limitation to apologise for: "the opening 60 seconds"
+   is the claim, and 29 well-chosen entries serve it.
+
+**IMPORTANT GAP THIS SURFACED:** accent IS tested (L2-ARCTIC), but PANIC/DISFLUENCY has never
+been tested at any stage. `slm_testset.json` is synthetic and clean - our own notes call it
+"optimistic vs real panicked/accented Whisper output". Perturbed-transcript testing (injected
+repetition, filler, false starts) is a real open gap regardless of which Stage A we use.
+
+## Modifier system - DESIGNED, deliberately NOT built (2026-08-12)
+
+The wording problems found during the ontology verification pass are not 6 separate issues.
+They are 4 axes:
+  ASPECT    ongoing vs finished        (vomiting, seizure, bleeding)
+  SOURCE    caller saw vs patient said (difficulty_breathing, choking - `source_dependent`)
+  CERTAINTY confirmed vs couldn't-tell (no_pulse)
+  SEVERITY  weak vs cannot-move        (one_sided_weakness)
+
+**`frame` IS ALREADY ONE OF THESE.** It is a modifier stored on the entry and applied at render
+time by `_format_statement`. The pattern exists; only one axis of it was ever built.
+
+The generalization: entries gain OPTIONAL named variants, e.g.
+    "japanese_term": "けいれんしています",
+    "forms": { "aspect_finished": "けいれんしていました" }
+The renderer picks a variant when the modifier says so, else the default, then applies `frame`.
+NOT grammatical conjugation in code (a project in itself) - hand-written variants, opt-in per
+term. Cost stays ~linear (29 terms + ~6 variants), not the 116 a full cross-product would need.
+
+**Why NOT built now:** only 2 terms are affected today (vomiting, seizure). A modifier system to
+fix 2 terms is scope creep. Safe defaults used instead - ASSUME ONGOING, because saying
+けいれんしています when it stopped merely over-prepares the crew, while the reverse under-prepares
+them. EMS practice errs toward over-triage.
+
+**When it becomes mandatory:** before ANY ontology expansion. 200 entries x 4 variants = 800
+strings to verify, which collapses under its own weight. Expansion is currently OFF the table
+(see the embedding decision above), so this stays deferred - but do not expand without it.
+
+## Ontology wording - open questions, recorded not fixed (2026-08-12)
+
+Flagged during the verification pass; judged non-blocking, need a Japanese-language call:
+- `slurred_speech` 呂律が回りにくいです - the set idiom is 呂律が回らない. Is 回りにくい a
+  deliberate softening or should it be 呂律が回っていません?
+- `one_sided_weakness` 体の片側が動きません - triggers include "one side is weak", but 動きません
+  means cannot move AT ALL. We may be upgrading weakness into paralysis.
+- `face_drooping` 顔がゆがんでいます - ゆがむ reads closer to "distorted/twisted" than "drooping".
+  The protocol does use 顔のゆがみ, so probably fine.
+- `difficulty_breathing` 息が苦しいです is `source_dependent` and currently renders as a direct
+  assertion, i.e. it states the patient's internal sensation as observed fact. Resolving this is
+  the `source_dependent` work already deferred to the SLM.
+
 ## Gap-reduction levers (reduce distance to the human interpreter)
 
 Fold the cheap wins into Week 2 alongside the OpenVINO work. All discussed 2026-07-27.

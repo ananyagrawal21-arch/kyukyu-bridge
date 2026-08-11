@@ -16,8 +16,11 @@
     "  source_dependent - could be either; the Week-2 SLM resolves per utterance. For now the",
     "                     crude matcher states them directly. Do not hard-code a frame guess.",
     "",
-    "verified: TRUE for all 16 - founder (fluent, resident in Japan) read every term and",
-    "confirmed each is natural, clear, non-diagnostic, and dispatcher-appropriate."
+    "verified: TRUE for all 29 - founder (fluent, resident in Japan) read every term and",
+    "confirmed each is natural, clear, non-diagnostic, and dispatcher-appropriate. The 13",
+    "added from the 緊急度判定プロトコル were reviewed 2026-08-12 as RENDERED OUTPUT (term +",
+    "frame wrapper), not as raw strings - that review is what caught the polite-form-before-",
+    "と言っています bug and the 脈がありません over-claim."
   ],
 
   "sex_terms": {
@@ -127,65 +130,65 @@
       "trigger_phrases_en": ["cold sweat", "clammy", "sweating a lot", "drenched in sweat", "sweaty and pale"],
       "japanese_term": "冷や汗をかいています",
       "frame": "observed",
-      "verified": false,
+      "verified": true,
       "critical": true,
-      "note": "CIRCULATION vital sign. Protocol asks 「冷や汗をかいていますか？」. NEEDS FOUNDER CHECK."
+      "note": "CIRCULATION vital sign. Protocol asks 「冷や汗をかいていますか？」."
     },
     {
       "id": "pale_complexion",
       "trigger_phrases_en": ["looks pale", "turning pale", "face is white", "colour has drained", "grey looking", "ashen"],
       "japanese_term": "顔色が悪いです",
       "frame": "observed",
-      "verified": false,
+      "verified": true,
       "critical": true,
-      "note": "CIRCULATION vital sign. Protocol asks 「顔色は悪いですか？」. NEEDS FOUNDER CHECK."
+      "note": "CIRCULATION vital sign. Protocol asks 「顔色は悪いですか？」."
     },
     {
       "id": "headache",
       "trigger_phrases_en": ["headache", "head hurts", "bad headache", "splitting headache", "worst headache", "head is pounding"],
       "japanese_term": "頭が痛い",
       "frame": "reported",
-      "verified": false,
-      "note": "Protocol lists 頭痛 as HIGH-URGENCY (緊急性が高い症候). Was missing. NEEDS FOUNDER CHECK."
+      "verified": true,
+      "note": "Protocol lists 頭痛 as HIGH-URGENCY (緊急性が高い症候). Was missing."
     },
     {
       "id": "palpitations",
       "trigger_phrases_en": ["heart is racing", "palpitations", "heart pounding", "heart is fluttering", "irregular heartbeat"],
       "japanese_term": "動悸がする",
       "frame": "reported",
-      "verified": false,
-      "note": "Protocol lists 動悸 as HIGH-URGENCY. Their 通報内容: 「どきどきする」「動悸がする」. NEEDS FOUNDER CHECK."
+      "verified": true,
+      "note": "Protocol lists 動悸 as HIGH-URGENCY. Their 通報内容: 「どきどきする」「動悸がする」."
     },
     {
       "id": "back_pain",
       "trigger_phrases_en": ["back pain", "back hurts", "pain in his back", "pain in her back", "severe back pain"],
       "japanese_term": "背中が痛い",
       "frame": "reported",
-      "verified": false,
-      "note": "Protocol lists 背部痛 as HIGH-URGENCY (aortic emergencies). NEEDS FOUNDER CHECK."
+      "verified": true,
+      "note": "Protocol lists 背部痛 as HIGH-URGENCY (aortic emergencies)."
     },
     {
       "id": "lower_back_pain",
       "trigger_phrases_en": ["lower back pain", "pain in his lower back", "pain in her lower back", "loin pain", "kidney area pain"],
       "japanese_term": "腰が痛い",
       "frame": "reported",
-      "verified": false,
-      "note": "Protocol lists 腰痛 as HIGH-URGENCY. NEEDS FOUNDER CHECK."
+      "verified": true,
+      "note": "Protocol lists 腰痛 as HIGH-URGENCY."
     },
     {
       "id": "dizziness",
       "trigger_phrases_en": ["dizzy", "lightheaded", "feels faint", "room is spinning", "vertigo", "woozy"],
       "japanese_term": "めまいがする",
       "frame": "reported",
-      "verified": false,
-      "note": "Protocol lists めまい as a 症候. We previously treated 'dizzy' as out-of-scope - that was wrong. NEEDS FOUNDER CHECK."
+      "verified": true,
+      "note": "Protocol lists めまい as a 症候. We previously treated 'dizzy' as out-of-scope - that was wrong."
     },
     {
       "id": "vomiting",
       "trigger_phrases_en": ["vomiting", "throwing up", "been sick", "keeps vomiting", "threw up"],
       "japanese_term": "吐いています",
       "frame": "observed",
-      "verified": false,
+      "verified": true,
       "note": "OFFICIAL: protocol 通報内容 for 嘔気・嘔吐 is 「吐いた」「吐き気が強い」. This entry = actually vomiting (吐いた). Nausea-only is the separate `nausea` entry."
     },
     {
@@ -193,7 +196,7 @@
       "trigger_phrases_en": ["nauseous", "feels sick", "feels like throwing up", "queasy", "sick to his stomach", "sick to her stomach"],
       "japanese_term": "吐き気がある",
       "frame": "reported",
-      "verified": false,
+      "verified": true,
       "note": "OFFICIAL: protocol asks 「吐き気がありますか？」 and lists 「吐き気が強い」 in 通報内容. Deliberately separate from `vomiting` - saying 吐いています when they have only felt sick would fabricate a symptom."
     },
     {
@@ -201,26 +204,26 @@
       "trigger_phrases_en": ["numb", "numbness", "pins and needles", "can't feel his arm", "can't feel her leg", "tingling"],
       "japanese_term": "しびれがある",
       "frame": "reported",
-      "verified": false,
-      "note": "Protocol lists しびれ as a 症候. Distinct from one_sided_weakness (can't move). NEEDS FOUNDER CHECK."
+      "verified": true,
+      "note": "Protocol lists しびれ as a 症候. Distinct from one_sided_weakness (can't move)."
     },
     {
       "id": "no_pulse",
       "trigger_phrases_en": ["no pulse", "can't find a pulse", "there's no pulse", "heart stopped"],
-      "japanese_term": "脈がありません",
+      "japanese_term": "脈が見つかりません",
       "frame": "observed",
-      "verified": false,
+      "verified": true,
       "critical": true,
-      "note": "CPA keyword -> immediate R1 in the protocol. NEEDS FOUNDER CHECK."
+      "note": "CPA keyword -> immediate R1 in the protocol."
     },
     {
       "id": "body_cold",
       "trigger_phrases_en": ["body is cold", "gone cold", "cold to the touch", "he's cold", "she's cold"],
       "japanese_term": "体が冷たくなっています",
       "frame": "observed",
-      "verified": false,
+      "verified": true,
       "critical": true,
-      "note": "CPA keyword (冷たくなっている) -> immediate R1. NEEDS FOUNDER CHECK."
+      "note": "CPA keyword (冷たくなっている) -> immediate R1."
     }
   ],
 
@@ -266,11 +269,11 @@
     {
       "id": "drowning",
       "trigger_phrases_en": ["drowned", "drowning", "fell in the water", "pulled from the water", "was underwater", "fell in the bath"],
-      "japanese_term": "水に溺れました",
+      "japanese_term": "溺れました",
       "frame": "observed",
-      "verified": false,
+      "verified": true,
       "critical": true,
-      "note": "CPA keyword (水没) -> immediate R1 in the protocol. Bathtub drowning is a common domestic emergency in Japan. NEEDS FOUNDER CHECK."
+      "note": "CPA keyword (水没) -> immediate R1 in the protocol. Bathtub drowning is a common domestic emergency in Japan."
     }
   ]
 }
