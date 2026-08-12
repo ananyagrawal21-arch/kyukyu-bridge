@@ -41,9 +41,33 @@ Fire Agency's own crew-side phrasebook, deployed to 96% of fire departments. Tha
 translates what a panicking family says on scene; it structurally cannot know the patient's
 address, age, or medical history in advance. This can.
 
+## Who it's for
+
+A household with a **known at-risk person** — an elderly relative with a heart condition — where
+a family member with limited Japanese may be the one who finds them.
+
+The app runs on a **home device, already open**, model already warm. In an emergency the caller
+dials 119 on their **phone**, puts it on **speakerphone**, and works the app while holding the
+phone toward its speaker. Two devices, deliberately: a phone can't inject app audio into a live
+call — call and media audio are separate streams, and echo cancellation would suppress it anyway.
+
+This does **not** help someone alone, away from home, or without the device set up. It's a home
+emergency tool, which is narrower than "helps foreigners call 119" — and it's what every design
+decision here actually fits.
+
 ## How it works
 
+**Dial 119 first. Always** — never delay the call to prepare a better message.
+
 ```
+  ☎️  119 dialled, phone on speakerphone
+        ↓
+  🚨 tap EMERGENCY  →  plays IMMEDIATELY, needs nothing computed:
+        「救急です。場所は東京都江東区…」
+        ↓  ~15 seconds in. Type + location. THE AMBULANCE IS DISPATCHED.
+        ↓
+        ↓   everything below happens while it is already en route
+        ↓
   🎤 speech (any language)
         ↓  Whisper small, language forced from profile (override available)
   📝 English transcript
@@ -59,6 +83,19 @@ address, age, or medical history in advance. This can.
         ↓
   🔊 spoken aloud, one paced chunk at a time
 ```
+
+Emergency dispatch works on **location and call type, not diagnosis** — the ambulance rolls
+immediately and the crew is updated by radio while driving. Travel time dwarfs everything else,
+so gathering symptoms before dispatching would only add delay to every case. The remaining
+details still arrive minutes before the crew does, and they do real work: upgrading the response
+(PA連携 sends a fire engine alongside for a suspected arrest), pre-briefing the crew, and
+attacking the on-scene delay the FDMA measured.
+
+This is the NET119 pattern — the Fire Agency's own caller-side app for people with hearing and
+speech disabilities also connects on type + location first and handles details afterwards.
+
+It also means **inference latency is a polish problem, not a safety one.** Help is already moving
+before the model has finished thinking.
 
 ### Safety architecture
 
@@ -116,7 +153,13 @@ explained — recorded honestly rather than omitted. SLM numbers on Intel hardwa
 - **Whisper accuracy varies a lot by language**, and is weakest for some whose speakers are most
   vulnerable. No claim of uniform coverage.
 - **Panicked, disfluent speech is untested.** Accent is tested; panic is not.
-- One stored patient profile, English-first in practice, and no GPS yet.
+- **Outbound only.** After dispatching, Japanese dispatchers give 口頭指導 — talking the caller
+  through CPR and positioning, in Japanese. That is genuinely life-saving and we don't handle it.
+- One stored patient profile, English-first in practice, and no GPS.
+
+On GPS specifically: it's absent by choice, not omission. A laptop has no GPS chip and locates by
+WiFi/IP triangulation, which cannot produce a room number — while `profile.json` already holds
+one, exactly. For a home emergency, a stored verified address beats an estimated position.
 
 ## Running it
 

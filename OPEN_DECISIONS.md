@@ -56,6 +56,67 @@ wrong - it was never a target in either direction.
 - Claim "the opening 60 seconds", NOT "10x better than existing solutions". A precise claim we
   can demonstrate beats a multiplier we cannot.
 
+## THE REAL-WORLD USE CASE - defined 2026-08-12 (was never written down)
+
+This existed only as an unstated assumption for weeks. Every design decision already implied it;
+nobody had said it out loud, and it kept causing confusion.
+
+**Target scenario:** a household with a KNOWN AT-RISK PERSON (elderly relative, heart condition).
+A family member with limited Japanese is present when they collapse. At home.
+
+**Physical setup - TWO DEVICES:**
+- Phone: dials 119, on SPEAKERPHONE.
+- Home device (laptop/tablet): runs this app, ALREADY OPEN, model already warm.
+- Audio path is acoustic: device speaker -> phone mic -> dispatcher.
+
+Two devices is NOT a Streamlit limitation. A phone cannot inject app audio into a live call -
+call audio and media audio are separate streams, and echo cancellation would actively suppress
+it. Even a native phone app would end up doing speakerphone + acoustic pickup.
+
+The app MUST already be running. Waking a laptop, opening a browser and loading a 3B model takes
+minutes. `warm_brain()` was written to load at app-open rather than mid-emergency - that function
+only makes sense under this assumption, so the code had already answered this question.
+
+**DIAL 119 FIRST. Always.** Never delay an emergency call to prepare a better message.
+Dispatchers routinely handle panicking, silent or incoherent callers; 30 seconds of fumbling is
+normal to them. Never getting usable information is not.
+
+**Honest scope limit, state it in the pitch:** this does not help someone alone, away from home,
+or without the device set up. It is a HOME emergency tool for a household with a known at-risk
+person. Narrower than "helps foreigners call 119" - and far stronger, because every design
+decision already fits it (stored address, stored patient profile, stored conditions, warm model).
+
+## Location goes FIRST - flow restructured 2026-08-12
+
+**The bug, found by walking through a real scenario minute by minute:** `ask_location` was step 7
+of 9. The dispatcher answers with 「火事ですか、救急ですか?」 at ~0:08, and heard SILENCE until
+~1:00 while the caller recorded, transcribed, classified and confirmed - before finally playing a
+chunk whose first word (救急です) answered the original question. We made them wait a minute for
+a word we had before the call started.
+
+**Fix:** new `dispatch_now` phase immediately after the EMERGENCY button. 救急です + the address
+need NOTHING from the pipeline - one is a constant, the other is in profile.json. Plays at ~0:13.
+The briefing phase then starts at chunk 1, since chunk 0 was already delivered ("Back" can still
+reach it if the dispatcher asks for the address again).
+
+**Why this is correct, not just faster:** dispatch happens on LOCATION + TYPE, not on diagnosis.
+The ambulance rolls and the crew is updated by radio en route. Travel time (~10 min nationally,
+worth re-verifying) dwarfs everything, so gathering symptoms before dispatching just adds delay
+to every case. Matches our own NET119 finding exactly: 救急/火事 + location connects immediately,
+details follow. NET119 is CALLER-side, confirming the pattern is already accepted in Japan.
+
+**Consequence: inference latency is now a POLISH problem, not a safety one.** The ambulance is
+moving before the SLM has finished thinking. This is the strongest answer to "isn't 6-9s too slow
+for an emergency?" - and it reinforces the Stage-A decision below.
+
+**Details still do real work** (they arrive minutes before the crew does): response upgrade
+(PA連携 - a fire engine dispatched alongside for suspected arrest), crew pre-briefing, and
+attacking the 3-6 minute on-scene delay the FDMA measured.
+
+**Gap this exposed:** after dispatching, dispatchers do 口頭指導 - talking the caller through CPR
+in Japanese. That is inbound, we are outbound-only, and it is genuinely life-saving. Belongs in
+the honest-limitations section; a judge who knows this field will ask.
+
 ## Stage A stays an LLM - embedding retrieval REJECTED (2026-08-12)
 
 Considered replacing Stage A (candidate generation) with embedding retrieval: ~70x smaller

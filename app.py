@@ -1,6 +1,16 @@
 """Kyūkyū-Bridge - one-button emergency UI (Streamlit).
-Flow: EMERGENCY -> speak/upload -> Whisper -> confirm transcript -> SLM brain ->
-confirm understood symptoms -> breathing/awake -> location -> patient -> Japanese briefing.
+
+REAL-WORLD USE: a household with a known at-risk person keeps this OPEN and running on a home
+device (hence warm_brain() below - the model loads at app-open, never mid-emergency). When
+someone collapses, the caller dials 119 on their PHONE and puts it on SPEAKERPHONE, then works
+this app on the home device, holding the phone toward its speaker. Two devices is not a
+Streamlit limitation: a phone cannot inject app audio into a live call, and its echo
+cancellation would suppress it if you tried.
+
+Flow: 119 dialled FIRST -> EMERGENCY -> [dispatch_now: play 救急です + address IMMEDIATELY,
+this is what sends the ambulance] -> speak/upload -> Whisper -> confirm transcript ->
+SLM brain -> confirm understood symptoms -> awake/breathing/circulation -> patient ->
+remaining briefing chunks, delivered while the ambulance is already en route.
 """
 import os
 import sys
@@ -124,8 +134,48 @@ phase = st.session_state.phase
 # ---- 1. Idle: the button ----
 if phase == "idle":
     if st.button("🚨  EMERGENCY", key="emergency"):
+        go("dispatch_now")
+    st.markdown('<div class="caption">Call 119 first. Then tap this.</div>', unsafe_allow_html=True)
+
+# ---- 1b. THE FIRST 15 SECONDS. ----
+# 救急です + the address need NOTHING from the pipeline: the word is a constant and the address
+# is already in profile.json. This used to be the LAST question asked (old `ask_location` phase,
+# step 7 of 9), so the dispatcher asked 「火事ですか、救急ですか?」 and heard silence for a full
+# minute while the caller recorded, transcribed, classified and confirmed - before finally
+# playing a chunk whose first word answered the original question.
+# Type + location is what actually dispatches the ambulance; everything else is follow-up
+# delivered while it is already en route. This is the NET119 pattern, and it is also why our
+# inference latency is a polish problem rather than a safety one - the ambulance is already
+# moving before the SLM has finished thinking.
+elif phase == "dispatch_now":
+    if "at_home" not in st.session_state:
+        st.session_state.at_home = True
+
+    first = build_briefing_chunks(
+        [], [], profile, ontology, False, st.session_state.at_home
+    )[0]
+
+    st.markdown('<div class="status">▶ Play this to the dispatcher NOW</div>', unsafe_allow_html=True)
+    st.markdown('<div class="caption">Ambulance + location — this is what sends help</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="briefing-jp">{first["jp"]}</div>', unsafe_allow_html=True)
+
+    audio = speak(first["jp"])
+    if audio:
+        st.audio(audio, format="audio/wav")
+    else:
+        st.markdown('<div class="caption">(no Japanese voice available on this machine)</div>', unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    c1, c2 = st.columns(2)
+    # Toggling re-renders with the not-at-home line instead of a possibly-wrong address.
+    if c1.button(
+        "🏠 At home" if st.session_state.at_home else "📍 Not at home",
+        use_container_width=True,
+    ):
+        st.session_state.at_home = not st.session_state.at_home
+        st.rerun()
+    if c2.button("Next: symptoms →", use_container_width=True):
         go("recording")
-    st.markdown('<div class="caption">Tap the button, then speak in your language.</div>', unsafe_allow_html=True)
 
 # ---- 2. Record ----
 elif phase == "recording":
@@ -241,7 +291,7 @@ elif phase == "ask_awake":
         if picked:
             st.session_state.extras.append(_statement_from(ontology, picked))
         go("ask_breathing" if st.session_state.need_breathing else
-           "ask_circulation" if st.session_state.need_circulation else "ask_location")
+           "ask_circulation" if st.session_state.need_circulation else "ask_patient")
 
 # ---- 6. Critical field: breathing? (only if not already mentioned) ----
 elif phase == "ask_breathing":
@@ -257,7 +307,7 @@ elif phase == "ask_breathing":
     if picked is not None:
         if picked:
             st.session_state.extras.append(_statement_from(ontology, picked))
-        go("ask_circulation" if st.session_state.need_circulation else "ask_location")
+        go("ask_circulation" if st.session_state.need_circulation else "ask_patient")
 
 # ---- 6b. Critical field: CIRCULATION - the third vital sign. Mirrors the dispatcher's own
 #      questions 「冷や汗をかいていますか？」「顔色は悪いですか？」so we pre-answer them. ----
@@ -277,21 +327,12 @@ elif phase == "ask_circulation":
     if picked is not None:
         for eid in picked:
             st.session_state.extras.append(_statement_from(ontology, eid))
-        go("ask_location")
+        go("ask_patient")
 
 # ---- 7. Location ----
-elif phase == "ask_location":
-    st.markdown('<div class="status">Is the emergency at your home address?</div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="caption">{_format_address(profile["address"])}</div>', unsafe_allow_html=True)
-    c1, c2 = st.columns(2)
-    picked = None
-    if c1.button("Yes, at home", use_container_width=True):
-        picked = True
-    if c2.button("No, somewhere else", use_container_width=True):
-        picked = False
-    if picked is not None:
-        st.session_state.at_home = picked
-        go("ask_patient")
+# (The old `ask_location` phase lived here. Location is now the FIRST thing delivered, in
+#  `dispatch_now` - see the comment there. Asking it last was the single worst ordering bug
+#  in the flow.)
 
 # ---- 8. Patient identity ----
 elif phase == "ask_patient":
@@ -318,7 +359,10 @@ elif phase == "briefing":
             st.session_state.entries, st.session_state.extras, profile, ontology,
             st.session_state.patient_ok, st.session_state.at_home,
         )
-        st.session_state.chunk_i = 0
+        # Start at 1, not 0: chunk 0 is the emergency+location line, already delivered back in
+        # `dispatch_now`. Replaying it would waste the dispatcher's time on the one thing they
+        # definitely already have. min() guards the degenerate case of a single-chunk briefing.
+        st.session_state.chunk_i = min(1, len(st.session_state.chunks) - 1)
 
     chunks = st.session_state.chunks
     i = st.session_state.chunk_i
