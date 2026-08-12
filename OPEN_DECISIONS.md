@@ -104,9 +104,29 @@ fix 2 terms is scope creep. Safe defaults used instead - ASSUME ONGOING, because
 けいれんしています when it stopped merely over-prepares the crew, while the reverse under-prepares
 them. EMS practice errs toward over-triage.
 
-**When it becomes mandatory:** before ANY ontology expansion. 200 entries x 4 variants = 800
-strings to verify, which collapses under its own weight. Expansion is currently OFF the table
-(see the embedding decision above), so this stays deferred - but do not expand without it.
+**SHARPENED 2026-08-12 - the aspect problem is NOT universal, it is 4 terms.** Categorising all
+29 by how they behave in time:
+- **19 are STATES** (pain, fever, pallor, consciousness). A state describes NOW; there is no
+  aspect to resolve. Stored です/ます.
+- **3 are DISCRETE EVENTS** (倒れました, 頭を打ちました, 溺れました) - already stored past,
+  completed by definition. Correct as-is.
+- **7 use ています**, but only 4 describe something that can genuinely STOP while still being
+  worth reporting: `vomiting`, `seizure`, `heavy_bleeding`, `choking` (object dislodges ->
+  のどに何か詰まっていました). 冷や汗 and 体が冷たい do not reverse; 息をしていません comes from
+  the deterministic question, not the model.
+
+So the ontology ALREADY handles this for 25 of 29 by choosing the right form per term TYPE.
+That was a good implicit design choice - states get です/ます, discrete events get ました.
+
+**And the strongest argument is for doing nothing at all:** a safe default cannot be wrong in
+the DANGEROUS direction. A model-detected aspect could report "finished" while a seizure is
+ongoing, under-preparing the crew. Trading a guaranteed-safe default for a model guess that can
+fail unsafely is a DOWNGRADE for these 4 terms.
+
+**Revised trigger (the earlier "mandatory before expansion" framing was wrong):** this is
+genuinely OPTIONAL, not deferred-mandatory. Build it only if disfluency testing shows the 4
+terms actually cause problems in practice. Expansion is off the table anyway (see the embedding
+decision above).
 
 ## Ontology wording - open questions, recorded not fixed (2026-08-12)
 

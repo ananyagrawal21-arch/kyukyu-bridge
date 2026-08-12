@@ -16,7 +16,12 @@ from ontology import load_ontology
 
 import os
 
-MODEL_ID = os.environ.get("SLM_MODEL", "Qwen/Qwen2.5-1.5B-Instruct")
+# MUST stay 3B. 1.5B was measured UNRELIABLE - it inverted critical binary fields ("still
+# awake" -> unconscious), which is the single most dangerous error this system can make.
+# This default used to be 1.5B while convert_slm.py used 3B, so any machine WITHOUT a
+# converted models/ directory (a fresh clone - models/ is gitignored) silently ran the
+# rejected model with no warning. Keep this in step with benchmark/convert_slm.py.
+MODEL_ID = os.environ.get("SLM_MODEL", "Qwen/Qwen2.5-3B-Instruct")
 
 # Critical binary STATUS fields are never DECIDED by the SLM - a 1.5B model inverted them
 # ("still awake" -> unconscious). They come from the deterministic ask_critical_fields step.
@@ -48,7 +53,15 @@ def _load_pipe():
             tok = AutoTokenizer.from_pretrained(ov_dir)
             _pipe = pipeline("text-generation", model=model, tokenizer=tok, device=-1)
         else:
-            # Plain PyTorch fallback (the slow baseline).
+            # Plain PyTorch fallback (the slow baseline). Say so loudly - silently running
+            # unoptimized is how a demo machine ends up several seconds slower than the
+            # measured numbers with nobody noticing why.
+            print(
+                f"[slm_classify] models/ not found - running {MODEL_ID} as PLAIN PYTORCH "
+                f"(slow, unoptimized). Convert with benchmark/convert_slm.py for the "
+                f"OpenVINO INT8 path.",
+                flush=True,
+            )
             _pipe = pipeline("text-generation", model=MODEL_ID, device=-1)
     return _pipe
 

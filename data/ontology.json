@@ -187,6 +187,7 @@
       "id": "vomiting",
       "trigger_phrases_en": ["vomiting", "throwing up", "been sick", "keeps vomiting", "threw up"],
       "japanese_term": "吐いています",
+      "forms": { "finished": "吐いていました" },
       "frame": "observed",
       "verified": true,
       "note": "OFFICIAL: protocol 通報内容 for 嘔気・嘔吐 is 「吐いた」「吐き気が強い」. This entry = actually vomiting (吐いた). Nausea-only is the separate `nausea` entry. ASPECT ASSUMPTION: 〜ています states this is ONGOING. If it already stopped the correct form is 吐いていました (founder-confirmed 2026-08-12). We cannot currently tell which - deliberate safe default, see the modifier-system entry in OPEN_DECISIONS.md."
@@ -239,6 +240,7 @@
       "id": "choking",
       "trigger_phrases_en": ["choking", "is choking", "something stuck in his throat", "something stuck in her throat", "food stuck", "swallowed something", "can't swallow"],
       "japanese_term": "のどに何か詰まっています",
+      "forms": { "finished": "のどに何か詰まっていました" },
       "frame": "source_dependent",
       "verified": true,
       "critical": true,
@@ -248,6 +250,7 @@
       "id": "seizure",
       "trigger_phrases_en": ["seizure", "having a seizure", "convulsing", "convulsions", "shaking uncontrollably", "having a fit", "body is jerking", "twitching violently"],
       "japanese_term": "けいれんしています",
+      "forms": { "finished": "けいれんしていました" },
       "frame": "observed",
       "note": "ASPECT ASSUMPTION: 〜ています states this is ONGOING - clinically the sharpest case of this, since 'seizing now' and 'had one and stopped' drive different responses. Finished form would be けいれんしていました (mechanical 〜ています->〜ていました, NOT founder-checked). Safe default is ongoing: over-preparing the crew is harmless, under-preparing is not. See OPEN_DECISIONS.md.",
       "verified": true
@@ -263,6 +266,7 @@
       "id": "heavy_bleeding",
       "trigger_phrases_en": ["bleeding a lot", "lots of blood", "heavy bleeding", "bleeding badly", "severe bleeding", "won't stop bleeding", "wont stop bleeding", "blood everywhere"],
       "japanese_term": "血がたくさん出ています",
+      "forms": { "finished": "血がたくさん出ていました" },
       "frame": "observed",
       "note": "ASPECT ASSUMPTION: 〜ています states bleeding is ONGOING. Finished/controlled form would be 血がたくさん出ていました (mechanical, NOT founder-checked). Lower stakes than seizure - bleeding that has been stopped still matters to the crew. See OPEN_DECISIONS.md.",
       "verified": true,

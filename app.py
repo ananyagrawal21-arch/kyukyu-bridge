@@ -93,6 +93,10 @@ def reset():
     for k in ("phase", "transcript", "entries", "extras", "need_breathing",
               "need_circulation", "at_home", "patient_ok", "chunks", "chunk_i", "stt_language"):
         st.session_state.pop(k, None)
+    # The per-symptom aspect radios are keyed by symptom id, so they are not in the list above.
+    # Left behind, a previous call's "Has stopped" would silently pre-select on the next one.
+    for k in [k for k in st.session_state if k.startswith("aspect_")]:
+        st.session_state.pop(k, None)
     st.session_state.phase = "idle"
     st.rerun()
 
@@ -174,6 +178,17 @@ elif phase == "confirm_symptoms":
             if c2.button("✕", key=f"rm_{i}"):
                 entries.pop(i)
                 st.rerun()
+            # ASPECT: four terms (vomiting/seizure/heavy_bleeding/choking) describe something
+            # that can STOP while still being worth reporting. 〜ています asserts it is ongoing,
+            # which we cannot actually know. Rather than have the model guess the tense - which
+            # could fail in the DANGEROUS direction, reporting "stopped" during a live seizure -
+            # the human tells us here. Same principle as the awake/breathing buttons.
+            # Data-driven: any entry with a "finished" form gets this control, no hard-coded list.
+            if e.get("forms", {}).get("finished"):
+                st.radio(
+                    "aspect", ["Happening now", "Has stopped"],
+                    key=f"aspect_{e['id']}", horizontal=True, label_visibility="collapsed",
+                )
     else:
         st.markdown('<div class="caption">(nothing yet — add below if we missed something)</div>', unsafe_allow_html=True)
 
@@ -194,6 +209,12 @@ elif phase == "confirm_symptoms":
 
     st.markdown("<br>", unsafe_allow_html=True)
     if st.button("Looks right  →", use_container_width=True):
+        # Apply the aspect choices. Replace with a COPY rather than mutating in place - these
+        # dicts come from the loaded ontology, and editing them would corrupt it for later runs.
+        for i, e in enumerate(entries):
+            finished = e.get("forms", {}).get("finished")
+            if finished and st.session_state.get(f"aspect_{e['id']}") == "Has stopped":
+                entries[i] = {**e, "japanese_term": finished}
         st.session_state.extras = []
         st.session_state.need_breathing = not any(
             e["id"] in {"difficulty_breathing", "not_breathing"} for e in entries
