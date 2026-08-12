@@ -123,10 +123,31 @@ the DANGEROUS direction. A model-detected aspect could report "finished" while a
 ongoing, under-preparing the crew. Trading a guaranteed-safe default for a model guess that can
 fail unsafely is a DOWNGRADE for these 4 terms.
 
-**Revised trigger (the earlier "mandatory before expansion" framing was wrong):** this is
-genuinely OPTIONAL, not deferred-mandatory. Build it only if disfluency testing shows the 4
-terms actually cause problems in practice. Expansion is off the table anyway (see the embedding
-decision above).
+**Revised trigger (the earlier "mandatory before expansion" framing was wrong):** the general
+modifier system is genuinely OPTIONAL, not deferred-mandatory. Expansion is off the table anyway
+(see the embedding decision above).
+
+### RESOLVED for those 4 terms - built 2026-08-12, via the human, not the model
+
+The 4 aspect-ambiguous terms now carry a `forms.finished` variant in ontology.json, and the
+confirm-symptoms screen shows a "Happening now / Has stopped" choice for any entry that has one.
+Data-driven off `forms`, so no hard-coded id list in app.py.
+
+  vomiting        吐いています        -> 吐いていました       (founder-confirmed)
+  seizure         けいれんしています   -> けいれんしていました   (mechanical, unchecked)
+  heavy_bleeding  血がたくさん出ています -> 血がたくさん出ていました (mechanical, unchecked)
+  choking         のどに何か詰まっています -> のどに何か詰まっていました (mechanical, unchecked)
+
+**Why the human and not the SLM:** a model-detected aspect can fail in the DANGEROUS direction -
+reporting "stopped" during a live seizure under-prepares the crew. A human answering a direct
+question cannot. Same principle as the awake/breathing/circulation buttons: when the answer
+matters and we cannot know it, ASK - do not infer. Costs one extra tap, and only when one of
+these 4 actually fires.
+
+This is the general modifier design applied narrowly to the cases that need it. If it ever needs
+generalizing, the shape is already there (`forms` on the entry, resolved at render time).
+
+STILL NEEDED: founder check on the three "mechanical" variants above.
 
 ## Ontology wording - open questions, recorded not fixed (2026-08-12)
 
