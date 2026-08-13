@@ -117,6 +117,38 @@ attacking the 3-6 minute on-scene delay the FDMA measured.
 in Japanese. That is inbound, we are outbound-only, and it is genuinely life-saving. Belongs in
 the honest-limitations section; a judge who knows this field will ask.
 
+## Memory footprint - FUTURE enhancement, explicitly not for the competition (2026-08-13)
+
+Raised by the founder. Currently ~3 GB resident (Qwen2.5-3B, OpenVINO INT8) plus Whisper small.
+Explicitly parked as "later" - it does not block the competition.
+
+**First, a correction that reframes the problem.** The founder's intuition was "Claude/ChatGPT are
+huge yet run smoothly on my device, so there must be a trick". They do NOT run on the device at
+all. They run in datacentres on racks of GPUs; the phone or browser is a thin client sending text
+over a network. That is why they feel light - none of the work happens locally.
+
+Kyūkyū-Bridge runs the model ON the device, offline, with no network. That is a strictly harder
+engineering problem AND the entire product thesis: an emergency tool that needs a working
+internet connection is not an emergency tool. So the comparison is not us-versus-them; they are
+solving a different problem. Do not adopt their architecture - it would destroy the offline
+guarantee.
+
+**Real levers, cheapest and lowest-risk first:**
+1. **INT4 instead of INT8 weight quantization.** Same model, same architecture, same code path -
+   roughly halves memory (~3 GB -> ~1.5-1.8 GB). One flag in convert_slm.py
+   (OVWeightQuantizationConfig(bits=4)). Costs some accuracy, so it MUST be re-measured on
+   benchmark/eval_slm.py before adopting. This is the obvious first experiment.
+2. **A smaller model with task-specific fine-tuning.** A 0.5B model fine-tuned on THIS narrow
+   classification task can beat a general-purpose 3B at it. Needs training data - we have ~120
+   labelled cases across the three test sets, which is thin but a starting point.
+3. **Knowledge distillation** - train a small model on the 3B's outputs. Bigger project.
+4. **Pruning / sparsity.** Least mature, most effort, skip unless the above are exhausted.
+
+**Ordering:** try INT4 first and measure. It is a one-line change with a measurable answer, and
+if accuracy holds it halves the footprint for essentially no work. Everything else re-opens the
+accuracy question that Stage A + Stage B already settled (see below), so it needs the eval
+harness pointed at it before anything ships.
+
 ## Stage A stays an LLM - embedding retrieval REJECTED (2026-08-12)
 
 Considered replacing Stage A (candidate generation) with embedding retrieval: ~70x smaller

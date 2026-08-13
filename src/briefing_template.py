@@ -47,7 +47,37 @@ TEMPLATE_CALLER_NAME = "私の名前は{name}です。"
 # verified/unverified visual separation is a UI concern, handled on screen, not in speech.
 TEMPLATE_CALLER_WORDS = "あと、{caller_description}。"
 
-TEMPLATE_TAIL = "日本語が話せません。"
+# Delivered EARLY (second, right after the address), not last. The caller will go quiet for
+# up to a minute while working the app, and a dispatcher hearing silence assumes a broken line.
+# Said up front, every later pause reads as "they're using the app" instead of "is anyone there?".
+# It also explains WHY replies are slow, which "using a translation app" did not.
+# TODO(founder): verify this reads naturally - written from pattern, not verified.
+TEMPLATE_TAIL = "日本語が話せません。アプリで話すので、返事に時間がかかります。"
+
+
+def render_location_pieces(address: dict = None) -> list[dict]:
+    """The opening line split the way a person actually gives an address on the phone.
+
+    Measured 2026-08-12: as one sentence this is EIGHT SECONDS of continuous synthesised
+    speech - prefecture, ward, block, building and room with no pauses. No dispatcher can
+    write that down in one pass, and asking for a repeat is the one thing our caller cannot
+    understand. Split, each piece is independently replayable, so a repeat request only
+    costs the piece it applies to.
+
+    address=None means the caller is NOT at the registered address.
+    """
+    if address is None:
+        return [
+            {"label": "Ambulance", "jp": TEMPLATE_HEAD},
+            {"label": "Not at home", "jp": TEMPLATE_LOCATION_UNKNOWN},
+        ]
+    area = f"{address['prefecture']}{address['city_ward']}{address['street_block']}"
+    building = f"{address['building']} {address['room']}号室です。"
+    return [
+        {"label": "Ambulance", "jp": TEMPLATE_HEAD},
+        {"label": "Area", "jp": f"場所は{area}です。"},
+        {"label": "Building & room", "jp": building},
+    ]
 
 
 def _format_statement(term: str, frame: str) -> str:
@@ -81,6 +111,10 @@ def render_briefing_chunks(
     )
     chunks.append({"label": "Emergency & location", "jp": TEMPLATE_HEAD + location})
 
+    # SECOND, deliberately - see TEMPLATE_TAIL. Sets the dispatcher's expectations before the
+    # long pauses start, rather than explaining them after everything else is done.
+    chunks.append({"label": "Why replies are slow", "jp": TEMPLATE_TAIL})
+
     if age is not None and sex_ja is not None:
         jp = (
             TEMPLATE_PATIENT_NAMED.format(name=name, age=age, sex=sex_ja) if name
@@ -108,7 +142,6 @@ def render_briefing_chunks(
     if caller_name:
         chunks.append({"label": "Your name", "jp": TEMPLATE_CALLER_NAME.format(name=caller_name)})
 
-    chunks.append({"label": "Caller can't speak Japanese", "jp": TEMPLATE_TAIL})
     return chunks
 
 

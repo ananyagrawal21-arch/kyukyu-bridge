@@ -27,6 +27,7 @@ if os.path.isdir(_MODEL_DIR):
 from pipeline import (  # noqa: E402
     build_briefing_chunks, slm_matches, _statement_from, _format_address, _humanize,
 )
+from briefing_template import render_location_pieces  # noqa: E402
 from slm_classify import SLM_DISCARD  # noqa: E402
 from ontology import load_ontology  # noqa: E402
 from caller_profile import load_profile  # noqa: E402
@@ -95,12 +96,59 @@ def transcribe(file_like, language: str):
 
 
 def go(phase):
+    st.session_state.setdefault("history", []).append(st.session_state.phase)
     st.session_state.phase = phase
     st.rerun()
 
 
+def back():
+    hist = st.session_state.get("history", [])
+    if hist:
+        st.session_state.phase = hist.pop()
+        st.rerun()
+
+
+# Screens that get the generic "previous step" button. Deliberately NOT every screen:
+#   idle / dispatch_now - nothing useful behind them ("Start over" covers it).
+#   confirm_transcript  - already has "Say it again", which is the same move but clearer.
+#                         A generic back would also land on `recording` with the clip still
+#                         loaded, which re-transcribes immediately and looks like nothing
+#                         happened.
+#   briefing            - its own "Back" walks the chunks; two different Backs on one screen
+#                         is exactly the confusion we are trying to remove.
+BACKABLE = {"recording", "confirm_symptoms", "ask_awake", "ask_breathing",
+            "ask_circulation", "ask_patient"}
+
+
+# The flow in order. A panicking caller needs to see the end coming - an unbounded sequence of
+# screens feels endless, which is its own source of panic. Breathing and circulation are skipped
+# when the caller already mentioned them, so the total is computed per-call rather than fixed.
+FLOW_STEPS = [
+    "dispatch_now", "recording", "confirm_transcript", "confirm_symptoms",
+    "ask_awake", "ask_breathing", "ask_circulation", "ask_patient", "briefing",
+]
+
+
+def show_progress(phase):
+    skip = set()
+    if not st.session_state.get("need_breathing", True):
+        skip.add("ask_breathing")
+    if not st.session_state.get("need_circulation", True):
+        skip.add("ask_circulation")
+    steps = [s for s in FLOW_STEPS if s not in skip]
+    if phase not in steps:
+        return
+    i, total = steps.index(phase) + 1, len(steps)
+    st.markdown("<br>", unsafe_allow_html=True)
+    if phase in BACKABLE and st.session_state.get("history"):
+        if st.button("← Previous step", key=f"back_{phase}"):
+            back()
+    st.progress(i / total)
+    st.markdown(f'<div class="caption">Step {i} of {total}</div>', unsafe_allow_html=True)
+
+
 def reset():
-    for k in ("phase", "transcript", "entries", "extras", "need_breathing",
+    for k in ("phase", "transcript", "entries", "extras", "need_breathing", "history",
               "need_circulation", "at_home", "patient_ok", "chunks", "chunk_i", "stt_language"):
         st.session_state.pop(k, None)
     # The per-symptom aspect radios are keyed by symptom id, so they are not in the list above.
@@ -151,30 +199,36 @@ elif phase == "dispatch_now":
     if "at_home" not in st.session_state:
         st.session_state.at_home = True
 
-    first = build_briefing_chunks(
-        [], [], profile, ontology, False, st.session_state.at_home
-    )[0]
+    st.markdown('<div class="status">▶ Play these to the dispatcher NOW</div>', unsafe_allow_html=True)
 
-    st.markdown('<div class="status">▶ Play this to the dispatcher NOW</div>', unsafe_allow_html=True)
-    st.markdown('<div class="caption">Ambulance + location — this is what sends help</div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="briefing-jp">{first["jp"]}</div>', unsafe_allow_html=True)
+    # A radio, not a toggle. The old toggle showed the CURRENT state on its face
+    # ("🏠 At home"), so it was unreadable whether that described the situation or was the
+    # action you were about to take. A radio shows both options with one marked.
+    where = st.radio(
+        "Where is the emergency?",
+        ["At this address", "Somewhere else"],
+        index=0 if st.session_state.at_home else 1,
+        horizontal=True,
+    )
+    st.session_state.at_home = where == "At this address"
 
-    audio = speak(first["jp"])
-    if audio:
-        st.audio(audio, format="audio/wav")
-    else:
-        st.markdown('<div class="caption">(no Japanese voice available on this machine)</div>', unsafe_allow_html=True)
+    # Split into short pieces so the dispatcher can write each down, and so a repeat request
+    # only costs one piece. See render_location_pieces for the measurement behind this.
+    pieces = render_location_pieces(profile["address"] if st.session_state.at_home else None)
+    for n, piece in enumerate(pieces, 1):
+        st.markdown(
+            f'<div class="caption" style="text-align:left;margin-bottom:0.2rem">{n}. {piece["label"]}</div>',
+            unsafe_allow_html=True,
+        )
+        st.markdown(f'<div class="briefing-jp">{piece["jp"]}</div>', unsafe_allow_html=True)
+        audio = speak(piece["jp"])
+        if audio:
+            st.audio(audio, format="audio/wav")
+        else:
+            st.markdown('<div class="caption">(no Japanese voice on this machine)</div>', unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
-    c1, c2 = st.columns(2)
-    # Toggling re-renders with the not-at-home line instead of a possibly-wrong address.
-    if c1.button(
-        "🏠 At home" if st.session_state.at_home else "📍 Not at home",
-        use_container_width=True,
-    ):
-        st.session_state.at_home = not st.session_state.at_home
-        st.rerun()
-    if c2.button("Next: symptoms →", use_container_width=True):
+    if st.button("Next: symptoms →", use_container_width=True):
         go("recording")
 
 # ---- 2. Record ----
@@ -235,9 +289,14 @@ elif phase == "confirm_symptoms":
             # the human tells us here. Same principle as the awake/breathing buttons.
             # Data-driven: any entry with a "finished" form gets this control, no hard-coded list.
             if e.get("forms", {}).get("finished"):
-                st.radio(
-                    "aspect", ["Happening now", "Has stopped"],
-                    key=f"aspect_{e['id']}", horizontal=True, label_visibility="collapsed",
+                # Indented and explicitly named, because a bare pair of radios sitting under a
+                # list of symptoms reads as ONE setting for all of them. It is per-symptom -
+                # you can have vomiting ongoing while the seizure has already stopped.
+                pad, body = st.columns([1, 9])
+                body.radio(
+                    f"Is the {_humanize(e['id'])} still happening?",
+                    ["Happening now", "Has stopped"],
+                    key=f"aspect_{e['id']}", horizontal=True,
                 )
     else:
         st.markdown('<div class="caption">(nothing yet — add below if we missed something)</div>', unsafe_allow_html=True)
@@ -402,3 +461,7 @@ elif phase == "briefing":
         )
     if not st.session_state.patient_ok:
         st.markdown('<div class="caption">(patient details left out — the dispatcher will ask)</div>', unsafe_allow_html=True)
+
+# Rendered last so it sits at the bottom of every screen in the flow (returns silently on
+# `idle`, which is not part of the sequence).
+show_progress(phase)
