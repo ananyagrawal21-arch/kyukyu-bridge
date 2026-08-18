@@ -50,9 +50,68 @@ TEMPLATE_CALLER_WORDS = "あと、{caller_description}。"
 # Delivered EARLY (second, right after the address), not last. The caller will go quiet for
 # up to a minute while working the app, and a dispatcher hearing silence assumes a broken line.
 # Said up front, every later pause reads as "they're using the app" instead of "is anyone there?".
-# It also explains WHY replies are slow, which "using a translation app" did not.
-# TODO(founder): verify this reads naturally - written from pattern, not verified.
-TEMPLATE_TAIL = "日本語が話せません。アプリで話すので、返事に時間がかかります。"
+#
+# WORDED BY THE FOUNDER (fluent, resident in Japan) 2026-08-14. Note it leads with わからない
+# (cannot UNDERSTAND), not 話せません (cannot speak) - the earlier draft said only that replies
+# were slow, which implies the caller follows the questions and is merely taking time. A
+# dispatcher who believes that keeps asking and keeps waiting for answers that will never come.
+TEMPLATE_TAIL = "すみません。日本語がわからないので、アプリを使って話しています。少々お待ちください。"
+
+
+# ---- ON-SITE HANDOFF ----
+# Shown to the ambulance crew when they ARRIVE, held up on the screen. Not spoken - read.
+#
+# POSITIONING (from OPEN_DECISIONS): do NOT compete with 救急ボイストラ on translation. That is
+# deployed to 96% of fire departments already. Our unique value on scene is the PREPARED,
+# VERIFIED PROFILE - age, conditions, and what was actually confirmed during the call, in
+# correct Japanese. VoiceTra structurally cannot have that; it can only translate what a
+# panicking family member says in the moment.
+#
+# TODO(founder): verify these four labels read naturally to a crew.
+# NOT the same as TEMPLATE_TAIL. That one explains why answers are slow ON THE PHONE; the crew
+# is standing in the room, so "replies take time" is meaningless to them. They only need the
+# one fact that changes how they talk to this person.
+HANDOFF_CALLER = "日本語が話せません。"
+
+# JAPANESE ONLY, no English gloss. This screen has exactly ONE audience - the arriving crew -
+# and they read Japanese. The caller is not reading it, they are holding it up, and they already
+# know what it says because they answered every question that built it. A per-row English label
+# served nobody and forced a crew member to scan past a foreign word on every line.
+HANDOFF_LABELS = {
+    "patient": "患者",
+    "conditions": "持病",
+    "symptoms": "症状",
+    "caller": "通報者",
+}
+
+
+def render_handoff(
+    *,
+    statements: list[dict],
+    age: int = None,
+    sex_ja: str = None,
+    name: str = None,
+    conditions_ja: list[str] = None,
+) -> list[dict]:
+    """Rows for the crew-facing summary. Same rule as everywhere else: nothing unconfirmed."""
+    rows = []
+    if age is not None and sex_ja is not None:
+        who = f"{age}歳の{sex_ja}"
+        if name:
+            who = f"{name}（{who}）"
+        rows.append({"key": "patient", "jp": who})
+    if conditions_ja is not None:
+        rows.append({
+            "key": "conditions",
+            "jp": "、".join(conditions_ja) if conditions_ja else "なし",
+        })
+    if statements:
+        rows.append({
+            "key": "symptoms",
+            "jp": "。".join(_format_statement(s["term"], s["frame"]) for s in statements) + "。",
+        })
+    rows.append({"key": "caller", "jp": HANDOFF_CALLER})
+    return rows
 
 
 def render_location_pieces(address: dict = None) -> list[dict]:

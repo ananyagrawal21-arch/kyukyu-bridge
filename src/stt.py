@@ -27,7 +27,6 @@ ROBUST_GENERATE_KWARGS = {
     "compression_ratio_threshold": 1.35,
     "logprob_threshold": -1.0,
     "no_speech_threshold": 0.6,
-    "task": "transcribe",  # never translate - we want the caller's own words verbatim
 }
 
 _asr_cache = {}
@@ -62,12 +61,28 @@ def prepare_audio(audio_array, sampling_rate: int):
     return wav.numpy()
 
 
-def transcribe(source, language: str = None, model_name: str = DEFAULT_MODEL) -> str:
+def transcribe(source, language: str = None, model_name: str = DEFAULT_MODEL,
+               task: str = "transcribe") -> str:
     """Transcribe a path or file-like object.
 
     `language` should be the caller's language code from their profile (e.g. "en", "vi",
     "zh"). Passing it removes a whole failure class - Whisper guessing wrong on short or
     accented speech. None falls back to auto-detect.
+
+    `task`:
+      "transcribe" - the caller's own words, in their own language. What they SEE and confirm.
+      "translate"  - Whisper's built-in translation to English. What the CLASSIFIER reads.
+
+    WHY BOTH (measured 2026-08-14). The classifier's prompt, few-shot examples and all 29
+    trigger phrases are English. Handing it Chinese produced [] - every symptom silently
+    dropped. Korean produced a FABRICATED `no_pulse`, the term that maps to immediate cardiac
+    arrest. Translating first fixed both: each returned the correct collapsed + chest_pain.
+
+    CAVEAT, and it is a real one: translate mode LOSES NEGATION. Both test clips said "there is
+    no response" and both came back as the opposite. That inversion never reached the briefing
+    only because consciousness is in SLM_DISCARD and comes from a forced button instead - but
+    the same corruption could hit a symptom that is not excluded. The interpretation
+    confirmation screen is the remaining backstop.
     """
     import soundfile as sf
 
@@ -75,6 +90,7 @@ def transcribe(source, language: str = None, model_name: str = DEFAULT_MODEL) ->
     audio = prepare_audio(audio, sr)
 
     kwargs = dict(ROBUST_GENERATE_KWARGS)
+    kwargs["task"] = task
     if language:
         kwargs["language"] = language
 

@@ -68,9 +68,10 @@ decision here actually fits.
         ↓
         ↓   everything below happens while it is already en route
         ↓
-  🎤 speech (any language)
-        ↓  Whisper small, language forced from profile (override available)
-  📝 English transcript
+  🎤 speech, in the caller's own language
+        ↓  Whisper small, language taken from the profile (override available)
+  📝 transcript in their language  →  shown for confirmation
+     + English translation (Whisper's translate task) → fed to the classifier
         ↓  ← caller confirms: "is this what you said?"
   🧠 SLM classification against the 29-entry ontology
      Stage A  candidate generation (high recall)
@@ -115,17 +116,21 @@ rather than asserting a possibly-wrong address. A wrong address is worse than no
 
 ## Measured results
 
-**Classification** — 40-case labelled test set (`benchmark/eval_slm.py`):
+**Classification** — 52-case labelled test set (`benchmark/eval_slm.py`), and the same cases
+perturbed to simulate panicked speech (`benchmark/eval_disfluent.py`):
 
-| | |
-|---|---|
-| Exact-match | 90% |
-| Precision | **1.00** — zero fabrications |
-| Recall | 0.89 |
-| F1 | 0.94 |
+| | Clean | Panicked |
+|---|---|---|
+| Exact-match | 96% | 96% |
+| Precision | **1.00** | 0.96 |
+| Recall | 0.96 | 1.00 |
+| F1 | 0.98 | 0.98 |
+| Fabrications | **0** | 2 |
 
-Precision matters most: the system never invented a symptom. All remaining errors are
-under-reporting, which is the safe direction.
+Disfluency does not degrade accuracy overall — exact-match and F1 are unchanged. It does shift
+the *kind* of error: under noise the model over-includes, so recall rises and precision falls.
+Over-reporting is the safer direction, but note that **zero fabrications is a clean-speech,
+English result**, not a universal one.
 
 **Intel / OpenVINO** — Whisper `small`, 6.5s clip, Intel CPU:
 
@@ -147,11 +152,20 @@ explained — recorded honestly rather than omitted. SLM numbers on Intel hardwa
   The claim is "the opening 60 seconds", not "the conversation".
 - **Anything outside the 29 ontology entries is not conveyed.** This is deliberate: the
   alternative is unverified machine-generated Japanese on a live emergency call.
-- **Four terms assume ongoing aspect** (vomiting, seizure, bleeding, choking). If a seizure has
-  already stopped, we still say けいれんしています. The default errs toward over-preparing the
-  crew — see `OPEN_DECISIONS.md`.
+- **Four terms are aspect-ambiguous** (vomiting, seizure, bleeding, choking) — a seizure that has
+  stopped reads differently in Japanese from one still happening. The caller chooses on the
+  confirmation screen rather than the model guessing, because a wrong guess could under-prepare
+  the crew.
 - **Whisper accuracy varies a lot by language**, and is weakest for some whose speakers are most
-  vulnerable. No claim of uniform coverage.
+  vulnerable. No claim of uniform coverage. Two of the nine offered languages (Chinese, Korean)
+  have been run end to end; the other seven have not.
+- **Translation loses negation.** Non-English speech is translated to English before
+  classification, and in testing "there is no response" came back as its opposite in both
+  languages. Consciousness is unaffected — it comes from a forced button, never the model — but
+  the risk is real for other symptoms, and the confirmation screen is the only backstop.
+- **The interface is in English**, including both confirmation screens. A caller who reads
+  neither Japanese nor English can still be guided by the flow, but cannot fully verify what the
+  app understood — which weakens the safety loop for exactly the people who need it most.
 - **Panicked, disfluent speech is untested.** Accent is tested; panic is not.
 - **Outbound only.** After dispatching, Japanese dispatchers give 口頭指導 — talking the caller
   through CPR and positioning, in Japanese. That is genuinely life-saving and we don't handle it.
@@ -168,9 +182,15 @@ Requires **Python 3.12** (OpenVINO has no wheels for 3.13+).
 ```bash
 python3.12 -m venv .venv && source .venv/bin/activate    # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-cp data/profile.example.json data/profile.json           # then edit with real details
+python tools/setup_profile.py                            # pre-registration: address, patient, you
 streamlit run app.py
 ```
+
+`setup_profile.py` also renders the Japanese audio for your address and patient details. **The
+app never synthesises speech at runtime** — every sentence it can say is pre-rendered into
+`data/audio/`, which is why it doesn't need a Japanese voice installed on the machine running it.
+That works only because the ontology is a closed set. Rebuild with `python tools/build_audio.py`
+after changing the ontology; it needs a machine with a Japanese voice, and the output is portable.
 
 Optional but strongly recommended — convert the SLM to OpenVINO INT8 once:
 
@@ -187,7 +207,7 @@ converting once on a larger machine and copying it across is a valid route.
 
 ```bash
 SLM_MODEL="Qwen/Qwen2.5-3B-Instruct" python benchmark/eval_slm.py
-python benchmark/bench_whisper.py --audio data/test_recording1_converted.wav
+python benchmark/bench_whisper.py --audio data/bench_clip.wav
 ```
 
 ## Layout

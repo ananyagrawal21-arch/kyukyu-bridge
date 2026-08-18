@@ -33,7 +33,7 @@
     {
       "id": "conscious",
       "trigger_phrases_en": ["conscious", "awake", "responsive", "responding", "talking", "still conscious"],
-      "japanese_term": "意識があります",
+      "japanese_term": "意識はあります",
       "frame": "observed",
       "verified": true,
       "critical": true

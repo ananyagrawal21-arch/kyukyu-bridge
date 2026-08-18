@@ -10,6 +10,12 @@ models/
 # It is deliberately local-only - data/profile.example.json is the committed template.
 data/profile.json
 
+# PRIVACY: the same details, SPOKEN ALOUD. Committing these would leak a real home address as
+# audio - exactly what excluding profile.json prevents for text. Rebuild per install with
+# `python tools/build_audio.py`. The shared audio in data/audio/ IS committed: it is the same
+# for every user, and shipping it is what frees the app from needing a Japanese voice installed.
+data/audio/profile/
+
 # LICENSING: L2-ARCTIC accent samples are gated access under CC BY-NC 4.0.
 # Redistributing them here would breach that license. Downloaded separately per-machine.
 data/accent_test/

@@ -1,7 +1,7 @@
 import argparse
 
 from ontology import load_ontology, match_all
-from briefing_template import render_briefing, render_briefing_chunks
+from briefing_template import render_briefing, render_briefing_chunks, render_handoff
 from caller_profile import load_profile
 
 
@@ -54,6 +54,15 @@ def build_briefing(*args) -> str:
 def build_briefing_chunks(*args) -> list:
     """The briefing as ordered, labelled chunks for paced, one-at-a-time delivery."""
     return render_briefing_chunks(**_briefing_kwargs(*args))
+
+
+def build_handoff(*args) -> list:
+    """Crew-facing summary rows, from the same confirmed data as the briefing.
+    Address and the location state are irrelevant here - the crew has already arrived."""
+    kw = _briefing_kwargs(*args)
+    for drop in ("address", "caller_name", "caller_description"):
+        kw.pop(drop, None)
+    return render_handoff(**kw)
 
 
 def _format_address(address: dict) -> str:

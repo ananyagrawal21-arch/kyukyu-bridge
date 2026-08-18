@@ -1,24 +1,66 @@
-"""Offline Japanese text-to-speech.
+"""Offline Japanese speech.
 
 WHY THIS MATTERS: the caller does not read Japanese. The briefing on screen is text they
 cannot pronounce, so the app has to SAY it for them - they play it to the dispatcher.
-That makes TTS part of the core delivery path, not decoration.
+That makes this part of the core delivery path, not decoration.
 
-Pluggable backends, tried in order. All are OFFLINE (no network):
-  1. macOS `say`      - built-in Japanese voices (Kyoko etc). Dev machine.
-  2. pyttsx3          - wraps the OS voice engine (SAPI5 on Windows, NSSS on macOS),
-                        so the same code works on the Intel/Windows demo machine,
-                        PROVIDED a Japanese voice is installed in the OS.
-Returns WAV bytes so the UI can play it; None if no backend is available.
+TWO LAYERS, and the first is the important one:
+
+1. PRE-RENDERED AUDIO (data/audio/) - the real answer. Every sentence this app can speak is
+   known ahead of time: the fixed lines are constants, the 29 ontology terms are a closed set,
+   and the profile-derived lines (address, age, conditions) are settled when the profile is
+   written, not during a call. So we render every sentence ONCE with the best voice available
+   anywhere, ship the WAVs, and at runtime just play files.
+
+   This is only possible BECAUSE the ontology is closed - the same property the safety
+   architecture rests on. It buys: identical audio on every machine, no OS voice dependency
+   (Windows SAPI5 needs a Japanese language pack that may simply not be there), no synthesis
+   during an emergency, and no extra model in memory.
+
+2. LIVE SYNTHESIS - fallback only, and what the build script itself uses.
+   macOS `say`, then pyttsx3 (SAPI5 on Windows), both offline.
+
+Multi-sentence text is split on 。 and the pieces concatenated, so a briefing chunk that
+combines several symptoms never needs its own pre-rendered file - only the individual
+sentences do. Otherwise every possible COMBINATION of symptoms would need rendering.
 """
+import hashlib
+import io
 import os
 import platform
+import re
 import shutil
 import subprocess
 import tempfile
+import wave
+from pathlib import Path
 
-# Preferred macOS Japanese voice; any ja_JP voice works.
-_MAC_JA_VOICE = "Kyoko"
+# Two directories, and the split is a PRIVACY boundary, not organisation.
+#   audio/          fixed lines + the 29 ontology terms. Identical for every user, committed.
+#   audio/profile/  the address, name, age, conditions - SPOKEN ALOUD. Committing these would
+#                   leak a real home address as audio, exactly what gitignoring profile.json
+#                   prevents for text. Gitignored, and rebuilt per install.
+AUDIO_DIR = Path(__file__).resolve().parent.parent / "data" / "audio"
+PROFILE_AUDIO_DIR = AUDIO_DIR / "profile"
+
+# Preferred macOS Japanese voice, best first - the first one actually installed wins.
+# "Kyoko (Enhanced)" is a downloaded higher-quality voice with real intonation; plain "Kyoko"
+# is the old built-in and sounds flat and robotic, which makes a dispatcher work harder to
+# follow an address read aloud. Enhanced/Premium voices are NOT present by default - they come
+# from System Settings > (search "voice") > Manage Voices - so we fall back gracefully.
+_MAC_JA_VOICES = ("Kyoko (Premium)", "Kyoko (Enhanced)", "Kyoko")
+
+
+def _mac_voice() -> str:
+    """First preferred voice that is actually installed on this machine."""
+    try:
+        listed = subprocess.run(["say", "-v", "?"], capture_output=True, text=True).stdout
+    except (OSError, subprocess.SubprocessError):
+        return _MAC_JA_VOICES[-1]
+    for name in _MAC_JA_VOICES:
+        if name in listed:
+            return name
+    return _MAC_JA_VOICES[-1]
 
 
 def _mac_say(text: str):
@@ -28,7 +70,7 @@ def _mac_say(text: str):
         path = f.name
     try:
         subprocess.run(
-            ["say", "-v", _MAC_JA_VOICE, "-o", path,
+            ["say", "-v", _mac_voice(), "-o", path,
              "--data-format=LEI16@22050", text],
             check=True, capture_output=True,
         )
@@ -69,8 +111,8 @@ def _pyttsx3(text: str):
 BACKENDS = (_mac_say, _pyttsx3)
 
 
-def speak_japanese(text: str):
-    """Render Japanese text to WAV bytes offline, or None if no backend works."""
+def synthesize(text: str):
+    """Live TTS. Used by tools/build_audio.py and as the runtime fallback."""
     if not text.strip():
         return None
     for backend in BACKENDS:
@@ -80,11 +122,77 @@ def speak_japanese(text: str):
     return None
 
 
+def split_sentences(text: str) -> list:
+    """Atomic units for caching. Keeps the 。 so each piece is a complete spoken sentence."""
+    return [s + "。" for s in re.split(r"。", text) if s.strip()]
+
+
+def cache_key(sentence: str) -> str:
+    """Filename for one sentence. Content-addressed, so changing a term's wording simply
+    misses the cache and gets rebuilt - stale audio can never silently outlive its text."""
+    return hashlib.sha1(sentence.encode("utf-8")).hexdigest()[:16]
+
+
+def cache_path(sentence: str, profile_specific: bool = False) -> Path:
+    """Where this sentence's WAV lives. Profile-derived audio goes in the gitignored subfolder."""
+    base = PROFILE_AUDIO_DIR if profile_specific else AUDIO_DIR
+    return base / f"{cache_key(sentence)}.wav"
+
+
+def _find(sentence: str):
+    """Look in both directories - at playback we do not know or care which kind it was."""
+    for base in (AUDIO_DIR, PROFILE_AUDIO_DIR):
+        p = base / f"{cache_key(sentence)}.wav"
+        if p.exists():
+            return p
+    return None
+
+
+def _concat_wavs(paths: list):
+    """Join pre-rendered sentences into one clip. All were produced by the same build run,
+    so the formats match by construction."""
+    out = io.BytesIO()
+    writer = None
+    try:
+        for p in paths:
+            with wave.open(str(p), "rb") as r:
+                if writer is None:
+                    writer = wave.open(out, "wb")
+                    writer.setparams(r.getparams())
+                writer.writeframes(r.readframes(r.getnframes()))
+    except (wave.Error, OSError):
+        return None
+    finally:
+        if writer is not None:
+            writer.close()
+    return out.getvalue() or None
+
+
+def from_cache(text: str):
+    """Pre-rendered audio for this text, or None if any sentence is missing."""
+    pieces = split_sentences(text)
+    if not pieces:
+        return None
+    paths = [_find(p) for p in pieces]
+    if not all(paths):
+        return None
+    return _concat_wavs(paths)
+
+
+def speak_japanese(text: str):
+    """WAV bytes for Japanese text: pre-rendered if available, else synthesised live."""
+    if not text.strip():
+        return None
+    return from_cache(text) or synthesize(text)
+
+
 def available_backend() -> str:
-    """Which backend would be used (for diagnostics)."""
+    """Which path would be used (for diagnostics)."""
+    if from_cache("救急です。"):
+        return "pre-rendered audio (data/audio/)"
     for backend in BACKENDS:
         if backend("テスト"):
-            return backend.__name__
+            return f"live synthesis: {backend.__name__}"
     return "none"
 
 

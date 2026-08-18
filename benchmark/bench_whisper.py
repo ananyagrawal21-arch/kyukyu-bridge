@@ -9,7 +9,7 @@ Develop/test on any machine for correctness; run on an Intel CPU for the real
 numbers to present. Speed on non-Intel hardware is NOT representative.
 
 Usage:
-    python bench_whisper.py --audio ../data/test_recording1_converted.wav --model openai/whisper-small
+    python bench_whisper.py --audio ../data/bench_clip.wav --model openai/whisper-small
 """
 import argparse
 import re
@@ -94,7 +94,10 @@ def main():
     # an IDE Run/Debug button (which passes no arguments), which looks like a bug in the code.
     # Defaults to a bundled clip, resolved relative to THIS file so the working directory
     # does not matter.
-    default_audio = str(Path(__file__).resolve().parent.parent / "data" / "test_recording1_converted.wav")
+    # A SYNTHESISED clip, deliberately. The earlier default was a real human recording, which
+    # meant a personal voice sample lived in the repo for no reason - this measures latency, and
+    # latency depends on clip length, not on who is speaking.
+    default_audio = str(Path(__file__).resolve().parent.parent / "data" / "bench_clip.wav")
     p.add_argument("--audio", default=default_audio)
     # Default matches the actual product model (src/stt.py DEFAULT_MODEL) as of 2026-08-04 -
     # keep these in sync, otherwise the benchmark numbers describe a model we don't ship.

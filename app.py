@@ -27,7 +27,8 @@ if os.path.isdir(_MODEL_DIR):
 from pipeline import (  # noqa: E402
     build_briefing_chunks, slm_matches, _statement_from, _format_address, _humanize,
 )
-from briefing_template import render_location_pieces  # noqa: E402
+from briefing_template import render_location_pieces, HANDOFF_LABELS  # noqa: E402
+from pipeline import build_handoff  # noqa: E402
 from slm_classify import SLM_DISCARD  # noqa: E402
 from ontology import load_ontology  # noqa: E402
 from caller_profile import load_profile  # noqa: E402
@@ -89,10 +90,18 @@ LANGUAGE_OPTIONS = {
 }
 
 
-def transcribe(file_like, language: str):
-    """Delegates to src/stt.py so the app and CLI share one implementation."""
+def transcribe(file_like, language: str, task: str = "transcribe"):
+    """Delegates to src/stt.py so the app and CLI share one implementation.
+
+    Reads the clip into memory first: for a non-English caller we run Whisper TWICE over the
+    same audio, and a file-like object is exhausted after the first read.
+    """
+    import io
     from stt import transcribe as _transcribe
-    return _transcribe(file_like, language=language)
+
+    data = file_like.read() if hasattr(file_like, "read") else None
+    src = io.BytesIO(data) if data is not None else file_like
+    return _transcribe(src, language=language, task=task)
 
 
 def go(phase):
@@ -104,6 +113,12 @@ def go(phase):
 def back():
     hist = st.session_state.get("history", [])
     if hist:
+        # Leaving the briefing means an earlier answer may change, so the composed chunks are
+        # stale. Drop them; the briefing phase rebuilds on entry. Without this, going back to
+        # fix "is it this person?" would return you to the OLD briefing.
+        if st.session_state.phase == "briefing":
+            st.session_state.pop("chunks", None)
+            st.session_state.pop("chunk_i", None)
         st.session_state.phase = hist.pop()
         st.rerun()
 
@@ -114,10 +129,11 @@ def back():
 #                         A generic back would also land on `recording` with the clip still
 #                         loaded, which re-transcribes immediately and looks like nothing
 #                         happened.
-#   briefing            - its own "Back" walks the chunks; two different Backs on one screen
-#                         is exactly the confusion we are trying to remove.
+# `briefing` DOES get one: it has its own back, but that only walks the chunks, so from the
+# final screen there was no way back to an earlier question at all. The two are disambiguated
+# by name - "Previous part" moves within the briefing, "Previous step" leaves it.
 BACKABLE = {"recording", "confirm_symptoms", "ask_awake", "ask_breathing",
-            "ask_circulation", "ask_patient"}
+            "ask_circulation", "ask_patient", "briefing"}
 
 
 # The flow in order. A panicking caller needs to see the end coming - an unbounded sequence of
@@ -149,7 +165,8 @@ def show_progress(phase):
 
 def reset():
     for k in ("phase", "transcript", "entries", "extras", "need_breathing", "history",
-              "need_circulation", "at_home", "patient_ok", "chunks", "chunk_i", "stt_language"):
+              "need_circulation", "at_home", "patient_ok", "chunks", "chunk_i", "stt_language",
+              "transcript_en"):
         st.session_state.pop(k, None)
     # The per-symptom aspect radios are keyed by symptom id, so they are not in the list above.
     # Left behind, a previous call's "Has stopped" would silently pre-select on the next one.
@@ -252,8 +269,22 @@ elif phase == "recording":
     uploaded = st.file_uploader("upload", type=["wav"], label_visibility="collapsed")
     clip = recorded or uploaded
     if clip is not None:
+        lang = st.session_state.stt_language
         with st.spinner("Understanding what you said…"):
-            st.session_state.transcript = transcribe(clip, st.session_state.stt_language)
+            data = clip.read()
+            import io as _io
+            # TWO passes for a non-English caller, and they serve different readers:
+            #   transcript    - the caller's OWN language. This is what they read and confirm;
+            #                   showing them English they cannot read would break the safety loop.
+            #   transcript_en - Whisper's English translation, fed to the classifier, whose
+            #                   prompt and all 29 trigger phrases are English.
+            # Measured 2026-08-14: classifying Chinese directly returned [] (every symptom
+            # dropped) and Korean fabricated `no_pulse`. Translating first fixed both.
+            st.session_state.transcript = transcribe(_io.BytesIO(data), lang)
+            st.session_state.transcript_en = (
+                st.session_state.transcript if lang == "en"
+                else transcribe(_io.BytesIO(data), lang, task="translate")
+            )
         go("confirm_transcript")
     if st.button("← Start over"):
         reset()
@@ -265,7 +296,8 @@ elif phase == "confirm_transcript":
     c1, c2 = st.columns(2)
     if c1.button("✓ Yes, correct", use_container_width=True):
         with st.spinner("Understanding the emergency… (a few seconds)"):
-            m = slm_matches(st.session_state.transcript, ontology)
+            # The ENGLISH text - see the two-pass comment in the recording phase.
+            m = slm_matches(st.session_state.transcript_en, ontology)
             st.session_state.entries = m["symptoms"] + m["events"] + m["consciousness"]
         go("confirm_symptoms")
     if c2.button("✗ Say it again", use_container_width=True):
@@ -443,7 +475,9 @@ elif phase == "briefing":
     st.markdown("<br>", unsafe_allow_html=True)
 
     c1, c2 = st.columns(2)
-    if i > 0 and c1.button("← Back", use_container_width=True):
+    # "Previous PART" (moves within the briefing) vs the "Previous STEP" button below the
+    # progress bar (leaves the briefing entirely). Named apart so they cannot be confused.
+    if i > 0 and c1.button("← Previous part", use_container_width=True):
         st.session_state.chunk_i -= 1
         st.rerun()
     if i < len(chunks) - 1:
@@ -451,8 +485,8 @@ elif phase == "briefing":
             st.session_state.chunk_i += 1
             st.rerun()
     else:
-        if c2.button("✓ Done", use_container_width=True):
-            reset()
+        if c2.button("Call finished →", use_container_width=True):
+            go("handoff")
 
     with st.expander("Show the whole briefing"):
         st.markdown(
@@ -461,6 +495,38 @@ elif phase == "briefing":
         )
     if not st.session_state.patient_ok:
         st.markdown('<div class="caption">(patient details left out — the dispatcher will ask)</div>', unsafe_allow_html=True)
+
+# ---- 10. ON-SITE HANDOFF: hold the screen up to the arriving crew. ----
+# The call is over; this is the other end of the same problem. The crew arrives to a family
+# member who cannot tell them anything. 救急ボイストラ (96% of fire departments) already handles
+# translating what gets said on scene - we do NOT compete with that. What it structurally cannot
+# have is the PREPARED profile plus what was actually confirmed during the call. That is what
+# this shows, in verified Japanese, big enough to read at arm's length.
+elif phase == "handoff":
+    st.markdown('<div class="status">Show this to the ambulance crew</div>', unsafe_allow_html=True)
+    rows = build_handoff(
+        st.session_state.entries, st.session_state.extras, profile, ontology,
+        st.session_state.patient_ok, st.session_state.at_home,
+    )
+    # Label and value on ONE line, label in a fixed-width column so all four line up and the
+    # crew's eye runs straight down the values. All Japanese, nothing to scan past.
+    for row in rows:
+        st.markdown(
+            f'<div class="briefing-jp" style="display:flex;gap:1rem;align-items:baseline;'
+            f'margin-bottom:0.6rem">'
+            f'<span style="flex:0 0 4.5em;opacity:0.6;font-size:1.2rem">'
+            f'{HANDOFF_LABELS[row["key"]]}</span>'
+            f'<span style="flex:1">{row["jp"]}</span>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    c1, c2 = st.columns(2)
+    if c1.button("← Back to briefing", use_container_width=True):
+        back()
+    if c2.button("✓ Done", use_container_width=True):
+        reset()
 
 # Rendered last so it sits at the bottom of every screen in the flow (returns silently on
 # `idle`, which is not part of the sequence).

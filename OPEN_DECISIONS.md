@@ -117,6 +117,130 @@ attacking the 3-6 minute on-scene delay the FDMA measured.
 in Japanese. That is inbound, we are outbound-only, and it is genuinely life-saving. Belongs in
 the honest-limitations section; a judge who knows this field will ask.
 
+## PANIC/DISFLUENCY - tested at last, 2026-08-14 (benchmark/eval_disfluent.py)
+
+Accent was tested months ago (L2-ARCTIC). Panic never had been, at any stage. Same 52 labelled
+cases, each perturbed with the three things panic does to speech - word repetition, stuttered
+false starts, and filler ("oh god", "please hurry") - then re-scored against the same labels.
+
+                 exact        precision   recall   F1     fabrications
+    CLEAN        50/52 (96%)  1.00        0.96     0.98   0
+    PANICKED     50/52 (96%)  0.96        1.00     0.98   2
+
+**Disfluency does NOT break classification.** Exact-match and F1 are identical. That is the
+first evidence either way on the thing we had been most worried about.
+
+**But precision 1.00 does not survive panic - it falls to 0.96, with 2 fabrications.** The
+pattern is coherent: noise makes the model OVER-include, so recall rises to 1.00 while precision
+falls. It errs toward too many symptoms rather than too few, which is the safer direction, but
+"zero fabrications" is an ENGLISH, CLEAN-SPEECH claim and should be stated that way.
+
+The two failures:
+  "her stomach is- is killing killing her, she's doubled over" -> added `vomiting`
+  "he's- he's just really anxious and panicking panicking about work" -> returned `confused`
+The second is partly an artefact: the harness wraps every case in panic filler, and that case is
+ABOUT someone panicking. The first is a genuine repetition-induced fabrication.
+
+HONEST BOUND: this perturbs TEXT. Real panic also degrades the AUDIO before Whisper sees it, so
+this is a lower bound - passing does not prove robustness, failing would have proven fragility.
+
+**Baseline also improved and the old note below is stale:** the recorded 40 cases / 90% exact /
+F1 0.94 is now 52 cases / 96% exact / F1 0.98, from the ontology work since.
+
+## NON-ENGLISH WAS BROKEN - found and fixed 2026-08-14
+
+The language selector offered 9 languages. Nobody had ever run one end to end. Two were tested:
+
+    Chinese  transcript correct  ->  classified []           EVERY symptom silently dropped
+    Korean   transcript correct  ->  classified no_pulse     FABRICATED cardiac arrest
+
+Whisper was fine both times. The CLASSIFIER failed: its system prompt, few-shot examples and all
+29 trigger phrases are English, and we handed it Chinese with no bridge. Precision 1.00 was
+measured on English only; the first Korean test invented the most dangerous term in the ontology.
+
+**FIX:** for a non-English caller, run Whisper TWICE over the same audio.
+    transcribe -> the caller's own language. What they READ and confirm (the safety loop only
+                  works if they can read it).
+    translate  -> Whisper's built-in English output. What the CLASSIFIER reads.
+After the fix both Chinese and Korean returned the correct `collapsed` + `chest_pain`, and the
+`no_pulse` fabrication was gone.
+
+**CAVEAT, unresolved: TRANSLATE MODE LOSES NEGATION.** Both clips said "there is no response";
+both came back as the opposite. That inversion did NOT reach the briefing - consciousness is in
+SLM_DISCARD and comes from a forced button. **The architecture caught a failure it was designed
+for, arriving by a completely different route than anticipated.** But the same corruption could
+hit a symptom that is not excluded, and the interpretation-confirmation screen is the only
+remaining backstop - and its labels are English, which is weakest for exactly these callers.
+
+Still untested: the other 7 languages, and Whisper is known to be weakest on some (Nepali,
+Burmese) whose speakers are most vulnerable. Do not claim uniform coverage.
+
+## PRE-RENDERED AUDIO - the TTS portability answer (2026-08-14)
+
+The app no longer synthesises speech at runtime. `tools/build_audio.py` renders every sentence
+it can ever say into data/audio/ (44 sentences, 3.3 MB); `speak_japanese()` plays files and only
+falls back to live TTS if one is missing.
+
+Possible ONLY because the ontology is closed - the same property the safety design rests on.
+Fixed lines are constants, the 29 terms are a closed set, and profile lines are settled when the
+profile is written. Multi-symptom chunks are handled by splitting on 。 and concatenating, so
+COMBINATIONS never need rendering.
+
+Buys: identical audio everywhere; **the Windows SAPI5 Japanese-language-pack risk disappears
+entirely** (it was the single biggest demo-breaking unknown); no synthesis during an emergency;
+no extra model in memory.
+
+**PRIVACY SPLIT:** data/audio/profile/ holds the address, name, age and conditions SPOKEN ALOUD.
+Gitignored - committing it would leak a real home address as audio, exactly what excluding
+profile.json prevents for text. The 40 shared sentences ARE committed.
+
+`tools/setup_profile.py` is the pre-registration step: prompts for each field, writes
+profile.json, and re-renders the changed audio automatically. Fails loudly if the machine has no
+Japanese voice, telling you to build elsewhere and copy data/audio/ across.
+
+## LATENCY BREAKDOWN - measured 2026-08-14 (Mac, OpenVINO INT8, 3B)
+
+    MODEL LOAD (once, at app open) : 59.1s
+    STAGE A prompt                 : 788 tokens
+    STAGE A (pick candidates)      : 14.5s
+    STAGE B (review/trim)          :  1.5s
+    TOTAL user-visible wait        : 16.0s
+
+**Stage A is 90% of the wait; Stage B is nearly free.** That settles the recurring question of
+whether the verification pass is worth its cost - 1.5s for precision 1.00 is a bargain, and any
+future optimisation should leave it alone and attack Stage A.
+
+**WHY Stage A is slow, and the fix it points at:** the prompt is 788 tokens, and ~700 of those
+are the 29-entry menu plus few-shot examples - IDENTICAL on every single call. Only the caller's
+transcript (a few dozen tokens at the END) ever changes. So we re-process the same ~700 tokens
+from scratch every time.
+
+=> **PREFIX / KV CACHING is the obvious win.** Process the static prefix once at warm-up, keep
+   the KV state, and feed only the transcript per call. Architecture-preserving: same model,
+   same two stages, same prompts, same accuracy. Check whether optimum-intel/OpenVINO exposes
+   reusable `past_key_values` for this. Untried.
+
+Other levers, weaker: trim trigger phrases per entry (shorter menu, may cost accuracy);
+max_new_tokens 64 -> 32 for Stage A (the JSON array is short); and of course the Intel/OpenVINO
+numbers themselves, still unmeasured for the SLM.
+
+**59s model load confirms the operational rule: NEVER restart the app right before a demo.**
+Harmless in the real use case (it sits open all day), fatal on stage.
+
+## UI PRINCIPLE - the screen must guide, never present (founder, 2026-08-14)
+
+Standing rule for every screen, not a one-off note:
+
+**A lot of text appearing at once causes subconscious confusion.** The caller is panicking. They
+should be close to autopilot - one clear thing to do per screen, no reading, no deciding. We want
+SWIFTNESS. Anything that makes them stop and parse the screen is a defect, even if every word on
+it is correct.
+
+Applied so far: dropped the "Ambulance + location — this is what sends help" caption (explained
+OUR reasoning to a panicking user); toggle -> radio for the location question; per-symptom aspect
+radios given explicit names; handoff screen stripped to Japanese only. Judge new screens by this,
+and prefer removing a line to adding one.
+
 ## Memory footprint - FUTURE enhancement, explicitly not for the competition (2026-08-13)
 
 Raised by the founder. Currently ~3 GB resident (Qwen2.5-3B, OpenVINO INT8) plus Whisper small.
@@ -322,14 +446,18 @@ does not. Not hypothetical; each has a concrete failure case.
 - **Sentiment is fine and needs no work** — the caller is on the phone, so the dispatcher
   hears panic directly in the human voice. A payoff of keeping a human in the loop.
 
-## Needs a Japanese speaker
+## Needs a Japanese speaker - ALL RESOLVED (2026-08-14)
 
-- All 16 `japanese_term` values in `data/ontology.json` — verify against real 119 intake usage.
-- The label `通報者の説明：` in `src/briefing_template.py` — does it read naturally to a
-  dispatcher? Alternatives: 通報者によると / 通報者の話では / 補足.
-- The fallback `詳細不明` when nothing matches — right thing to say, or better to omit the
-  section entirely rather than announce an empty field?
-- Specific term questions are recorded in the `note` fields inside `ontology.json`.
+- ~~All 16 `japanese_term` values~~ - RESOLVED. All **29** are founder-verified as of 2026-08-12,
+  reviewed as rendered output rather than raw strings, which is what caught the
+  polite-form-before-と言っています bug and the 脈がありません over-claim.
+- ~~The label `通報者の説明：`~~ - RESOLVED. Replaced by the natural lead-in `あと、`.
+- ~~The fallback `詳細不明`~~ - RESOLVED. The symptom line is omitted entirely when nothing
+  matches, rather than announcing an empty field.
+- Founder-worded since: the dispatcher line (すみません。日本語がわからないので…), the
+  particle rule (意識はあります positive / 意識がありません negative), and the four handoff
+  labels (患者 / 持病 / 症状 / 通報者).
+- Specific term questions remain recorded in the `note` fields inside `ontology.json`.
 
 ## Considered and deprioritized
 
