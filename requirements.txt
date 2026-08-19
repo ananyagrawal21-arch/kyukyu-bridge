@@ -8,6 +8,10 @@ sounddevice
 soundfile
 streamlit
 numpy
+# SAPI5 (Windows) / NSSS (mac) TTS fallback - used by tools/build_audio.py to RECORD the
+# app's speech ahead of time. The app itself only ever plays those recordings; this is
+# what the build step needs to create them on a machine with no Kyoko-quality voice.
+pyttsx3
 
 # Week 2 — Intel OpenVINO conversion + quantization, and the SLM structurer.
 #

@@ -79,7 +79,7 @@
         "head_injury"
       ],
       "acceptable": [
-        "collapsed"
+        "fall"
       ]
     },
     {
@@ -295,6 +295,9 @@
       "transcript": "my son fell into the bath and was underwater",
       "expected": [
         "drowning"
+      ],
+      "acceptable": [
+        "fall"
       ]
     },
     {

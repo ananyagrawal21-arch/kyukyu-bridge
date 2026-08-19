@@ -122,9 +122,30 @@ def synthesize(text: str):
     return None
 
 
+# Japanese addresses are WRITTEN with hyphens and SPOKEN with の: 24-5 is read
+# "にじゅうよん の ご", never with a hyphen sound. A speech engine given "24-5" either swallows
+# the hyphen or says "minus", so a dispatcher hears the wrong address - the single most
+# critical field. Only a hyphen BETWEEN DIGITS is converted, so the long-vowel ー inside words
+# like マンション is untouched.
+_ADDR_HYPHEN = re.compile(r"(?<=[0-9０-９])[-−‐―ー](?=[0-9０-９])")
+
+# Full-width digits are also read less reliably than half-width, so normalise them.
+_FULLWIDTH_DIGITS = str.maketrans("０１２３４５６７８９", "0123456789")
+
+
+def speech_form(text: str) -> str:
+    """How this text should be SPOKEN, which is not always how it is written.
+
+    Applied to everything before synthesis AND before the cache lookup, so the recording and
+    the request always agree. The on-screen text keeps the written form.
+    """
+    return _ADDR_HYPHEN.sub("の", text).translate(_FULLWIDTH_DIGITS)
+
+
 def split_sentences(text: str) -> list:
-    """Atomic units for caching. Keeps the 。 so each piece is a complete spoken sentence."""
-    return [s + "。" for s in re.split(r"。", text) if s.strip()]
+    """Atomic units for caching. Keeps the 。 so each piece is a complete spoken sentence,
+    and normalises each to its spoken form."""
+    return [speech_form(s + "。") for s in re.split(r"。", text) if s.strip()]
 
 
 def cache_key(sentence: str) -> str:

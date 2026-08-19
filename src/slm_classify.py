@@ -95,7 +95,11 @@ SYSTEM_PROMPT = (
 # Few-shot examples teach restraint: pick what is stated, ignore what is not in the menu.
 _FEWSHOT = [
     ("his chest feels really tight and he's sweating a lot", '["chest_pain"]'),
-    ("she tripped and fell, and her arm is bleeding heavily", '["collapsed","heavy_bleeding"]'),
+    # Deliberately a TRIP, answered with `fall` not `collapsed` - this example is doing double
+    # duty, teaching restraint AND the fall/collapse distinction on the exact wording that
+    # confuses it. It said "collapsed" here until 2026-08-19, which taught the model backwards.
+    ("she tripped and fell, and her arm is bleeding heavily", '["fall","heavy_bleeding"]'),
+    ("he suddenly went limp and dropped to the floor", '["collapsed"]'),
 ]
 
 
@@ -190,7 +194,16 @@ def _parse_ids(text, valid_ids):
 DESCRIPTIONS = {
     "chest_pain": "pain, tightness, or pressure in the chest",
     "difficulty_breathing": "difficulty breathing, shortness of breath, gasping, or wheezing",
-    "collapsed": "the person collapsed, fell down, or dropped to the ground",
+    # THREE-WAY split. English "fell"/"collapsed" cover all of these, so the descriptions must
+    # carry the distinction the words themselves don't: no mechanism given, level-ground trip,
+    # or fall FROM HEIGHT (higher risk of spinal/multiple injury - the crew needs to know which).
+    "collapsed": "the person went down with NO stated cause or mechanism - sudden, unexplained, "
+                 "or described as fainting/going limp. Use this ONLY when the statement does "
+                 "not say HOW they ended up on the ground",
+    "fall": "the person tripped, slipped, or lost their balance on LEVEL GROUND. NOT a fall "
+            "from stairs, a ladder, or any height",
+    "fall_from_height": "the person fell FROM STAIRS, A LADDER, A ROOF, OR ANY HEIGHT - "
+                        "distinct from tripping on level ground",
     "choking": "choking, or something stuck in the throat",
     "seizure": "a seizure, convulsions, or uncontrollable shaking of the body",
     "head_injury": "a blow or injury to the head",

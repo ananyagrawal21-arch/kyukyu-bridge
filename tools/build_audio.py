@@ -81,6 +81,15 @@ def every_sentence() -> tuple:
     return texts, personal
 
 
+def _lock_down(path: Path):
+    """Owner-only. These recordings say a home address out loud; the default lets every
+    account on the machine read them."""
+    try:
+        path.chmod(0o600)
+    except OSError:
+        pass  # non-POSIX filesystem; the gitignore boundary still holds
+
+
 def _flatten(texts) -> list:
     """Split into sentences and de-duplicate, preserving order. Several templates share
     sentences (救急です。 opens both the head constant and the location pieces)."""
@@ -92,8 +101,15 @@ def _flatten(texts) -> list:
     return out
 
 
-def main():
-    force = "--force" in sys.argv
+def build(force: bool = False, log=print) -> dict:
+    """Render missing audio and REMOVE personal audio that is no longer needed.
+
+    Callable from the app's setup screen, not just the command line.
+
+    The removal step matters for privacy: without it, changing your address leaves the old
+    address's recording on disk forever, and the folder slowly accumulates a spoken history of
+    every address and medical condition ever entered.
+    """
     AUDIO_DIR.mkdir(parents=True, exist_ok=True)
     PROFILE_AUDIO_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -101,7 +117,6 @@ def main():
     shared = _flatten(shared_texts)
     personal = [s for s in _flatten(personal_texts) if s not in shared]
 
-    print(f"{len(shared)} shared + {len(personal)} profile-specific sentences")
     built = skipped = failed = 0
     for sentences, is_profile in ((shared, False), (personal, True)):
         for s in sentences:
@@ -111,14 +126,34 @@ def main():
                 continue
             audio = synthesize(s)
             if not audio:
-                print(f"  FAILED  {s}")
+                log(f"  FAILED  {s}")
                 failed += 1
                 continue
             path.write_bytes(audio)
+            _lock_down(path)
             built += 1
-            print(f"  built   {'profile/' if is_profile else '        '}{path.name}  {s}")
+            log(f"  built   {'profile/' if is_profile else '        '}{path.name}  {s}")
 
-    print(f"\nbuilt {built}, already present {skipped}, failed {failed}")
+    # Anything in the personal folder that the CURRENT profile does not need is stale.
+    wanted = {cache_path(s, profile_specific=True).name for s in personal}
+    removed = 0
+    for old in PROFILE_AUDIO_DIR.glob("*.wav"):
+        if old.name not in wanted:
+            old.unlink()
+            removed += 1
+            log(f"  removed stale profile/{old.name}")
+        else:
+            _lock_down(old)  # every run, not just newly built - files made before this
+                             # existed are still world-readable otherwise
+
+    return {"built": built, "skipped": skipped, "failed": failed, "removed": removed}
+
+
+def main():
+    result = build(force="--force" in sys.argv)
+    built, skipped = result["built"], result["skipped"]
+    failed, removed = result["failed"], result["removed"]
+    print(f"\nbuilt {built}, already present {skipped}, removed {removed}, failed {failed}")
     if failed:
         print("Failures mean no working TTS on THIS machine - run the build somewhere with a "
               "Japanese voice, then commit data/audio/.")

@@ -231,10 +231,27 @@
   "events": [
     {
       "id": "collapsed",
-      "trigger_phrases_en": ["collapsed", "just collapsed", "fell down", "fell over", "went down", "dropped to the floor", "fell to the ground"],
+      "trigger_phrases_en": ["collapsed", "just collapsed", "went down", "dropped to the floor", "crumpled", "went limp and fell", "passed out and fell"],
       "japanese_term": "倒れました",
+      "note_correction_2026_08_19": "CORRECTED: 倒れる is CAUSE-NEUTRAL, not a medical-specific verb - it just means 'went down' and tells the dispatcher NOTHING about why. It is the right default ONLY when the caller gives no mechanism (sudden, unexplained). If a mechanism is stated, use `fall` or `fall_from_height` instead - do not use collapsed just because the cause sounds medical.",
       "frame": "observed",
       "verified": true
+    },
+    {
+      "id": "fall",
+      "trigger_phrases_en": ["tripped", "tripped and fell", "slipped", "slipped and fell", "lost her footing", "lost his footing", "fell over"],
+      "japanese_term": "転倒しました",
+      "frame": "observed",
+      "verified": false,
+      "note": "LEVEL-GROUND trip/slip only - falling from height is the separate `fall_from_height` entry below, because it is a different clinical picture (higher risk of spinal/multiple injury) and the crew needs to know which. 転倒 means 'lost balance and fell' but does NOT say from where, so it must not be used for a stairs/ladder fall. English 'fell' does not distinguish these on its own - the SLM reads the whole sentence, caller can correct on the confirmation screen. NEEDS FOUNDER CHECK."
+    },
+    {
+      "id": "fall_from_height",
+      "trigger_phrases_en": ["fell down the stairs", "fell down stairs", "fell off a ladder", "fell off the roof", "fell from a height", "fell out of a window", "fell off", "fell from"],
+      "japanese_term": "階段から落ちました",
+      "frame": "observed",
+      "verified": false,
+      "note": "A fall FROM HEIGHT (stairs, ladder, roof) carries materially higher risk of spinal or multiple injury than a level-ground trip, and the crew needs to know which they are walking into. 階段から落ちました is literally 'fell from the stairs' - it will read oddly for a ladder or roof fall. NEEDS FOUNDER CHECK: whether a more general term (例: 高い所から落ちました, 'fell from a height') should replace this so one term covers stairs/ladder/roof, or whether stairs specifically is common enough to keep as the default and add a second term for other heights."
     },
     {
       "id": "choking",

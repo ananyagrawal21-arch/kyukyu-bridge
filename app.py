@@ -13,6 +13,7 @@ SLM brain -> confirm understood symptoms -> awake/breathing/circulation -> patie
 remaining briefing chunks, delivered while the ambulance is already en route.
 """
 import os
+import re
 import sys
 
 import streamlit as st
@@ -25,15 +26,16 @@ if os.path.isdir(_MODEL_DIR):
     os.environ.setdefault("SLM_OV_DIR", _MODEL_DIR)
 
 from pipeline import (  # noqa: E402
-    build_briefing_chunks, slm_matches, _statement_from, _format_address, _humanize,
+    build_briefing_chunks, slm_matches, _statement_from, _humanize,
 )
 from briefing_template import render_location_pieces, HANDOFF_LABELS  # noqa: E402
 from pipeline import build_handoff  # noqa: E402
 from slm_classify import SLM_DISCARD  # noqa: E402
 from ontology import load_ontology  # noqa: E402
 from caller_profile import load_profile  # noqa: E402
+from postal import lookup as postal_lookup, looks_romaji  # noqa: E402
 
-st.set_page_config(page_title="Kyūkyū-Bridge", page_icon="🚑", layout="centered")
+st.set_page_config(page_title="Kyūkyū-Bridge", layout="centered")
 
 st.markdown(
     """
@@ -72,7 +74,13 @@ st.markdown(
 
 @st.cache_resource
 def get_data():
-    return load_profile(), load_ontology()
+    """Profile is None on a machine that has not been set up yet - the app sends you to the
+    setup screen instead of crashing."""
+    try:
+        profile = load_profile()
+    except (FileNotFoundError, ValueError):
+        profile = None
+    return profile, load_ontology()
 
 
 @st.cache_data(show_spinner=False)
@@ -124,7 +132,7 @@ def back():
 
 
 # Screens that get the generic "previous step" button. Deliberately NOT every screen:
-#   idle / dispatch_now - nothing useful behind them ("Start over" covers it).
+#   idle                - it IS the start; there is nothing behind it.
 #   confirm_transcript  - already has "Say it again", which is the same move but clearer.
 #                         A generic back would also land on `recording` with the clip still
 #                         loaded, which re-transcribes immediately and looks like nothing
@@ -132,7 +140,7 @@ def back():
 # `briefing` DOES get one: it has its own back, but that only walks the chunks, so from the
 # final screen there was no way back to an earlier question at all. The two are disambiguated
 # by name - "Previous part" moves within the briefing, "Previous step" leaves it.
-BACKABLE = {"recording", "confirm_symptoms", "ask_awake", "ask_breathing",
+BACKABLE = {"dispatch_now", "recording", "confirm_symptoms", "ask_awake", "ask_breathing",
             "ask_circulation", "ask_patient", "briefing"}
 
 
@@ -196,11 +204,180 @@ if "phase" not in st.session_state:
 phase = st.session_state.phase
 
 
+# ---- 0. SETUP: fill this in once, long before it is needed. ----
+# Was a terminal script (tools/setup_profile.py, still there for headless use). A family
+# setting this up will not open a terminal, and the details MUST be entered before an
+# emergency - there is no time to type an address while someone is on the floor.
+if profile is None and phase != "setup":
+    st.session_state.phase = phase = "setup"
+
+if phase == "setup":
+    p = profile or {}
+    addr, pat, cal = p.get("address", {}), p.get("patient", {}), p.get("caller", {})
+
+    st.markdown('<div class="status">Your details</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="caption">Fill this in once, now. In an emergency the app says it for '
+        'you — there is no time to type. It stays on this device.</div>',
+        unsafe_allow_html=True,
+    )
+
+    # POSTAL CODE FIRST, and outside the form - a non-submit button inside an st.form does
+    # nothing until submit, and this has to work on its own. Placed at the top because it is
+    # the step that saves the user from the impossible task: typing their own address in
+    # Japanese when they do not read Japanese.
+    st.markdown("#### Step 1 — your postal code")
+    st.markdown(
+        '<div class="caption" style="text-align:left">Everyone knows this one. We turn it '
+        'into the Japanese address for you, so you never have to type Japanese.</div>',
+        unsafe_allow_html=True,
+    )
+    pc1, pc2 = st.columns([3, 1])
+    pc_input = pc1.text_input(
+        "Postal code", st.session_state.get("pc_code", ""),
+        placeholder="134-0088", label_visibility="collapsed",
+    )
+    if pc2.button("Look up", use_container_width=True):
+        st.session_state.pc_code = pc_input
+        found = postal_lookup(pc_input)
+        if found:
+            st.session_state.pc_result = found
+            st.rerun()
+        else:
+            st.session_state.pop("pc_result", None)
+            st.error(
+                "Could not find that postal code. Check the 7 digits, or type the address "
+                "below by hand — this lookup needs internet, the emergency itself never does."
+            )
+    found = st.session_state.get("pc_result")
+    if found:
+        st.success(f"Found: **{found['prefecture']}{found['city_ward']}** — filled in below.")
+
+    st.markdown("#### Step 2 — the rest")
+    st.warning(
+        "**Anything you type yourself must be in Japanese, not romaji.** A Japanese voice "
+        "reads this to the dispatcher — 'Tokyo Edogawa' comes out as noise, and the address "
+        "is the one field that must be right. Numbers are fine as digits.",
+        icon="⚠️",
+    )
+
+    with st.form("setup"):
+        st.markdown("**Where the ambulance should come**")
+        c1, c2 = st.columns(2)
+        _pc = st.session_state.get("pc_result") or {}
+        prefecture = c1.text_input("Prefecture 都道府県",
+                                   _pc.get("prefecture") or addr.get("prefecture", ""),
+                                   placeholder="東京都")
+        city_ward = c2.text_input("City / ward 市区町村",
+                                  _pc.get("city_ward") or addr.get("city_ward", ""),
+                                  placeholder="江戸川区西葛西")
+        c3, c4, c5 = st.columns([2, 2, 1])
+        street_block = c3.text_input("Street & block 丁目・番地", addr.get("street_block", ""),
+                                     placeholder="4丁目24-5")
+        building = c4.text_input("Building name 建物名", addr.get("building", ""),
+                                 placeholder="〇〇マンション")
+        room = c5.text_input("Room 部屋", addr.get("room", ""), placeholder="405")
+
+        st.markdown("**The person most likely to need help**")
+        c6, c7, c8 = st.columns([2, 1, 1])
+        pname = c6.text_input("Name 名前 (Japanese)", pat.get("name", ""))
+        page = c7.number_input("Age", 0, 120, int(pat.get("age") or 0))
+        sexes = ["female", "male", "unknown"]
+        psex = c8.selectbox("Sex", sexes, index=sexes.index(pat.get("sex", "female")))
+        conds = st.text_input(
+            "Known conditions 持病 (Japanese, comma-separated)",
+            "、".join(pat.get("known_conditions") or []),
+        )
+
+        st.markdown("**You**")
+        c9, c10 = st.columns(2)
+        cname = c9.text_input("Your name 名前 (Japanese)", cal.get("name", ""))
+        lang_codes = list(LANGUAGE_OPTIONS)
+        clang = c10.selectbox(
+            "Language you will speak", lang_codes,
+            index=lang_codes.index(cal.get("native_language", "en")),
+            format_func=lambda c: LANGUAGE_OPTIONS[c],
+        )
+
+        if st.form_submit_button("Save", use_container_width=True):
+            missing = not (prefecture and city_ward and street_block and page)
+            # Romaji in the address is the failure mode that matters: it is spoken aloud as the
+            # ambulance's destination. Saving is still allowed - locking the user out entirely
+            # is worse - but the home screen keeps warning until it is fixed.
+            romaji = [
+                label for label, val in (
+                    ("Prefecture", prefecture), ("City/ward", city_ward),
+                    ("Street & block", street_block), ("Building", building),
+                )
+                if looks_romaji(val)
+            ]
+            if missing:
+                st.error("Prefecture, city/ward, street & block, and age are required.")
+            else:
+                import json as _json
+                from caller_profile import PROFILE_PATH
+                PROFILE_PATH.write_text(_json.dumps({
+                    "address": {
+                        "prefecture": prefecture, "city_ward": city_ward,
+                        "street_block": street_block, "building": building, "room": room,
+                    },
+                    "patient": {
+                        "name": pname, "age": int(page), "sex": psex,
+                        "known_conditions": [
+                            c.strip() for c in conds.replace("、", ",").split(",") if c.strip()
+                        ],
+                    },
+                    "caller": {
+                        "name": cname, "native_language": clang,
+                        "japanese_fluency": cal.get("japanese_fluency", "limited"),
+                    },
+                }, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+                try:
+                    PROFILE_PATH.chmod(0o600)  # owner-only; it holds a home address
+                except OSError:
+                    pass
+
+                # Record the new details NOW, not during an emergency. Also deletes recordings
+                # of details you just changed, so an old address does not linger on disk.
+                with st.spinner("Recording your details in Japanese…"):
+                    sys.path.insert(0, os.path.join(os.path.dirname(__file__), "tools"))
+                    import build_audio
+                    result = build_audio.build(log=lambda *_: None)
+                get_data.clear()
+                if result["failed"]:
+                    st.error(
+                        f"{result['failed']} recordings could not be made — this machine has "
+                        "no Japanese voice. Run tools/build_audio.py on a machine that does "
+                        "and copy data/audio/ across."
+                    )
+                elif romaji:
+                    st.error(
+                        f"Saved, but **{', '.join(romaji)}** is not in Japanese. The dispatcher "
+                        "will hear this read aloud and it will not be understandable. Please fix "
+                        "it before relying on this app."
+                    )
+                else:
+                    st.success(
+                        f"Saved. {result['built']} new recordings made"
+                        + (f", {result['removed']} old ones deleted." if result["removed"] else ".")
+                    )
+                    st.session_state.phase = "idle"
+                    st.rerun()
+
 # ---- 1. Idle: the button ----
-if phase == "idle":
+elif phase == "idle":
     if st.button("🚨  EMERGENCY", key="emergency"):
         go("dispatch_now")
     st.markdown('<div class="caption">Call 119 first. Then tap this.</div>', unsafe_allow_html=True)
+    if st.button("⚙ Your details"):
+        go("setup")
+    # Keep warning here, not only on the setup screen. A romaji address is not a cosmetic
+    # problem - the ambulance would be sent nowhere - and the user must not be able to forget.
+    if any(looks_romaji(str(v)) for v in profile["address"].values()):
+        st.error(
+            "⚠️ Your address is not in Japanese, so it cannot be read to the dispatcher. "
+            "Open **Your details** and fix it.",
+        )
 
 # ---- 1b. THE FIRST 15 SECONDS. ----
 # 救急です + the address need NOTHING from the pipeline: the word is a constant and the address

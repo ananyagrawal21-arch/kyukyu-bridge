@@ -20,6 +20,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
 from caller_profile import PROFILE_PATH  # noqa: E402
+from postal import lookup as postal_lookup, looks_romaji  # noqa: E402
 
 SEXES = ("male", "female", "unknown")
 
@@ -65,14 +66,39 @@ def main():
     pat = existing.get("patient", {})
     caller = existing.get("caller", {})
 
-    print("--- Where the ambulance should come (Japanese) ---")
+    print("--- Where the ambulance should come ---")
+    print("Enter your 7-digit POSTAL CODE and we look up the Japanese prefecture/city/ward for")
+    print("you - you never have to type Japanese yourself. Blank to skip and type it by hand.")
+    pc = ask("Postal code (e.g. 134-0088)")
+    found = postal_lookup(pc) if pc else None
+    if pc and not found:
+        print("  Could not look that up (offline, or not a real code) - type it below by hand.")
     address = {
-        "prefecture": ask("Prefecture 都道府県", addr.get("prefecture"), required=True),
-        "city_ward": ask("City / ward 市区町村", addr.get("city_ward"), required=True),
-        "street_block": ask("Street & block 丁目番地", addr.get("street_block"), required=True),
-        "building": ask("Building 建物名 (blank if none)", addr.get("building")),
+        "prefecture": ask(
+            "Prefecture 都道府県",
+            (found or {}).get("prefecture") or addr.get("prefecture"), required=True,
+        ),
+        "city_ward": ask(
+            "City / ward 市区町村",
+            (found or {}).get("city_ward") or addr.get("city_ward"), required=True,
+        ),
+        "street_block": ask("Street & block 丁目番地 (Japanese)", addr.get("street_block"), required=True),
+        "building": ask("Building 建物名 (Japanese, blank if none)", addr.get("building")),
         "room": ask("Room 部屋番号 (blank if none)", addr.get("room")),
     }
+    # The postal lookup only covers prefecture/city/ward - street_block and building are
+    # still typed by hand, so the same romaji mistake remains possible there.
+    romaji_fields = [
+        label for label, val in (
+            ("street_block", address["street_block"]), ("building", address["building"]),
+        ) if looks_romaji(val)
+    ]
+    if romaji_fields:
+        print(
+            f"\n  WARNING: {', '.join(romaji_fields)} looks like romaji, not Japanese. "
+            "A Japanese voice cannot read it, and the dispatcher would hear noise for the "
+            "single most critical field. Please re-enter in Japanese."
+        )
 
     print("\n--- The person most likely to need help ---")
     patient = {

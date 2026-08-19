@@ -3,6 +3,103 @@
 Running list so nothing gets silently forgotten. Not a task list — these are things
 that need a judgement call, not just implementation.
 
+## POSTAL CODE LOOKUP - the romaji problem, actually solved (2026-08-19)
+
+**The bug this fixes:** the setup screen let a user type their address in ROMAJI - the natural
+mistake, since our user is defined as someone who does not read Japanese. The address is spoken
+aloud by a JAPANESE voice, so "Tokyo / Edogawa / 4 chome" produced literal noise. Measured on a
+real profile. The address is the single most critical field; this was silent and structural, not
+cosmetic.
+
+**The fix:** `src/postal.py`. Enter a 7-digit postal code (on every bill, lease, residence card)
+-> looked up against a free public API (zipcloud.ibsnet.co.jp) -> returns 東京都江戸川区西葛西 in
+correct kanji. The user never types Japanese for prefecture/city/ward at all. Wired as "Step 1"
+at the top of the setup screen, ahead of everything else.
+
+**THE NETWORK BOUNDARY - this is the only code in the whole project that touches the internet.**
+It runs ONLY when the user presses "Look up" on the setup screen, a calm one-time activity. The
+result is written into profile.json and never fetched again. The EMERGENCY PATH remains fully
+offline - postal.py is never imported by anything the app does during a call. Failure here is
+non-fatal (falls back to manual entry).
+
+A fully-offline version is possible by bundling Japan Post's own KEN_ALL dataset (~120k rows,
+their official source) instead of calling an API. Their direct download blocks automated
+fetches (returns an HTML 404 page, checked 2026-08-19), so that is a manual step for later - the
+module's public interface (`lookup(code) -> {prefecture, city_ward} | None`) would not change.
+
+Also added: `looks_romaji()`, catching any FIELD typed in Latin letters (not just the
+postal-code ones) with a persistent warning on the home screen until fixed. Digits are excluded
+deliberately - a Japanese voice reads "405" correctly, so a numbers-only room number must not
+false-positive. Lives in `src/postal.py` (not app.py) so app.py and the headless
+`tools/setup_profile.py` share ONE implementation - it was written into app.py only at first,
+which broke setup_profile.py's import; moved once that surfaced, caught before it shipped.
+
+## FALL vs COLLAPSED - split into two entries (2026-08-19)
+
+**The bug, found by the founder testing the app:** saying "fell down the stairs" classified as
+`collapsed` (倒れました). Clinically wrong: 倒れました tells a dispatcher this was an internal
+MEDICAL event (cardiac, neurological, fainting); a fall down stairs is TRAUMA, where the crew
+may need spinal precautions. `collapsed`'s own trigger list included "fell down" and "fell
+over" - the entry never should have covered mechanical falls.
+
+**Fix:** new entry `fall` -> 転倒しました (`verified: false`, NEEDS FOUNDER CHECK), narrowed
+`collapsed`'s triggers to medical-only language (collapsed, went down, went limp, passed out
+and fell). English "fell" genuinely covers both causes, so trigger-phrase keyword matching
+cannot decide this alone - per the founder's call, Stage B's descriptions carry the distinction
+by CAUSE ("collapsed BY THEMSELVES from a medical cause" vs "fell BECAUSE OF an accident"), and
+the SLM reads the whole sentence rather than keying off one word. Genuinely ambiguous cases fall
+to the human via the existing confirm-symptoms screen, same principle as the aspect choice.
+
+**A bug caught before it shipped:** the few-shot example teaching the model restraint said "she
+tripped and fell, and her arm is bleeding heavily" -> `["collapsed","heavy_bleeding"]`. That
+would have taught the model the WRONG mapping on every single call - a trip is exactly a `fall`.
+Corrected to `["fall","heavy_bleeding"]`, plus a second example contrasting an actual collapse.
+Caught here, but is a reminder: an ontology change is not complete until every place that
+teaches the model (few-shot, Stage B descriptions) is checked, not just the entry itself.
+
+**Verified 4/4 target-tested**: "fell down the stairs and hit his head" -> fall+head_injury;
+"suddenly collapsed... not responding" -> collapsed; "tripped on the step" -> fall. One miss on
+a genuinely ambiguous phrase ("just went down, he was fine a second ago") returned nothing -
+safe direction, not a fabrication.
+
+**Re-running the eval after this change surfaced a real methodology finding first:** two
+apparent "regressions" (head_injury and drowning cases now also returning `fall`) were not
+model failures at all - the test labels PREDATED the `fall` entry, so there was never a slot
+for it in `expected`/`acceptable`. Both cases genuinely describe falls ("he slipped...", "fell
+into the bath..."). Fixed the test set (`benchmark/slm_testset.json`) to mark `fall` acceptable
+in both, rather than accept a headline number without checking whether the eval itself was the
+thing that was stale.
+
+**The TRUE cost, measured after that fix, over the full 52-case set:**
+
+    exact-match  96% -> 94%  (-2pt)
+    precision    1.00 -> 0.98  (1 fabrication introduced)
+    recall       0.96 -> 0.96  (unchanged)
+    F1           0.98 -> 0.97
+
+All 3 remaining failures (1 fabrication, 2 misses) are the SAME pre-existing cases already known
+from earlier testing (the "her stomach is killing her" vomiting fabrication, the "boiling hot"
+missed fever, the "pale and sweating" missed pale_complexion) - NONE are new failure modes from
+the fall/collapse split. The split itself is clean; the small numeric cost is genuinely the
+price of asking the model to resolve an ambiguity English does not disambiguate on its own
+("fell" covers both readings), not a defect in how it was built.
+
+STILL NEEDED: founder check on 転倒しました - is it right for a level-ground trip, and is a
+falling-FROM-HEIGHT term needed separately (階段から落ちました)?
+
+## HOUSEKEEPING - found during a full-repo audit (2026-08-19)
+
+- `pyttsx3` is imported by `src/speak.py` (the Windows/SAPI5 build-time TTS fallback) but was
+  MISSING from requirements.txt. A fresh Windows install would fail to build audio with no
+  obvious reason why. Added, with a comment clarifying it is a BUILD-time dependency
+  (tools/build_audio.py) - the shipped app itself only ever plays pre-rendered files.
+- `_format_address` was imported into app.py but never called - dead code left over from before
+  the address-split refactor (render_location_pieces replaced it). Removed.
+- `pipeline.py`'s CLI `main()` still asks location last in its own interactive question order.
+  Confirmed NOT a bug: it is explicitly a testing tool for the ontology/template wiring (its own
+  --help says so), not the emergency flow, and `build_briefing`/`render_briefing` just joins the
+  same chunks the app uses - it inherited the location-first order automatically.
+
 ## GUIDING SLOGAN
 
 **We do not try to beat the human interpreter — at every step we reduce the GAP.**

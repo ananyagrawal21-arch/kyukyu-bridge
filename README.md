@@ -32,7 +32,7 @@ person cannot produce structured, dispatcher-usable information at all — in an
 The system's advantage is **preparation**, not out-comprehending panicked speech:
 
 - Address, age, sex, known conditions, and names are stored in advance and delivered instantly.
-- Symptoms map onto a **fixed ontology of 29 human-verified Japanese terms**.
+- Symptoms map onto a **fixed ontology of 30 Japanese terms** (29 human-verified, 1 pending final sign-off).
 - **The model never generates Japanese.** It *selects* from pre-verified terms. Every Japanese
   string that reaches a dispatcher was checked by a fluent human beforehand.
 
@@ -73,7 +73,7 @@ decision here actually fits.
   📝 transcript in their language  →  shown for confirmation
      + English translation (Whisper's translate task) → fed to the classifier
         ↓  ← caller confirms: "is this what you said?"
-  🧠 SLM classification against the 29-entry ontology
+  🧠 SLM classification against the 30-entry ontology
      Stage A  candidate generation (high recall)
      Stage B  whole-list review pass (anti-fabrication)
         ↓  ← caller confirms: "is this what you meant?"  (can remove AND add)
@@ -121,16 +121,21 @@ perturbed to simulate panicked speech (`benchmark/eval_disfluent.py`):
 
 | | Clean | Panicked |
 |---|---|---|
-| Exact-match | 96% | 96% |
-| Precision | **1.00** | 0.96 |
+| Exact-match | 94% | — |
+| Precision | 0.98 | 0.96 |
 | Recall | 0.96 | 1.00 |
-| F1 | 0.98 | 0.98 |
-| Fabrications | **0** | 2 |
+| F1 | 0.97 | 0.98 |
+| Fabrications | 1 | 2 |
 
-Disfluency does not degrade accuracy overall — exact-match and F1 are unchanged. It does shift
-the *kind* of error: under noise the model over-includes, so recall rises and precision falls.
-Over-reporting is the safer direction, but note that **zero fabrications is a clean-speech,
-English result**, not a universal one.
+(Clean-speech numbers as of the 30-entry ontology, 2026-08-19 — splitting `fall` from
+`collapsed` cost 2 points of exact-match and 1 fabrication, the honest price of asking the
+model to resolve an ambiguity English itself doesn't disambiguate. All 3 remaining failures —
+1 fabrication, 2 misses — are unrelated pre-existing cases, unchanged by the split.)
+
+Disfluency does not degrade accuracy overall — exact-match and F1 are essentially unchanged. It
+does shift the *kind* of error: under noise the model over-includes, so recall rises and
+precision falls. Over-reporting is the safer direction, but fabrications are not zero even on
+clean English speech, so the honest claim is "very low," not "none."
 
 **Intel / OpenVINO** — Whisper `small`, 6.5s clip, Intel CPU:
 
@@ -150,7 +155,7 @@ explained — recorded honestly rather than omitted. SLM numbers on Intel hardwa
 
 - **It only asks questions it anticipated.** Open-ended clarification is the dispatcher's job.
   The claim is "the opening 60 seconds", not "the conversation".
-- **Anything outside the 29 ontology entries is not conveyed.** This is deliberate: the
+- **Anything outside the ontology's ~30 entries is not conveyed.** This is deliberate: the
   alternative is unverified machine-generated Japanese on a live emergency call.
 - **Four terms are aspect-ambiguous** (vomiting, seizure, bleeding, choking) — a seizure that has
   stopped reads differently in Japanese from one still happening. The caller chooses on the
@@ -182,12 +187,19 @@ Requires **Python 3.12** (OpenVINO has no wheels for 3.13+).
 ```bash
 python3.12 -m venv .venv && source .venv/bin/activate    # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-python tools/setup_profile.py                            # pre-registration: address, patient, you
 streamlit run app.py
 ```
 
-`setup_profile.py` also renders the Japanese audio for your address and patient details. **The
-app never synthesises speech at runtime** — every sentence it can say is pre-rendered into
+First run opens straight to a **setup screen** — no profile exists yet. Enter your postal code
+and it looks up your prefecture/city/ward in Japanese automatically (only place in the whole
+project that touches the network, and only when you press that button — the emergency path
+stays fully offline). Fill in the rest, save, and the app renders the Japanese audio for your
+details right there before returning you to the emergency button.
+
+(`tools/setup_profile.py` is the same thing as a terminal prompt, for a headless machine with
+no browser.)
+
+**The app never synthesises speech at runtime** — every sentence it can say is pre-rendered into
 `data/audio/`, which is why it doesn't need a Japanese voice installed on the machine running it.
 That works only because the ontology is a closed set. Rebuild with `python tools/build_audio.py`
 after changing the ontology; it needs a machine with a Japanese voice, and the output is portable.
@@ -221,7 +233,7 @@ src/briefing_template.py    composes Japanese from verified terms; owns the regi
 src/caller_profile.py       stored address / patient / caller details
 src/pipeline.py             wiring, plus a CLI for testing without the UI
 src/speak.py                offline Japanese TTS, pluggable backends
-data/ontology.json          the 29 verified terms — the heart of the project
+data/ontology.json          the ontology (verified Japanese terms) — the heart of the project
 benchmark/                  evaluation and Intel/OpenVINO conversion scripts
 OPEN_DECISIONS.md           full dated decision log, including reversals and rejected ideas
 ```
