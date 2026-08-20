@@ -99,6 +99,13 @@ _FEWSHOT = [
     # duty, teaching restraint AND the fall/collapse distinction on the exact wording that
     # confuses it. It said "collapsed" here until 2026-08-19, which taught the model backwards.
     ("she tripped and fell, and her arm is bleeding heavily", '["fall","heavy_bleeding"]'),
+    # CONTRASTING PAIR with the line above. Same shape - a fall plus an injury - but down
+    # STAIRS, so the answer is fall_down, not fall. Without this, the model pattern-matched
+    # the "tripped and fell + injury" example above and answered `fall` for a stairs fall
+    # (measured 2026-08-19); Stage B then correctly rejected it as not-level-ground and the
+    # fall disappeared from the briefing entirely. The examples must teach the DISTINCTION,
+    # not just the shape.
+    ("my father fell down the stairs and hit his head", '["fall_down","head_injury"]'),
     ("he suddenly went limp and dropped to the floor", '["collapsed"]'),
 ]
 
@@ -200,10 +207,10 @@ DESCRIPTIONS = {
     "collapsed": "the person went down with NO stated cause or mechanism - sudden, unexplained, "
                  "or described as fainting/going limp. Use this ONLY when the statement does "
                  "not say HOW they ended up on the ground",
-    "fall": "the person tripped, slipped, or lost their balance on LEVEL GROUND. NOT a fall "
-            "from stairs, a ladder, or any height",
-    "fall_from_height": "the person fell FROM STAIRS, A LADDER, A ROOF, OR ANY HEIGHT - "
-                        "distinct from tripping on level ground",
+    "fall": "the person tripped, slipped, or lost their balance on LEVEL GROUND - flat floor, "
+            "pavement, a rug. NOT down stairs or a slope",
+    "fall_down": "the person fell DOWN STAIRS, STEPS, OR A SLOPE - they went down something, "
+                 "not over on the spot",
     "choking": "choking, or something stuck in the throat",
     "seizure": "a seizure, convulsions, or uncontrollable shaking of the body",
     "head_injury": "a blow or injury to the head",

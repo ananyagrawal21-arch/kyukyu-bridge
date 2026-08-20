@@ -21,18 +21,28 @@
 # When adding a reported-frame term, store the PLAIN form.
 
 # Location is the single most critical field: a wrong address sends the ambulance to the
-# wrong place. So we only state the home address when the caller confirms they are there.
-# Otherwise we say plainly they are not home - never a silently-wrong location - prompting
-# the dispatcher to ask where they actually are.
+# wrong place. So we only state the REGISTERED address when the caller confirms they are there.
+# Otherwise we say plainly that they are elsewhere - never a silently-wrong location -
+# prompting the dispatcher to ask where they actually are.
 TEMPLATE_HEAD = "救急です。"
 TEMPLATE_LOCATION_KNOWN = "場所は{address}です。"
 # Rewritten 2026-08-04 (was 「登録した住所と違います」 - leaked our internal app concept,
 # meaningless to a dispatcher). Now a plain, natural statement that simply signals no address
-# is coming, so the dispatcher knows to ask. TODO(founder): confirm this reads naturally.
-TEMPLATE_LOCATION_UNKNOWN = "今、自宅にいません。"
+# is coming, so the dispatcher knows to ask.
+#
+# LOCATION-NEUTRAL as of 2026-08-20 (was 「今、自宅にいません。」 - "I am not at home").
+# The app is not home-only: it works at any indoor place whose address is registered - a home,
+# a company dormitory, a care facility, a language school. 自宅 hard-coded the home assumption
+# into the one line a dispatcher actually hears, and would have been simply false when the
+# registered address was a workplace.
+# TODO(founder): confirm 「今、別の場所にいます。」 reads naturally to a dispatcher.
+TEMPLATE_LOCATION_UNKNOWN = "今、別の場所にいます。"
 
 TEMPLATE_PATIENT = "{age}歳の{sex}です。"
 TEMPLATE_PATIENT_NAMED = "名前は{name}、{age}歳の{sex}です。"
+# Sex unknown -> say the age alone. 「25歳です」, never 「25歳の不明です」.
+TEMPLATE_PATIENT_NO_SEX = "{age}歳です。"
+TEMPLATE_PATIENT_NAMED_NO_SEX = "名前は{name}、{age}歳です。"
 TEMPLATE_CONDITIONS = "持病は{conditions}です。"
 NO_CONDITIONS = "持病はありません。"
 # The dispatcher's near-certain first question is the caller's own name (通報者の名前),
@@ -95,8 +105,8 @@ def render_handoff(
 ) -> list[dict]:
     """Rows for the crew-facing summary. Same rule as everywhere else: nothing unconfirmed."""
     rows = []
-    if age is not None and sex_ja is not None:
-        who = f"{age}歳の{sex_ja}"
+    if age is not None:
+        who = f"{age}歳の{sex_ja}" if sex_ja else f"{age}歳"
         if name:
             who = f"{name}（{who}）"
         rows.append({"key": "patient", "jp": who})
@@ -128,7 +138,7 @@ def render_location_pieces(address: dict = None) -> list[dict]:
     if address is None:
         return [
             {"label": "Ambulance", "jp": TEMPLATE_HEAD},
-            {"label": "Not at home", "jp": TEMPLATE_LOCATION_UNKNOWN},
+            {"label": "Different location", "jp": TEMPLATE_LOCATION_UNKNOWN},
         ]
     area = f"{address['prefecture']}{address['city_ward']}{address['street_block']}"
     building = f"{address['building']} {address['room']}号室です。"
@@ -174,11 +184,17 @@ def render_briefing_chunks(
     # long pauses start, rather than explaining them after everything else is done.
     chunks.append({"label": "Why replies are slow", "jp": TEMPLATE_TAIL})
 
-    if age is not None and sex_ja is not None:
-        jp = (
-            TEMPLATE_PATIENT_NAMED.format(name=name, age=age, sex=sex_ja) if name
-            else TEMPLATE_PATIENT.format(age=age, sex=sex_ja)
-        )
+    if age is not None:
+        if sex_ja:
+            jp = (
+                TEMPLATE_PATIENT_NAMED.format(name=name, age=age, sex=sex_ja) if name
+                else TEMPLATE_PATIENT.format(age=age, sex=sex_ja)
+            )
+        else:
+            jp = (
+                TEMPLATE_PATIENT_NAMED_NO_SEX.format(name=name, age=age) if name
+                else TEMPLATE_PATIENT_NO_SEX.format(age=age)
+            )
         chunks.append({"label": "Patient", "jp": jp})
 
     if statements:

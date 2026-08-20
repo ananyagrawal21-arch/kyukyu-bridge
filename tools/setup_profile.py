@@ -19,8 +19,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
-from caller_profile import PROFILE_PATH  # noqa: E402
-from postal import lookup as postal_lookup, looks_romaji  # noqa: E402
+from caller_profile import PROFILE_PATH, romaji_fields  # noqa: E402
+from postal import lookup as postal_lookup  # noqa: E402
 
 SEXES = ("male", "female", "unknown")
 
@@ -86,19 +86,9 @@ def main():
         "building": ask("Building 建物名 (Japanese, blank if none)", addr.get("building")),
         "room": ask("Room 部屋番号 (blank if none)", addr.get("room")),
     }
-    # The postal lookup only covers prefecture/city/ward - street_block and building are
-    # still typed by hand, so the same romaji mistake remains possible there.
-    romaji_fields = [
-        label for label, val in (
-            ("street_block", address["street_block"]), ("building", address["building"]),
-        ) if looks_romaji(val)
-    ]
-    if romaji_fields:
-        print(
-            f"\n  WARNING: {', '.join(romaji_fields)} looks like romaji, not Japanese. "
-            "A Japanese voice cannot read it, and the dispatcher would hear noise for the "
-            "single most critical field. Please re-enter in Japanese."
-        )
+    # Checked once at the END against the whole profile instead of piecemeal here - the same
+    # helper the app uses, so the two entry points cannot disagree about what counts as romaji.
+    # (Deliberately after the patient/caller sections below, which are also spoken aloud.)
 
     print("\n--- The person most likely to need help ---")
     patient = {
@@ -123,6 +113,15 @@ def main():
     }
 
     profile = {"address": address, "patient": patient, "caller": caller_out}
+
+    bad = romaji_fields(profile)
+    if bad:
+        print(
+            f"\n  WARNING: {', '.join(bad)} look like romaji, not Japanese. A Japanese voice "
+            "cannot read them, so the dispatcher would hear noise. Re-run this and enter them "
+            "in Japanese before relying on the app."
+        )
+
     PROFILE_PATH.write_text(
         json.dumps(profile, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )

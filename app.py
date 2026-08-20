@@ -1,11 +1,23 @@
 """Kyūkyū-Bridge - one-button emergency UI (Streamlit).
 
-REAL-WORLD USE: a household with a known at-risk person keeps this OPEN and running on a home
-device (hence warm_brain() below - the model loads at app-open, never mid-emergency). When
-someone collapses, the caller dials 119 on their PHONE and puts it on SPEAKERPHONE, then works
-this app on the home device, holding the phone toward its speaker. Two devices is not a
+REAL-WORLD USE: any INDOOR PLACE WITH A FIXED, REGISTERED ADDRESS keeps this OPEN and running
+on a device that stays there (hence warm_brain() below - the model loads at app-open, never
+mid-emergency). A home is the obvious case, but nothing here is home-specific: a company
+dormitory, a care facility, a language school and a share house all work identically, because
+the only requirement is that the address in profile.json is the address of the building the
+device is sitting in.
+
+When someone collapses, the caller dials 119 on their PHONE and puts it on SPEAKERPHONE, then
+works this app on the fixed device, holding the phone toward its speaker. Two devices is not a
 Streamlit limitation: a phone cannot inject app audio into a live call, and its echo
 cancellation would suppress it if you tried.
+
+WHY INDOORS IS THE RIGHT SCOPE, not a retreat: Japan already solves the outdoor/mobile case
+better than we could. Mobile 119 calls transmit the caller's location automatically
+(緊急通報位置通知, carrier-level, nationwide), and 三者間同時通訳 patches a live human
+interpreter into any call from any phone (673/720 fire departments, 93.5%, Jan 2025). What
+NEITHER can supply is the room number and the patient's medical history - which is exactly
+what a registered indoor address plus a stored profile give you.
 
 Flow: 119 dialled FIRST -> EMERGENCY -> [dispatch_now: play 救急です + address IMMEDIATELY,
 this is what sends the ambulance] -> speak/upload -> Whisper -> confirm transcript ->
@@ -32,7 +44,7 @@ from briefing_template import render_location_pieces, HANDOFF_LABELS  # noqa: E4
 from pipeline import build_handoff  # noqa: E402
 from slm_classify import SLM_DISCARD  # noqa: E402
 from ontology import load_ontology  # noqa: E402
-from caller_profile import load_profile  # noqa: E402
+from caller_profile import load_profile, romaji_fields  # noqa: E402
 from postal import lookup as postal_lookup, looks_romaji  # noqa: E402
 
 st.set_page_config(page_title="Kyūkyū-Bridge", layout="centered")
@@ -173,7 +185,7 @@ def show_progress(phase):
 
 def reset():
     for k in ("phase", "transcript", "entries", "extras", "need_breathing", "history",
-              "need_circulation", "at_home", "patient_ok", "chunks", "chunk_i", "stt_language",
+              "need_circulation", "at_registered_address", "patient_ok", "chunks", "chunk_i", "stt_language",
               "transcript_en"):
         st.session_state.pop(k, None)
     # The per-symptom aspect radios are keyed by symptom id, so they are not in the list above.
@@ -304,10 +316,13 @@ if phase == "setup":
             # Romaji in the address is the failure mode that matters: it is spoken aloud as the
             # ambulance's destination. Saving is still allowed - locking the user out entirely
             # is worse - but the home screen keeps warning until it is fixed.
+            # EVERY spoken field, not just the address. The patient's name, their conditions
+            # and the caller's name are all read aloud by a Japanese voice too.
             romaji = [
                 label for label, val in (
                     ("Prefecture", prefecture), ("City/ward", city_ward),
                     ("Street & block", street_block), ("Building", building),
+                    ("Patient name", pname), ("Known conditions", conds), ("Your name", cname),
                 )
                 if looks_romaji(val)
             ]
@@ -371,12 +386,14 @@ elif phase == "idle":
     st.markdown('<div class="caption">Call 119 first. Then tap this.</div>', unsafe_allow_html=True)
     if st.button("⚙ Your details"):
         go("setup")
-    # Keep warning here, not only on the setup screen. A romaji address is not a cosmetic
-    # problem - the ambulance would be sent nowhere - and the user must not be able to forget.
-    if any(looks_romaji(str(v)) for v in profile["address"].values()):
+    # Keep warning here, not only on the setup screen. Romaji in a spoken field is not a
+    # cosmetic problem - the dispatcher hears noise for the address, the name, or the medical
+    # history - and the user must not be able to forget about it.
+    bad = romaji_fields(profile)
+    if bad:
         st.error(
-            "⚠️ Your address is not in Japanese, so it cannot be read to the dispatcher. "
-            "Open **Your details** and fix it.",
+            f"⚠️ **{', '.join(bad)}** {'is' if len(bad) == 1 else 'are'} not in Japanese, so "
+            "cannot be read to the dispatcher. Open **Your details** and fix it.",
         )
 
 # ---- 1b. THE FIRST 15 SECONDS. ----
@@ -390,8 +407,8 @@ elif phase == "idle":
 # inference latency is a polish problem rather than a safety one - the ambulance is already
 # moving before the SLM has finished thinking.
 elif phase == "dispatch_now":
-    if "at_home" not in st.session_state:
-        st.session_state.at_home = True
+    if "at_registered_address" not in st.session_state:
+        st.session_state.at_registered_address = True
 
     st.markdown('<div class="status">▶ Play these to the dispatcher NOW</div>', unsafe_allow_html=True)
 
@@ -401,14 +418,14 @@ elif phase == "dispatch_now":
     where = st.radio(
         "Where is the emergency?",
         ["At this address", "Somewhere else"],
-        index=0 if st.session_state.at_home else 1,
+        index=0 if st.session_state.at_registered_address else 1,
         horizontal=True,
     )
-    st.session_state.at_home = where == "At this address"
+    st.session_state.at_registered_address = where == "At this address"
 
     # Split into short pieces so the dispatcher can write each down, and so a repeat request
     # only costs one piece. See render_location_pieces for the measurement behind this.
-    pieces = render_location_pieces(profile["address"] if st.session_state.at_home else None)
+    pieces = render_location_pieces(profile["address"] if st.session_state.at_registered_address else None)
     for n, piece in enumerate(pieces, 1):
         st.markdown(
             f'<div class="caption" style="text-align:left;margin-bottom:0.2rem">{n}. {piece["label"]}</div>',
@@ -625,7 +642,7 @@ elif phase == "briefing":
     if "chunks" not in st.session_state:
         st.session_state.chunks = build_briefing_chunks(
             st.session_state.entries, st.session_state.extras, profile, ontology,
-            st.session_state.patient_ok, st.session_state.at_home,
+            st.session_state.patient_ok, st.session_state.at_registered_address,
         )
         # Start at 1, not 0: chunk 0 is the emergency+location line, already delivered back in
         # `dispatch_now`. Replaying it would waste the dispatcher's time on the one thing they
@@ -683,7 +700,7 @@ elif phase == "handoff":
     st.markdown('<div class="status">Show this to the ambulance crew</div>', unsafe_allow_html=True)
     rows = build_handoff(
         st.session_state.entries, st.session_state.extras, profile, ontology,
-        st.session_state.patient_ok, st.session_state.at_home,
+        st.session_state.patient_ok, st.session_state.at_registered_address,
     )
     # Label and value on ONE line, label in a fixed-width column so all four line up and the
     # crew's eye runs straight down the values. All Japanese, nothing to scan past.

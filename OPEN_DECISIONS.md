@@ -57,10 +57,9 @@ Corrected to `["fall","heavy_bleeding"]`, plus a second example contrasting an a
 Caught here, but is a reminder: an ontology change is not complete until every place that
 teaches the model (few-shot, Stage B descriptions) is checked, not just the entry itself.
 
-**Verified 4/4 target-tested**: "fell down the stairs and hit his head" -> fall+head_injury;
-"suddenly collapsed... not responding" -> collapsed; "tripped on the step" -> fall. One miss on
-a genuinely ambiguous phrase ("just went down, he was fine a second ago") returned nothing -
-safe direction, not a fabrication.
+**SUPERSEDED 2026-08-20 - it is now a THREE-way split, see the section below.** The two-entry
+version described here was an intermediate step and its Japanese was wrong twice over. Kept for
+the reasoning trail; read the three-way section as the current state.
 
 **Re-running the eval after this change surfaced a real methodology finding first:** two
 apparent "regressions" (head_injury and drowning cases now also returning `fall`) were not
@@ -84,8 +83,76 @@ the fall/collapse split. The split itself is clean; the small numeric cost is ge
 price of asking the model to resolve an ambiguity English does not disambiguate on its own
 ("fell" covers both readings), not a defect in how it was built.
 
-STILL NEEDED: founder check on 転倒しました - is it right for a level-ground trip, and is a
-falling-FROM-HEIGHT term needed separately (階段から落ちました)?
+## FALL vs COLLAPSE - the THREE-way split, current state (2026-08-20)
+
+Grounded in standard Japanese EMS/nursing vocabulary rather than invented phrasing. Japanese
+already carves this up, and 転倒・転落 is used as a recognised paired term in patient-safety
+contexts:
+
+    collapsed  倒れました    no mechanism stated - "he just collapsed", "went limp"
+    fall       転倒しました   fell OVER on level ground - tripped, slipped, a rug
+    fall_down  転落しました   fell DOWN stairs or a slope (in contact with a surface)
+
+**墜落 (free fall through air - ladder, roof, window) is deliberately NOT modelled.** It is a
+real and distinct term, but rare in the domestic setting this app is scoped to, and a fourth
+lookalike entry is precisely what caused the misclassification described below.
+
+**TWO Japanese errors were made getting here, both caught by the founder, both worth remembering:**
+1. Claimed 倒れました signals a MEDICAL cause. It does not - 倒れる is CAUSE-NEUTRAL, it only
+   means "went down". It is the right default when no mechanism is given, and for no other
+   reason.
+2. Used 階段から落ちました ("fell from the stairs") as the generic from-height term while its
+   trigger phrases also covered ladders and roofs - so a ladder fall would have told the
+   dispatcher the patient fell down STAIRS. A plain description masquerading as a general term.
+Both were avoidable by checking the standard vocabulary first, which is what finally resolved it.
+
+**A REAL FAILURE MODE, measured and fixed:** "fell down the stairs and hit his head" originally
+returned ONLY head_injury - the fall vanished. Isolating the stages showed why, and every
+component was behaving correctly:
+
+    Stage A (propose) -> ['fall', 'head_injury']     <- picked the WRONG sibling
+    Stage B (review)  -> ['head_injury']             <- correctly rejected `fall`, which its
+                                                       own description says is level-ground
+
+Stage B was right to reject it. But because Stage A never proposed `fall_down`, the correct
+label was never in the list to survive, and the information was lost silently.
+
+Root cause was the few-shot examples: the model saw only "she tripped and fell + injury ->
+[fall, injury]" and pattern-matched that SHAPE for a stairs fall. Fixed by adding a CONTRASTING
+example with the same shape but a stairs mechanism, answered `fall_down`. The examples now teach
+the DISTINCTION, not just the output format.
+
+**Verified 4/4 after the fix**, including the founder's exact phrasing:
+    "he fell from the stairs"                          -> fall_down
+    "fell down the stairs and is bleeding"             -> fall_down + heavy_bleeding
+    "she tripped on the rug and cannot get up"         -> fall
+    "he suddenly collapsed and is not responding"      -> collapsed
+
+STILL NEEDED: founder check on whether 転倒しました and 転落しました are natural in a PANICKING
+CALLER's mouth, or read too clinically. Both are currently `verified: false`.
+**RESOLVED 2026-08-20 - founder confirmed both read naturally. No longer blocking.**
+
+**Full 52-case regression after the fall_down addition:**
+
+    exact-match  94% -> 92%  (48/52)
+    precision    0.98 -> 0.98  (unchanged, 1 fabrication)
+    recall       0.96 -> 0.94  (1 new miss)
+    F1           0.97 -> 0.96
+
+3 of 4 failures are the SAME pre-existing cases (vomiting fabrication, boiling-hot fever miss,
+pale/sweating miss). ONE new miss: "he collapsed and now he's convulsing on the floor" ->
+missed `seizure` (kept `collapsed`).
+
+**This new miss is NOT about fall/collapse at all - and that is the real finding.** The
+situation menu is the FULL ontology on every single call, so adding `fall_down` changed the
+exact prompt text for EVERY case, including ones with no fall in them. A seizure case that
+previously classified correctly can flip purely from prompt-length/content shift, with zero
+change to seizure-relevant code. This is the mechanism the embedding-retrieval rejection and
+the "ontology size bounded by precision, not latency" note already predicted in the abstract -
+here it is concretely, in a real regression. Each new entry has some non-zero chance of
+perturbing UNRELATED classifications. Not a reason to stop growing the ontology, but a reason
+to always re-run the FULL eval after any addition, not just targeted tests of the new entry -
+exactly what this session did, and exactly why it caught this.
 
 ## HOUSEKEEPING - found during a full-repo audit (2026-08-19)
 
@@ -158,12 +225,15 @@ wrong - it was never a target in either direction.
 This existed only as an unstated assumption for weeks. Every design decision already implied it;
 nobody had said it out loud, and it kept causing confusion.
 
-**Target scenario:** a household with a KNOWN AT-RISK PERSON (elderly relative, heart condition).
-A family member with limited Japanese is present when they collapse. At home.
+**Target scenario (WIDENED 2026-08-20 - see the location-neutral pass below):** ANY INDOOR PLACE
+WITH A FIXED, REGISTERED ADDRESS, where the people present may not speak Japanese. A household
+with a known at-risk person is the obvious case, but a company dormitory, care facility, language
+school or share house work IDENTICALLY - the only requirement is that the address in profile.json
+is the address of the building the device sits in.
 
 **Physical setup - TWO DEVICES:**
 - Phone: dials 119, on SPEAKERPHONE.
-- Home device (laptop/tablet): runs this app, ALREADY OPEN, model already warm.
+- Fixed device (laptop/tablet) that STAYS IN THE BUILDING: runs this app, ALREADY OPEN, warm.
 - Audio path is acoustic: device speaker -> phone mic -> dispatcher.
 
 Two devices is NOT a Streamlit limitation. A phone cannot inject app audio into a live call -
@@ -178,10 +248,33 @@ only makes sense under this assumption, so the code had already answered this qu
 Dispatchers routinely handle panicking, silent or incoherent callers; 30 seconds of fumbling is
 normal to them. Never getting usable information is not.
 
-**Honest scope limit, state it in the pitch:** this does not help someone alone, away from home,
-or without the device set up. It is a HOME emergency tool for a household with a known at-risk
-person. Narrower than "helps foreigners call 119" - and far stronger, because every design
-decision already fits it (stored address, stored patient profile, stored conditions, warm model).
+**Honest scope limit, state it in the pitch:** this does not help someone alone, OUTDOORS, or in
+a building that has not been set up. It is an INDOOR emergency tool for a registered address.
+Narrower than "helps foreigners call 119" - and far stronger, because every design decision
+already fits it (stored address, stored patient profile, stored conditions, warm model).
+
+**WHY INDOORS IS THE RIGHT SCOPE, NOT A RETREAT (verified 2026-08-20).** Japan already handles
+the outdoor/mobile case BETTER than we could, with two pieces of national infrastructure:
+
+1. **緊急通報位置通知** - dialling 119 from a mobile transmits the caller's location to the fire
+   department AUTOMATICALLY, at carrier level, nationwide (confirmed on Docomo's and SoftBank's
+   own service pages). Adding GPS to this app would duplicate that, worse: a laptop has no GPS
+   receiver, WiFi positioning needs the internet, and no coordinate can give a room number.
+2. **三者間同時通訳** - a live professional interpreter patched into any 119 call, 24/7, any
+   phone, no app, no registration. 673/720 fire departments = 93.5% (FDMA, Jan 2025).
+
+What NEITHER supplies is the ROOM NUMBER and the PATIENT'S MEDICAL HISTORY. Carrier location
+finds the building, not 405号室. An interpreter faithfully translates what the caller CAN say -
+not what they cannot recall, spell or pronounce under panic. That gap exists only where an
+address can be registered in advance, i.e. indoors.
+
+=> The honest claim is NOT "this helps foreigners call 119" (the government largely solved that).
+It is **"this delivers a verified patient record into the first 15 seconds of the call."**
+
+This also RETIRES the "not at home" problem rather than solving it: away from the registered
+address every advantage this app has evaporates, and the caller is better served by the two
+systems above, which need no device at all. The app says 「今、別の場所にいます。」 and gets out
+of the way.
 
 ## Location goes FIRST - flow restructured 2026-08-12
 
@@ -597,7 +690,9 @@ does not. Not hypothetical; each has a concrete failure case.
 ## Not-at-home line leaks app-internal jargon - RESOLVED 2026-08-04
 
 - Was 「今いる場所は登録した住所と違います」("different from the registered address") - leaked
-  our internal concept. Now: 「今、自宅にいません。」- plain, natural, no jargon. Still marked
+  our internal concept. Then 「今、自宅にいません。」, now 「今、別の場所にいます。」 after the
+  2026-08-20 location-neutral pass (自宅 hard-coded a home assumption into the one line the
+  dispatcher hears, and was simply false when the registered address is a dormitory). Marked
   TODO(founder) in the code for a final naturalness check, but no longer blocking.
   File: src/briefing_template.py, TEMPLATE_LOCATION_UNKNOWN.
 

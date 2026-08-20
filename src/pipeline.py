@@ -32,7 +32,18 @@ def _briefing_kwargs(
     if patient_is_profiled:
         patient_details = dict(
             age=profile["patient"]["age"],
-            sex_ja=ontology["sex_terms"].get(profile["patient"].get("sex", "unknown"), "不明"),
+            # None when sex is unknown/unrecognised, NOT 不明. Speaking 「25歳の不明です」
+            # announces a field we do not have; the templates drop the word entirely instead,
+            # same omit-rather-than-guess rule as the address and patient identity.
+            # ONLY male/female map to a word. Anything else - "unknown", or a value that is
+            # not in the map at all - becomes None, and the templates then say the age alone.
+            # sex_terms DOES contain unknown->不明, so looking it up would produce
+            # 「25歳の不明です」: announcing a field we do not have, which is exactly what the
+            # omit-rather-than-guess rule forbids everywhere else.
+            sex_ja=(
+                ontology["sex_terms"].get(profile["patient"].get("sex"))
+                if profile["patient"].get("sex") in ("male", "female") else None
+            ),
             conditions_ja=profile["patient"].get("known_conditions", []),
             name=profile["patient"].get("name") or None,
         )

@@ -16,11 +16,11 @@
     "  source_dependent - could be either; the Week-2 SLM resolves per utterance. For now the",
     "                     crude matcher states them directly. Do not hard-code a frame guess.",
     "",
-    "verified: TRUE for all 29 - founder (fluent, resident in Japan) read every term and",
+    "verified: TRUE for all 31 - founder (fluent, resident in Japan) read every term and",
     "confirmed each is natural, clear, non-diagnostic, and dispatcher-appropriate. The 13",
     "added from the 緊急度判定プロトコル were reviewed 2026-08-12 as RENDERED OUTPUT (term +",
     "frame wrapper), not as raw strings - that review is what caught the polite-form-before-",
-    "と言っています bug and the 脈がありません over-claim."
+    "と言っています bug and the 脈がありません over-claim. 転倒/転落 signed off 2026-08-20."
   ],
 
   "sex_terms": {
@@ -242,16 +242,16 @@
       "trigger_phrases_en": ["tripped", "tripped and fell", "slipped", "slipped and fell", "lost her footing", "lost his footing", "fell over"],
       "japanese_term": "転倒しました",
       "frame": "observed",
-      "verified": false,
+      "verified": true,
       "note": "LEVEL-GROUND trip/slip only - falling from height is the separate `fall_from_height` entry below, because it is a different clinical picture (higher risk of spinal/multiple injury) and the crew needs to know which. 転倒 means 'lost balance and fell' but does NOT say from where, so it must not be used for a stairs/ladder fall. English 'fell' does not distinguish these on its own - the SLM reads the whole sentence, caller can correct on the confirmation screen. NEEDS FOUNDER CHECK."
     },
     {
-      "id": "fall_from_height",
-      "trigger_phrases_en": ["fell down the stairs", "fell down stairs", "fell off a ladder", "fell off the roof", "fell from a height", "fell out of a window", "fell off", "fell from"],
-      "japanese_term": "階段から落ちました",
+      "id": "fall_down",
+      "trigger_phrases_en": ["fell down the stairs", "fell down stairs", "fell from the stairs", "fell down a slope", "tumbled down", "fell down the steps", "rolled down the stairs"],
+      "japanese_term": "転落しました",
       "frame": "observed",
-      "verified": false,
-      "note": "A fall FROM HEIGHT (stairs, ladder, roof) carries materially higher risk of spinal or multiple injury than a level-ground trip, and the crew needs to know which they are walking into. 階段から落ちました is literally 'fell from the stairs' - it will read oddly for a ladder or roof fall. NEEDS FOUNDER CHECK: whether a more general term (例: 高い所から落ちました, 'fell from a height') should replace this so one term covers stairs/ladder/roof, or whether stairs specifically is common enough to keep as the default and add a second term for other heights."
+      "verified": true,
+      "note": "転落 = tumbling down WHILE IN CONTACT with a surface (stairs, slope). Standard Japanese EMS vocabulary, and morphologically parallel to 転倒 so the pair reads naturally. Distinct from 転倒 (level ground) and from 墜落 (free fall through air - ladder, roof, window), which is deliberately NOT modelled: rare in the domestic setting this app is scoped to, and a fourth lookalike entry is what made the model misclassify in the first place. Earlier draft used 階段から落ちました, which hardcoded 'stairs' while covering ladders/roofs - it would have told a dispatcher someone fell down stairs when they fell off a ladder. NEEDS FOUNDER CHECK: is 転落しました natural in a panicking caller's mouth, or too clinical?"
     },
     {
       "id": "choking",

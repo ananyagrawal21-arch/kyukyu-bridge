@@ -32,7 +32,7 @@ person cannot produce structured, dispatcher-usable information at all — in an
 The system's advantage is **preparation**, not out-comprehending panicked speech:
 
 - Address, age, sex, known conditions, and names are stored in advance and delivered instantly.
-- Symptoms map onto a **fixed ontology of 30 Japanese terms** (29 human-verified, 1 pending final sign-off).
+- Symptoms map onto a **fixed ontology of 31 Japanese terms** (29 human-verified, 2 pending final sign-off).
 - **The model never generates Japanese.** It *selects* from pre-verified terms. Every Japanese
   string that reaches a dispatcher was checked by a fluent human beforehand.
 
@@ -43,17 +43,43 @@ address, age, or medical history in advance. This can.
 
 ## Who it's for
 
-A household with a **known at-risk person** — an elderly relative with a heart condition — where
-a family member with limited Japanese may be the one who finds them.
+**Any indoor place with a fixed, registered address**, where the people present may not speak
+Japanese. A home with an elderly relative is the obvious case, but nothing in the design is
+home-specific — a company dormitory, a care facility, a language school, a share house all work
+identically. The only requirement is that the address stored in the app is the address of the
+building the device sits in.
 
-The app runs on a **home device, already open**, model already warm. In an emergency the caller
-dials 119 on their **phone**, puts it on **speakerphone**, and works the app while holding the
-phone toward its speaker. Two devices, deliberately: a phone can't inject app audio into a live
-call — call and media audio are separate streams, and echo cancellation would suppress it anyway.
+Japan has roughly **4.1 million foreign residents** ([MOJ, 2026](https://www.moj.go.jp/isa/publications/press/13_00062.html?lang=en)),
+and **55–60% of ambulance dispatches are to incidents inside a private residence**.
 
-This does **not** help someone alone, away from home, or without the device set up. It's a home
-emergency tool, which is narrower than "helps foreigners call 119" — and it's what every design
-decision here actually fits.
+The app runs on a **device that stays in the building, already open**, model already warm. In an
+emergency the caller dials 119 on their **phone**, puts it on **speakerphone**, and works the app
+while holding the phone toward its speaker. Two devices, deliberately: a phone can't inject app
+audio into a live call — call and media audio are separate streams, and echo cancellation would
+suppress it anyway.
+
+### Why indoors is the right scope, not a retreat
+
+Japan already handles the outdoor and mobile case **better than this could**:
+
+- **Location is already automatic.** Dialling 119 from a mobile transmits the caller's position
+  to the fire department at carrier level ([緊急通報位置通知](https://www.docomo.ne.jp/service/position_notification/)),
+  nationwide. Adding GPS here would duplicate national infrastructure, worse.
+- **A human interpreter is already one button away.** 三者間同時通訳 patches a live professional
+  interpreter into any 119 call, 24/7, from any phone, with no app and no registration —
+  [673 of 720 fire departments, 93.5%](https://www.fdma.go.jp/mission/enrichment/gaikokujin_syougaisya_torikumi/sanshakan-douji-tsuuyaku.html)
+  as of January 2025.
+
+What **neither** can supply is the **room number** and the **patient's medical history**. Carrier
+location finds the building, not 405号室. An interpreter faithfully translates what the caller
+can say — not what they can't recall, spell, or pronounce under panic.
+
+That is the gap this fills, and it exists only where an address can be registered in advance:
+indoors. So the honest claim is not "this helps foreigners call 119" — the government largely
+solved that. It is **"this delivers a verified patient record into the first 15 seconds of the
+call."**
+
+It does **not** help someone alone, outdoors, or in a building that hasn't been set up.
 
 ## How it works
 
@@ -73,7 +99,7 @@ decision here actually fits.
   📝 transcript in their language  →  shown for confirmation
      + English translation (Whisper's translate task) → fed to the classifier
         ↓  ← caller confirms: "is this what you said?"
-  🧠 SLM classification against the 30-entry ontology
+  🧠 SLM classification against the 31-entry ontology
      Stage A  candidate generation (high recall)
      Stage B  whole-list review pass (anti-fabrication)
         ↓  ← caller confirms: "is this what you meant?"  (can remove AND add)
@@ -111,7 +137,7 @@ Three rules the design refuses to break:
    the interpretation (did we *understand* you right?). Failures get caught, not delivered.
 
 Supporting decisions: unknown values are omitted rather than guessed — an unconfirmed patient
-identity drops age/sex/conditions entirely, and an unconfirmed location says 「今、自宅にいません。」
+identity drops age/sex/conditions entirely, and an unconfirmed location says 「今、別の場所にいます。」
 rather than asserting a possibly-wrong address. A wrong address is worse than no address.
 
 ## Measured results
@@ -121,16 +147,20 @@ perturbed to simulate panicked speech (`benchmark/eval_disfluent.py`):
 
 | | Clean | Panicked |
 |---|---|---|
-| Exact-match | 94% | — |
+| Exact-match | 92% | — |
 | Precision | 0.98 | 0.96 |
-| Recall | 0.96 | 1.00 |
-| F1 | 0.97 | 0.98 |
+| Recall | 0.94 | 1.00 |
+| F1 | 0.96 | 0.98 |
 | Fabrications | 1 | 2 |
 
-(Clean-speech numbers as of the 30-entry ontology, 2026-08-19 — splitting `fall` from
-`collapsed` cost 2 points of exact-match and 1 fabrication, the honest price of asking the
-model to resolve an ambiguity English itself doesn't disambiguate. All 3 remaining failures —
-1 fabrication, 2 misses — are unrelated pre-existing cases, unchanged by the split.)
+(Clean-speech numbers as of the 31-entry ontology, 2026-08-20. Growing the ontology from 29 to
+31 entries — splitting `collapsed` into three cause-specific terms — cost a few points across
+the board. Most of that cost is not really about falls: because the model sees the *entire*
+ontology on every call, adding any entry slightly perturbs the prompt for *every* case, so one
+unrelated miss appeared alongside the expected ones. This is the concrete version of a risk
+already reasoned about in `OPEN_DECISIONS.md` — ontology growth is bounded by precision, not
+latency — and it's why every addition here was re-verified against the full test set, not just
+the new case.)
 
 Disfluency does not degrade accuracy overall — exact-match and F1 are essentially unchanged. It
 does shift the *kind* of error: under noise the model over-includes, so recall rises and
@@ -155,7 +185,7 @@ explained — recorded honestly rather than omitted. SLM numbers on Intel hardwa
 
 - **It only asks questions it anticipated.** Open-ended clarification is the dispatcher's job.
   The claim is "the opening 60 seconds", not "the conversation".
-- **Anything outside the ontology's ~30 entries is not conveyed.** This is deliberate: the
+- **Anything outside the ontology's 31 entries is not conveyed.** This is deliberate: the
   alternative is unverified machine-generated Japanese on a live emergency call.
 - **Four terms are aspect-ambiguous** (vomiting, seizure, bleeding, choking) — a seizure that has
   stopped reads differently in Japanese from one still happening. The caller chooses on the
@@ -178,7 +208,8 @@ explained — recorded honestly rather than omitted. SLM numbers on Intel hardwa
 
 On GPS specifically: it's absent by choice, not omission. A laptop has no GPS chip and locates by
 WiFi/IP triangulation, which cannot produce a room number — while `profile.json` already holds
-one, exactly. For a home emergency, a stored verified address beats an estimated position.
+one, exactly. For an indoor emergency, a stored verified address beats an estimated position —
+and Japan already transmits mobile-caller location to 119 automatically at carrier level.
 
 ## Running it
 
