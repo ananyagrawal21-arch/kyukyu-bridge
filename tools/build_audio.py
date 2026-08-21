@@ -10,7 +10,7 @@ WHY THIS EXISTS
 
     We can dodge this entirely because every sentence is knowable in advance:
       - fixed lines are constants
-      - the 29 ontology terms are a CLOSED set (the same property the safety design rests on)
+      - the ontology terms are a CLOSED set (the same property the safety design rests on)
       - profile lines (address, age, conditions) are settled when the profile is written
     So: render once here with the best voice available, ship the WAVs, play files at runtime.
 
@@ -42,7 +42,6 @@ def every_sentence() -> tuple:
     ont = load_ontology()
     texts = [
         T.TEMPLATE_HEAD,
-        T.TEMPLATE_LOCATION_UNKNOWN,
         T.TEMPLATE_TAIL,
         T.HANDOFF_CALLER,
         T.NO_CONDITIONS,
@@ -66,12 +65,31 @@ def every_sentence() -> tuple:
     for piece in T.render_location_pieces(profile["address"]):
         personal.append(piece["jp"])
 
+    # ALSO the COMBINED location sentence. render_location_pieces splits the address into
+    # separate play buttons for the dispatch_now screen, but render_briefing_chunks builds it as
+    # ONE sentence (場所は<whole address>です。) for the briefing's chunk 0. The briefing normally
+    # opens at chunk 1 - chunk 0 was already delivered - but "Previous part" can reach it, and
+    # without this it was the only chunk in the app that fell back to live synthesis.
+    from pipeline import build_briefing_chunks  # local: avoids a circular import at module load
+    personal.append(build_briefing_chunks([], [], profile, ont, True, True)[0]["jp"])
+
     p = profile["patient"]
-    age, sex_ja = p.get("age"), ont["sex_terms"].get(p.get("sex", "unknown"), "不明")
+    # MUST mirror _briefing_kwargs in pipeline.py exactly. It used to default to 不明 here while
+    # the briefing had moved to omitting sex entirely - so this rendered 「25歳の不明です」 while
+    # the app asked for 「25歳です」, a guaranteed cache MISS that silently dropped the app back
+    # to live synthesis: the machine-dependent path pre-rendering exists to eliminate.
+    age = p.get("age")
+    sex_ja = ont["sex_terms"].get(p.get("sex")) if p.get("sex") in ("male", "female") else None
     if age is not None:
-        personal.append(T.TEMPLATE_PATIENT.format(age=age, sex=sex_ja))
-        if p.get("name"):
-            personal.append(T.TEMPLATE_PATIENT_NAMED.format(name=p["name"], age=age, sex=sex_ja))
+        if sex_ja:
+            personal.append(T.TEMPLATE_PATIENT.format(age=age, sex=sex_ja))
+            if p.get("name"):
+                personal.append(
+                    T.TEMPLATE_PATIENT_NAMED.format(name=p["name"], age=age, sex=sex_ja))
+        else:
+            personal.append(T.TEMPLATE_PATIENT_NO_SEX.format(age=age))
+            if p.get("name"):
+                personal.append(T.TEMPLATE_PATIENT_NAMED_NO_SEX.format(name=p["name"], age=age))
     conds = p.get("known_conditions") or []
     if conds:
         personal.append(T.TEMPLATE_CONDITIONS.format(conditions="、".join(conds)))

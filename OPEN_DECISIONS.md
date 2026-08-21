@@ -3,6 +3,304 @@
 Running list so nothing gets silently forgotten. Not a task list — these are things
 that need a judgement call, not just implementation.
 
+## ============ SESSION SUMMARY 2026-08-20 — READ THIS FIRST ============
+
+Written because the context window was closing. Everything below this block is detail; this
+block is what a future session must not lose.
+
+### THE CENTRAL CHALLENGE, AND THE ANSWER
+
+An external critique argued the project is "dead on arrival" because Japan already has a
+nationwide three-way interpretation system. **The factual core of that critique is TRUE and was
+verified** (see the 三者間同時通訳 section). The parts that were WRONG:
+- "119 rejects robot voices" - unsourced, and contradicted by the FDMA's own deployment of
+  救急ボイストラ (a TTS tool) to 96% of departments, plus NET119 which accepts no voice at all.
+- "Send a data packet / fax to the fire department's intake" - you CANNOT inject reports into
+  119 dispatch infrastructure as a third party. That is exactly why NET119 had to be built BY
+  the government, department by department. The proposed pivot was the one thing an outsider
+  categorically cannot build.
+
+**The critique was also presenting the project's own founding premise back as a discovery** -
+the guiding slogan has said "we do not try to beat the human interpreter" from the start.
+
+### THE POSITIONING THAT SURVIVES SCRUTINY (adopt this wording)
+
+DO NOT pitch this as solving the language barrier. The government largely solved that.
+
+> **"This delivers a verified patient record into the first 15 seconds of a 119 call."**
+
+Because two pieces of Japanese national infrastructure already cover what people assume this is
+for, and NEITHER covers what it actually does:
+- 緊急通報位置通知 - mobile 119 calls transmit the caller's location AUTOMATICALLY at carrier
+  level, nationwide. So GPS here would duplicate infrastructure, worse.
+- 三者間同時通訳 - a live human interpreter, 24/7, any phone, no app, no registration,
+  673/720 departments = 93.5% (FDMA, Jan 2025).
+
+Neither can supply **the room number** (405号室) or **the medical history** (高血圧). Carrier
+location finds the building. An interpreter translates what the caller CAN say - not what they
+cannot recall, spell, or pronounce under panic. That gap exists only where an address is
+registered in advance: INDOORS.
+
+### MARKET FRAMING - one error to avoid
+
+A pasted funnel multiplied 2.88M language-isolated residents x 58% home-incident rate = "1.67M
+potential users". **That unit is wrong.** The 58% applies to EVENTS, not PEOPLE. Correct:
+"2.88M people at risk, and the app addresses ~58% of the emergencies they would experience."
+Also the "30% Japanese-proficient" figure was uncited - source it or say "estimated". The 4.1M
+foreign residents figure IS solid (MOJ, 2026).
+
+### SCOPE: INDOORS, NOT "HOME" (widened 2026-08-20)
+
+Any indoor place with a FIXED REGISTERED ADDRESS - home, company dormitory, care facility,
+language school, share house. Nothing in the code was ever home-specific; "home" was framing.
+NOTE the founder's correction: institutional settings where a JAPANESE SPEAKER IS PRESENT
+(care homes with Japanese staff, hotels) are NOT a market - someone can just talk to the
+dispatcher. The real user is a place where NO ONE present speaks Japanese.
+
+### "NOT AT THIS ADDRESS" - BRANCH DELETED ENTIRELY
+
+Three phrasings all failed:
+    「登録した住所と違います」 leaked our internal concept
+    「今、自宅にいません。」   hard-coded HOME, false in a dormitory
+    「今、別の場所にいます。」 "different from WHAT?" - the dispatcher does not know a
+                             registered address exists, so it carries zero information
+The real problem was upstream: **you must be physically AT the device to use the app, and the
+device is at the registered address** - so the branch contradicted the product's own premise.
+Now: no address -> say NOTHING about location (omit-rather-than-guess, same as unknown sex).
+Nothing was lost: the address is THREE SEPARATE play buttons, so a caller who is not there
+simply does not press them.
+
+### MOBILE (iOS/Android) IS A VERIFIED ROADMAP, NOT AN ASPIRATION
+
+The founder requires a defensible "next steps" story. Researched and confirmed 2026-08-20:
+
+**A 3B model on a phone is the accepted 2026 sweet spot:**
+    iPhone 16 Pro,  Llama 3.2 3B      22 tok/s (37.6 before thermal throttling)
+    Snapdragon 8 Elite, 3B via NPU    40-50 tok/s
+    INT4 quantised 3B                 ~1.9 GB - fine on any modern phone
+**Whisper on phone is production-standard:** whisper.cpp (46,900+ stars), WhisperKit (Swift SDK,
+iOS), Android JNI templates. Commercial apps ship this today.
+
+    PORTS UNCHANGED                          GETS SWAPPED
+    the 31-term ontology (JSON)              OpenVINO -> llama.cpp / MLC / ExecuTorch
+    all briefing templates + logic           transformers Whisper -> whisper.cpp / WhisperKit
+    the safety architecture entirely         Streamlit -> native UI or PWA
+    the pre-rendered Japanese audio
+    the prompts and few-shot examples
+
+**Three things get BETTER on mobile:** likely FASTER (we are on Mac CPU with no acceleration at
+16s; phones have NPUs and our generation is tiny - ~30 tokens); GPS becomes real, which unlocks
+away-from-home AND removes the need for a map picker; TTS gets easier (iOS ships Kyoko, Android
+ships Japanese voices, and the pre-rendered WAVs work anywhere regardless).
+
+**Honest risks:** audio-injection into a live call is STILL UNTESTED (the founder declined the
+speakerphone test - it remains the single genuine unknown); App Store review is stricter for
+emergency-adjacent apps; iOS+Android is two codebases unless PWA.
+
+**WHY WE ARE ON x86 AT ALL:** the Intel/OpenVINO framing is a COMPETITION requirement, not a
+product decision. A previous session let "this build runs on a laptop" harden into "this is a
+fixed-device product" - those are different claims. Nothing about the PRODUCT requires a fixed
+device.
+
+### KAIGO-AI (last year's winner) - what was actually learned
+
+- Their `GUI_Mobile.py` is NOT a phone app. It is a desktop window sized 450x800 using
+  customtkinter, and it calls `simulate_recording()` / `simulate_running_ai()` - placeholders,
+  not their real pipeline. **They did not solve on-device mobile either.** Do not copy this;
+  a judge who opens the file sees through it.
+- Their online/offline split is not an architecture - it is two near-duplicate files where the
+  ONLY difference is GPT-Neo-1.3B (local) vs a hardcoded Groq API key -> Llama-3.3-70B (cloud).
+  We need no such split: our task is selecting from a fixed list, achievable locally at 3B.
+- **What they had that we do not: qualitative validation.** They consulted actual caregivers.
+  Our only real validation gap is that no paramedic or dispatcher has ever seen this.
+
+### THE FOUNDER'S STANDING PRINCIPLES (do not violate)
+
+1. **Existing solutions are REFERENCES, not role models.** Do not defend our limitations by
+   pointing at what NET119 or VoiceTra also fail to do. The whole point is to solve THEIR gaps.
+2. **The UI must guide, never present.** A wall of text is a defect even when every word is
+   correct. The caller should be near autopilot.
+3. **Omit rather than guess** - applied to location, patient identity, unknown sex, symptoms.
+4. **When the answer matters clinically and the model cannot know it, ASK THE HUMAN.** Used for
+   consciousness/breathing/circulation, and for the ongoing/stopped aspect choice.
+
+### MAP PIN ADDRESS PICKER - built 2026-08-20 (src/postal.py + app.py setup screen)
+
+**THE UNIVERSAL MECHANISM the founder demanded: POINT, DO NOT TYPE.**
+
+The postal lookup solved prefecture/city/ward but still assumed the user can NAME their own
+address. The founder rejected that: addresses are written in different orders in different
+countries, and the place may be a school playground or a community hall with no address the
+user knows.
+
+**Verified by testing, not assumed:**
+- TYPING is unreliable REGARDLESS of language. Geocoding "Nishikasai 6-15-2" returned
+  西葛西一丁目 - the numbers were silently ignored. Japanese house-numbering is non-linear and
+  sparsely mapped, so this is not a language problem, it is an addressing-data problem.
+- 国土地理院 (GSI, Japan's national mapping authority) runs a FREE, KEYLESS reverse-geocoder.
+  Tested live on three coordinates:
+      35.6680,139.8533 residential -> 東京都 江戸川区 西葛西二丁目
+      35.6434,139.8631 A PARK      -> 東京都 江戸川区 臨海町六丁目
+      35.7100,139.8107 other ward  -> 東京都 墨田区   押上一丁目
+  The park was tested DELIBERATELY, to satisfy the "school playground / community hall"
+  requirement. It works.
+- Municipality codes resolve via GSI's own published table (maps.gsi.go.jp/js/muni.js).
+
+**Why this is legitimate under the project's own rules:** it is a LOOKUP AGAINST OFFICIAL
+GOVERNMENT DATA, not a translation - identical in kind to the postal lookup and the verified
+ontology. Nothing is machine-generated, so the never-generate-Japanese rule holds.
+
+**What the user types: DIGITS ONLY.** GSI resolves to 丁目; the lot number and room are digits,
+identical in every language. Total Japanese typed by the user: ZERO.
+
+**Remaining gap, stated honestly:** BUILDING NAME (〇〇マンション). No authoritative lookup
+exists and translating it would be guessing. It is also the least critical field - address +
+room locates someone without it - so it stays optional and skippable.
+
+**NETWORK BOUNDARY unchanged:** setup-time only. The result is written to profile.json and
+rendered to audio; during an emergency there is no map, no GPS and no network. New dependency
+`streamlit-folium` is imported ONLY inside the setup screen.
+
+**SEARCH BOX added 2026-08-20 (founder tested the map and asked for typing, like Google Maps).**
+Google Maps was rejected: it needs an API KEY tied to a BILLING ACCOUNT, and the key would sit in
+a public repo - a real security problem, not just friction. Instead: Nominatim (OpenStreetMap,
+free, keyless) via `search_place()`. Verified romaji input returns Japanese places:
+    "Tokyo Skytree"      -> 東京スカイツリー, 押上一丁目, 墨田区
+    "Kasai Rinkai Park"  -> 葛西臨海公園, 江戸川区
+    "Nishikasai station" -> 西葛西, 江戸川区
+So a non-Japanese speaker types a landmark in their OWN alphabet and the map jumps there.
+Search only MOVES THE MAP - the click is still what fixes the address, because typed street
+numbers were measured unreliable. Multiple hits are shown as a radio to pick between.
+
+**NOTE FOR THE MOBILE PORT - CORRECTED.** An earlier note in this log claimed the picker
+"becomes unnecessary" on a phone. That is WRONG and would have thrown away reusable work.
+GPS returns A POINT WITH ERROR (~5-10m outdoors, worse indoors) and can NEVER give a floor or
+room, so in an apartment block it can name the neighbouring building. On mobile the map is
+PRE-POSITIONED by GPS rather than replaced:
+    finding the area        laptop: search/pan     phone: GPS centres it automatically
+    confirming the building laptop: you click      phone: YOU STILL CLICK
+    room number             laptop: type digits    phone: type digits
+The precision always comes from the human pointing, never from a sensor. A laptop simply has no
+GPS receiver at all - it can only guess from nearby WiFi names via Apple/Google servers, which
+needs internet and is accurate to tens or hundreds of metres.
+
+### FOREIGN-LANGUAGE INPUT - the general problem and its per-field answers (2026-08-21)
+
+The founder's framing: this is not just about homes, so ANY field a foreign user types could be
+in their own language - building names, landmarks, names, conditions. The unifying rule remains
+**look it up in real data, or ask the human; never let a model invent Japanese.**
+
+    FIELD                MECHANISM                                          STATUS
+    prefecture/city      postal code -> zipcloud API                        DONE
+    town (丁目)           map pin -> GSI reverse geocoder                    DONE
+    building name        map pin -> OpenStreetMap `name` field              DONE 2026-08-21
+    lot no. / room       DIGITS - identical in every language               DONE (no Japanese)
+    medical conditions   closed ontology, MHLW 傷病名マスター / ICD-10 Japanese   NOT BUILT
+    patient/caller name  see below                                          NOT BUILT
+
+**Building name:** `building_name_at()` in postal.py. Verified: Skytree -> 東京スカイツリー.
+Ordinary apartment blocks usually return "" - honest coverage, field stays optional because
+address + room finds someone without it.
+
+**CONDITIONS NOT IN THE LIST - the answer is a third option, not free text.** Offer an "other /
+not listed" choice that emits 持病があります ("has a pre-existing condition") WITHOUT naming it.
+The crew learns there IS relevant history and asks; we never invent a disease name. Same
+omit-rather-than-guess rule as unknown sex and unconfirmed patient identity. Free text is the
+one thing that must NOT be the fallback - it reintroduces exactly the romaji problem.
+
+**NAMES - the realistic answer is that the name is OPTIONAL, and should stay optional.**
+The founder's question was: how does someone with 0% Japanese produce katakana at all? Honest
+answers, in order of realism:
+1. They usually HAVE it already - bank account, phone contract, insurance card, utility bills
+   are all registered in katakana. It is a COPY-PASTE, not a translation. (Note: the 在留カード
+   itself shows the roman-alphabet name, so do NOT tell users to copy it from there - that was
+   an earlier incorrect instruction in this log.)
+2. If they cannot produce it: OMIT IT. The briefing already renders correctly with no name
+   (TEMPLATE_PATIENT_NO_SEX etc.), and the dispatcher asks. A name is not safety-critical the
+   way an address is.
+3. LAST resort, not yet built: English -> katakana transliteration with a ROMAJI READBACK for
+   verification ("Smith" -> スミス -> shown back as "Sumisu"). The user cannot read katakana but
+   CAN judge whether "Sumisu" sounds like their name. Uses kana_to_romaji(), already written.
+   Only worth building if 1 and 2 prove insufficient.
+
+### KNOWLEDGE: are pre-existing conditions relevant to a TRAUMA call? YES (2026-08-21)
+
+Founder asked whether an elderly man's low blood pressure matters if the emergency is a fall
+from a ladder. It does, for two distinct reasons, and both REINFORCE why this app carries
+medical history:
+1. **The history may explain the fall.** Falls in elderly people are frequently CAUSED by a
+   medical event - syncope from low blood pressure, arrhythmia, hypoglycaemia, stroke. "Fell"
+   may actually be "collapsed, then fell". This is exactly why the 転倒/転落/倒れました
+   distinction was worth building.
+2. **The history changes treatment even for pure trauma.** Anticoagulants (blood thinners) turn
+   a minor head impact into a bleeding emergency; diabetes, heart conditions and allergies all
+   change what the crew does on scene and what they prepare en route.
+So a briefing that states BOTH mechanism and history is more useful than either alone.
+
+### FOR AN INTEL JUDGE WITH ZERO JAPAN KNOWLEDGE (founder requirement, 2026-08-21)
+
+Everything obvious to a Japan resident must be made explicit for the competition. Founder's own
+example: English subtitles on any played recording. Others that need the same treatment:
+
+- **119 is not 911.** State it. In Japan 119 is fire+ambulance; 110 is police.
+- **Japanese addresses have no street names.** They are prefecture -> ward -> district -> block
+  -> building number, numbered by registration order, NOT sequentially along a street. This is
+  WHY the address problem is hard and why a map pin beats typing - a judge who assumes "123 Main
+  Street" will not see the difficulty at all.
+- **Three writing systems**, and a foreign resident may read none of them. "Type your address in
+  Japanese" is not a small ask.
+- **Name every Japanese institution in one line when first used:** FDMA (national fire agency),
+  NET119 (government text-based emergency reporting for the speech/hearing impaired),
+  救急ボイストラ (the agency's own crew-side translation phrasebook app), 三者間同時通訳 (live
+  human interpreter conferenced into 119 calls), 国土地理院/GSI (national mapping authority).
+- **Every Japanese string shown on screen during the demo needs an English gloss.** The briefing
+  chunks already carry English labels - keep that. The HANDOFF SCREEN is deliberately
+  Japanese-only (correct for a real crew) so it will need a subtitled variant for the demo, or
+  spoken narration.
+- **Show the romaji readback** - it demonstrates the verification loop without the judge needing
+  to read kanji.
+
+### ELDERLY USABILITY - an honest limitation, with one important clarification (2026-08-21)
+
+Clarification first: **the app is operated by the CALLER, not the patient.** The scoped scenario
+is a younger family member finding a collapsed elderly relative, so the primary user is usually
+not elderly.
+
+But the founder's concern is real for the case of an **elderly foreign resident living alone**,
+who would be both patient and caller. For them this app is genuinely poor: ~14 interactions, a
+map, reading English. State this as a limitation rather than papering over it - and note that
+this specific person is better served by 三者間同時通訳, which needs no device and no app at all.
+Partial mitigations already in place: one huge EMERGENCY button, large type, forced-choice
+buttons instead of typing, a progress indicator, and the ambulance dispatched after just TWO taps.
+
+### 番地 CANNOT BE DERIVED FROM A MAP CLICK - structural, not a tooling gap (2026-08-21)
+
+Founder hit this: clicking their building returns only 南砂四丁目, never the 番地 (24-5).
+Tested three coordinates - GSI returns town only; OSM returns house_number ONLY where a building
+is individually tagged (Tokyo Skytree -> "2"; both residential points -> None).
+
+**This is structural to Japanese addressing, not a limitation of free tools.** Lot numbers are
+assigned by REGISTRATION ORDER, not spatial position, so no geometric relationship exists between
+a coordinate and its 番地. Even Google's reverse geocoder commonly stops at 丁目 in residential
+Japan. A nationwide fix would need GSI's 位置参照情報 街区レベル dataset downloaded and spatially
+indexed - real work, uncertain payoff, NOT attempted.
+
+**The correct division of labour, and it is fine:**
+    東京都江戸川区南砂   postal code   kanji the user cannot type
+    南砂四丁目          map click     kanji the user cannot type
+    24-5               USER TYPES    DIGITS - same in every language
+    405                USER TYPES    DIGITS
+
+The map's job is the genuinely impossible part (kanji). The lot number is on every piece of mail
+the resident receives and needs no language at all.
+
+**CORRECTION TO EARLIER FRAMING IN THIS LOG:** "point, don't type" and "zero Japanese typed" are
+both true, but were allowed to imply the map delivers the WHOLE address. It delivers the
+unwritable part. Do not repeat the stronger claim to a judge - it will not survive a demo where
+someone clicks a house and sees only 丁目.
+
+## ============ END SESSION SUMMARY ============
+
 ## POSTAL CODE LOOKUP - the romaji problem, actually solved (2026-08-19)
 
 **The bug this fixes:** the setup screen let a user type their address in ROMAJI - the natural

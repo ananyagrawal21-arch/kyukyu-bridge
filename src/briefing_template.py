@@ -21,22 +21,20 @@
 # When adding a reported-frame term, store the PLAIN form.
 
 # Location is the single most critical field: a wrong address sends the ambulance to the
-# wrong place. So we only state the REGISTERED address when the caller confirms they are there.
-# Otherwise we say plainly that they are elsewhere - never a silently-wrong location -
-# prompting the dispatcher to ask where they actually are.
+# wrong place. The address is stated whenever we have one - never a silently-wrong location.
 TEMPLATE_HEAD = "救急です。"
 TEMPLATE_LOCATION_KNOWN = "場所は{address}です。"
-# Rewritten 2026-08-04 (was 「登録した住所と違います」 - leaked our internal app concept,
-# meaningless to a dispatcher). Now a plain, natural statement that simply signals no address
-# is coming, so the dispatcher knows to ask.
-#
-# LOCATION-NEUTRAL as of 2026-08-20 (was 「今、自宅にいません。」 - "I am not at home").
-# The app is not home-only: it works at any indoor place whose address is registered - a home,
-# a company dormitory, a care facility, a language school. 自宅 hard-coded the home assumption
-# into the one line a dispatcher actually hears, and would have been simply false when the
-# registered address was a workplace.
-# TODO(founder): confirm 「今、別の場所にいます。」 reads naturally to a dispatcher.
-TEMPLATE_LOCATION_UNKNOWN = "今、別の場所にいます。"
+# NO "not at this address" LINE EXISTS ANY MORE (removed 2026-08-20).
+# Three attempts all failed for the same underlying reason:
+#   「登録した住所と違います」 - leaked our internal concept of a registered address
+#   「今、自宅にいません。」    - hard-coded HOME, false in a dormitory or care facility
+#   「今、別の場所にいます。」  - "different from WHAT?"; the dispatcher does not know a
+#                             registered address exists, so it carries no information
+# The real problem was upstream: the app only works when you are AT the device, and the device
+# is at the registered address, so the branch contradicted the product's own premise.
+# Now: no address confirmed -> say NOTHING about location. Same omit-rather-than-guess rule as
+# patient identity and unknown sex. The dispatcher asks, and carrier-level 緊急通報位置通知
+# has already given them the caller's position anyway.
 
 TEMPLATE_PATIENT = "{age}歳の{sex}です。"
 TEMPLATE_PATIENT_NAMED = "名前は{name}、{age}歳の{sex}です。"
@@ -136,10 +134,7 @@ def render_location_pieces(address: dict = None) -> list[dict]:
     address=None means the caller is NOT at the registered address.
     """
     if address is None:
-        return [
-            {"label": "Ambulance", "jp": TEMPLATE_HEAD},
-            {"label": "Different location", "jp": TEMPLATE_LOCATION_UNKNOWN},
-        ]
+        return [{"label": "Ambulance", "jp": TEMPLATE_HEAD}]
     area = f"{address['prefecture']}{address['city_ward']}{address['street_block']}"
     building = f"{address['building']} {address['room']}号室です。"
     return [
@@ -174,10 +169,8 @@ def render_briefing_chunks(
     TODO(founder): the chunk ORDER is a dispatch-flow decision, tune as needed."""
     chunks = []
 
-    location = (
-        TEMPLATE_LOCATION_KNOWN.format(address=address) if address is not None
-        else TEMPLATE_LOCATION_UNKNOWN
-    )
+    # 救急です always; the address only when we actually have one.
+    location = TEMPLATE_LOCATION_KNOWN.format(address=address) if address is not None else ""
     chunks.append({"label": "Emergency & location", "jp": TEMPLATE_HEAD + location})
 
     # SECOND, deliberately - see TEMPLATE_TAIL. Sets the dispatcher's expectations before the
