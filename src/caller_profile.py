@@ -25,7 +25,7 @@ def romaji_fields(profile: dict) -> list:
     candidates = [
         ("Prefecture", addr.get("prefecture")),
         ("City/ward", addr.get("city_ward")),
-        ("Street & block", addr.get("street_block")),
+        ("Area & block number", addr.get("street_block")),
         ("Building", addr.get("building")),
         ("Patient name", patient.get("name")),
         ("Known conditions", "、".join(patient.get("known_conditions") or [])),

@@ -18,6 +18,7 @@ RUN THIS AGAIN whenever data/profile.json or the ontology changes. Filenames are
 hashes, so edited wording just misses the cache and is re-rendered - stale audio cannot
 silently outlive the text it belongs to.
 """
+import json
 import sys
 from pathlib import Path
 
@@ -29,8 +30,15 @@ from briefing_template import _format_statement  # noqa: E402
 from caller_profile import load_profile  # noqa: E402
 from ontology import load_ontology  # noqa: E402
 from speak import (  # noqa: E402
-    AUDIO_DIR, PROFILE_AUDIO_DIR, cache_path, split_sentences, synthesize,
+    AUDIO_DIR, PROFILE_AUDIO_DIR, cache_path, current_voice, split_sentences, synthesize,
 )
+
+# Records WHICH VOICE rendered the cache. Without it the cache is invisible to voice changes:
+# filenames hash the TEXT only, so installing a better voice (Kyoko -> Kyoko (Enhanced)) leaves
+# every existing WAV in place forever and the app keeps playing the worse one. That is exactly
+# what happened between 2026-08-17 and 2026-08-22 - the audio was base Kyoko, whose Japanese
+# pitch accent is noticeably wrong, long after the Enhanced voice was available.
+BUILD_INFO = AUDIO_DIR / "BUILD_INFO.json"
 
 
 def every_sentence() -> tuple:
@@ -131,6 +139,19 @@ def build(force: bool = False, log=print) -> dict:
     AUDIO_DIR.mkdir(parents=True, exist_ok=True)
     PROFILE_AUDIO_DIR.mkdir(parents=True, exist_ok=True)
 
+    # A voice change invalidates EVERYTHING, because every file was rendered by the old one.
+    voice = current_voice()
+    previous = None
+    if BUILD_INFO.exists():
+        try:
+            previous = json.loads(BUILD_INFO.read_text(encoding="utf-8")).get("voice")
+        except (ValueError, OSError):
+            previous = None
+    if previous != voice:
+        if previous is not None:
+            log(f"  voice changed: {previous} -> {voice}; rebuilding everything")
+        force = True
+
     shared_texts, personal_texts = every_sentence()
     shared = _flatten(shared_texts)
     personal = [s for s in _flatten(personal_texts) if s not in shared]
@@ -163,6 +184,9 @@ def build(force: bool = False, log=print) -> dict:
         else:
             _lock_down(old)  # every run, not just newly built - files made before this
                              # existed are still world-readable otherwise
+
+    if not failed:
+        BUILD_INFO.write_text(json.dumps({"voice": voice}, indent=2), encoding="utf-8")
 
     return {"built": built, "skipped": skipped, "failed": failed, "removed": removed}
 

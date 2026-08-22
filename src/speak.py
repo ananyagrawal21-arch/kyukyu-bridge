@@ -148,9 +148,22 @@ def split_sentences(text: str) -> list:
     return [speech_form(s + "。") for s in re.split(r"。", text) if s.strip()]
 
 
+def current_voice() -> str:
+    """Identifier for the voice this machine would synthesise with. Used to detect that the
+    cache was built with a DIFFERENT (usually worse) voice - see BUILD_INFO in build_audio."""
+    if platform.system() == "Darwin" and shutil.which("say"):
+        return f"mac:{_mac_voice()}"
+    return "pyttsx3"
+
+
 def cache_key(sentence: str) -> str:
     """Filename for one sentence. Content-addressed, so changing a term's wording simply
-    misses the cache and gets rebuilt - stale audio can never silently outlive its text."""
+    misses the cache and gets rebuilt - stale audio can never silently outlive its text.
+
+    THE VOICE IS DELIBERATELY NOT IN THIS KEY. Including it would make playback machine-specific:
+    the committed WAVs would miss on any machine with a different voice and fall back to live
+    synthesis - reintroducing the exact Windows-language-pack risk pre-rendering exists to kill.
+    The voice is tracked separately, at BUILD time, via BUILD_INFO (tools/build_audio.py)."""
     return hashlib.sha1(sentence.encode("utf-8")).hexdigest()[:16]
 
 
@@ -169,17 +182,30 @@ def _find(sentence: str):
     return None
 
 
+# Pause inserted between concatenated sentences, in seconds.
+# WHY IT IS NEEDED: each sentence is synthesised INDEPENDENTLY, so each carries a complete
+# intonation contour - it starts high and falls to a sentence-final low. Butt-joined with no
+# gap, the next sentence snaps back up to its opening pitch mid-breath, which is heard as the
+# pitch jumping at random rather than as one sentence ending and another beginning.
+# A real pause makes the reset sound like what it is. It also matches how a person actually
+# reads an address to a dispatcher who is writing it down.
+_SENTENCE_GAP_S = 0.35
+
+
 def _concat_wavs(paths: list):
-    """Join pre-rendered sentences into one clip. All were produced by the same build run,
-    so the formats match by construction."""
+    """Join pre-rendered sentences into one clip, with a breath between them. All were produced
+    by the same build run, so the formats match by construction."""
     out = io.BytesIO()
     writer = None
     try:
-        for p in paths:
+        for i, p in enumerate(paths):
             with wave.open(str(p), "rb") as r:
                 if writer is None:
                     writer = wave.open(out, "wb")
                     writer.setparams(r.getparams())
+                elif _SENTENCE_GAP_S:
+                    frames = int(r.getframerate() * _SENTENCE_GAP_S)
+                    writer.writeframes(b"\x00" * frames * r.getsampwidth() * r.getnchannels())
                 writer.writeframes(r.readframes(r.getnframes()))
     except (wave.Error, OSError):
         return None

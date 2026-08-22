@@ -3,6 +3,251 @@
 Running list so nothing gets silently forgotten. Not a task list — these are things
 that need a judgement call, not just implementation.
 
+## JAPANESE PROSODY / TTS ENGINE — DEFERRED TO THE POST-SUBMISSION WINDOW (2026-08-22)
+
+**FOUNDER DECISION: not before initial submission.** End-to-end functionality for the
+presentation video outranks it. Scheduled for the 3-4 week refinement window between initial
+submission and Stage 2/3. **This is logged as a commitment, not a maybe.**
+
+### THE PROBLEM, precisely
+
+Founder reported the speech sounding wrong: "in a sentence there are specific places where pitch
+is high or low, but in this audio the pitch and emphasis is random." Correct diagnosis, and it
+took three attempts to find:
+
+  ATTEMPT 1 (wrong)  Blamed the VOICE. The cache filename hashes the TEXT only, so WAVs built
+                     2026-08-17 with base Kyoko survived the install of Kyoko (Enhanced)
+                     forever. Real bug, now fixed (BUILD_INFO.json records the build voice and
+                     forces a full rebuild when it changes) - but NOT the cause of the
+                     complaint. Founder correctly reported "no change happened".
+  ATTEMPT 2 (wrong)  Blamed sentence CONCATENATION. Each sentence is synthesised alone with a
+                     full contour, then butt-joined with no gap. Real problem, fixed with a
+                     0.35s pause - and again not the main cause.
+  ATTEMPT 3 (right)  THE TEXT. 「場所は東京都江東区南砂四丁目24の5です」 is one unbroken
+                     20-character noun phrase with ZERO boundary cues. Japanese TTS assigns
+                     pitch accent PER ACCENT PHRASE; given no boundaries it segments a long
+                     kanji compound by guesswork and places accents inconsistently. Heard
+                     exactly as "the emphasis is random". No voice change fixes this - the
+                     ambiguity is in the text, not the synthesiser.
+
+**SHIPPED FIX (current state):** `spoken_address()` in briefing_template.py inserts 読点
+between administrative levels - 場所は東京都、江東区、南砂四丁目、24の5です。Uses the separately
+stored `area`/`block_number` so the 丁目 and the lot number are their own phrases. Same for
+〇〇マンション、405号室. Founder assessment: "it is fine but this is not a reliable solution."
+That assessment is correct - it is hand-placed, and it does not generalise.
+
+### WHAT WAS TRIED AND REJECTED — do not redo this
+
+**Automatic accent-phrase boundaries via pyopenjtalk. REJECTED, and it is important to know why.**
+Open JTalk's frontend gives everything needed - morphology, readings, accent type, mora count,
+and `chain_flag` (0 = starts a new accent phrase). It is LINGUISTICALLY CORRECT: it reads
+南砂 as ミナミスナ accent 3, 東京都 as トーキョート, 24の5 as ニジューヨンノゴ. All right.
+
+But inserting 、 at those boundaries produced WORSE output than the manual fix:
+    息をしていません。   ->  息をして、いません。       breaks a verb
+    南砂四丁目24の5      ->  四丁目、二十四の、五です   breaks the lot number
+**ACCENT PHRASES ARE NOT PAUSE LOCATIONS.** Accent reset and breath placement are different
+questions. Punctuation is simply the wrong channel to carry accent information through, and no
+threshold tuning fixes that (tested min_mora 2/3/4/5).
+
+### THE ACTUAL ANSWER, for the refinement window
+
+**The NLP layer already knows the correct answer; `say` will not accept it.** Open JTalk computes
+the right reading and accent; macOS `say` takes only text and redoes its own analysis. Every
+punctuation trick is a workaround for an engine that refuses the data.
+
+A reliable solution requires **a TTS that accepts phonemes + accent directly**:
+
+    ENGINE                    ACCENT     VOICE      NOTE
+    macOS say / Kyoko         wrong      natural    current
+    pyopenjtalk HTS voice     CORRECT    robotic    already installed; proves the point
+    VOICEVOX                  correct    natural    ~1GB offline engine, local HTTP server.
+                                                    voicevox_core is NOT pip-installable on
+                                                    macOS arm64 - use the engine binary.
+    OpenJTalk accent + neural correct    natural    highest ceiling, most uncertain
+      vocoder
+
+**WHY THIS IS CHEAP WHENEVER WE DO IT:** the app PRE-RENDERS every sentence, so the TTS engine is
+a BUILD-TIME dependency only. The emergency path just plays WAVs. Swapping engines touches
+tools/build_audio.py and NOTHING in the runtime. Zero risk to the live path - this is a payoff
+from the pre-rendering architecture that was not anticipated when it was built.
+
+**RUBRIC ANGLE, worth remembering for Stage 3:** a neural TTS run through OpenVINO would be a
+THIRD Intel lifecycle stage (alongside the SLM and a converted Whisper), feeding the 0-4
+"extent of use of Intel software" item directly. So this refinement is not only quality work.
+
+**ALSO STILL OPEN, same area:** the profile's building name is stored as romaji
+("city terrace minamisuna") and a Japanese voice mangles it inside a Japanese sentence.
+romaji_fields() flags it; the fix is picking the building from the map so it stores 日本語, or
+leaving the field blank. Cheap, and audible today.
+
+## ============ RUBRIC ANALYSIS — read before prioritising anything (2026-08-22) ============
+
+Source: references/document.md (official rubric, converted). STRUCTURE:
+
+    STAGE 2 = 75 pts        Metric01 Impact 30 | Metric02 AI Innovation 30 | Metric03 Intel 15
+    STAGE 3 = 90 pts        Metric01 Impact 30 | Metric02 AI Innovation 30 | Metric03 Intel 30
+
+**THE SINGLE MOST IMPORTANT STRUCTURAL FACT: Intel weighting DOUBLES in Stage 3** (15 -> 30 pts,
+20% -> 33% of total). It is our WEAKEST metric and the one with the most headroom. Stage 3
+Intel breaks down as:
+    Requirement of Intel AI      3 + 4 = 7
+    Intel AI-optimized HARDWARE  3 + 3 + 4 = 10
+    Intel AI SOFTWARE            3 + 3 + 4 = 10
+    IDR Participation                    = 3
+"Extent of use" is worth 4 pts EACH for hardware and software, and asks explicitly:
+"used across development-deployment lifecycle / in 2-3 stages / in only 1 stage?"
+**We currently use OpenVINO in exactly ONE stage: SLM inference.** That is the bottom band of a
+4-point item, twice over.
+
+### WHERE WE ALREADY SCORE WELL (make sure the writeup SAYS these, they are not self-evident)
+
+- **Citations (6 pts: "evidence problem exists" 0-3 + "evidence time-critical" 0-3).** We have
+  FDMA primary sources, the 3-6 min on-scene delay linked to survival, 93.5% interpreter
+  coverage. Most entries will have none. BUT C9 flags two unsourced numbers - fix them.
+- **Accessibility & usability (0-3)** asks VERBATIM: offline/low-bandwidth? low-cost devices?
+  multilingual/multi-modal? We are fully offline, on-device, multilingual, speech+text+audio.
+  Near-perfect fit.
+- **Testing (0-3)** asks for "accuracy, F1, latency". We have 96% exact, F1 0.98, precision 1.00,
+  a panic-perturbation study and a latency breakdown. This is unusually strong for a student
+  project and must be front and centre.
+- **"Is GenAI used as the core innovation engine, or a WRAPPER AROUND AN API CALL?" (0-3).**
+  Local SLM + custom ontology + two-stage anti-fabrication. The opposite of a wrapper.
+- **Ethics 0-5 in Stage 2** (privacy, bias, safety, transparency). We have a real privacy
+  architecture (no network during an emergency, gitignored profile audio, owner-only chmod) and
+  a real safety architecture (closed ontology, zero generated Japanese, human confirmation,
+  omit-rather-than-guess). Currently these live in code comments and this log - NOT written up
+  as an ethics narrative. 5 points sitting unclaimed.
+- **"Impact not achievable through traditional software alone?"** Our answer: classifying
+  panicked free speech into pre-verified terms. A phrasebook cannot do it. Say it in those words.
+
+### WHERE WE ARE LEAVING POINTS ON THE TABLE (ranked by points per hour)
+
+R1  **Convert Whisper to OpenVINO.** Moves Intel software from 1 lifecycle stage to 2, directly
+    hitting the 0-4 "extent of use" item for software, and strengthens the 0-3 "type of software"
+    item. Highest-value single engineering task in the project. ~4-8 pts.
+R2  **Run on the Intel NPU, not just CPU.** The rubric explicitly separates "AI-specific
+    hardware (Intel Gaudi 3, Intel NPU via Core Ultra)" from "general-purpose (Core Ultra CPU,
+    Xeon 6, Arc GPU)" and scores type-of-hardware 0-3. If the Intel laptop is a Core Ultra,
+    targeting the NPU via OpenVINO is worth real points AND real latency.
+R3  **GenAI Tool Usage Transparency (1-4 pts) - nearly free, and ZERO if we stay silent.**
+    Scale is explicit: 0=no disclosure, 1=disclosed but GenAI is the primary dev method,
+    2=brainstorming/feedback, 3=disclosed + majority code original, 4=disclosed + all work
+    original. WE MUST PUBLISH A DISCLOSURE. State it accurately - founder wrote core logic
+    (ontology, Japanese verification, architecture), AI assisted on boilerplate and review.
+    Do not overclaim; a false "4" is worse than an honest "3".
+R4  **Cost-per-user at scale.** Asked verbatim under Scalability (0-3) and never computed.
+    Offline + on-device = near-zero marginal cost, which is a genuinely strong answer.
+R5  **Ethics/RAI writeup.** See above - substance exists, narrative does not.
+R6  **UI internationalisation.** Was filed as roadmap. The rubric asks "equivalent UX for all?"
+    and "multilingual/multi-modal interaction?" - so it is SCORED, not cosmetic. Also the
+    safety backstop in C1. Promote it.
+R7  **Name the AI paradigms explicitly.** 0-2 pts for "do the students understand the
+    sub-domains they used". The rubric's own list includes Edge/On-Device AI - which is exactly
+    what we are. Use their vocabulary: NLP, Edge/On-Device AI, quantisation (INT8), STT.
+
+### WHAT WE LIKELY CANNOT SCORE, ACCEPT IT
+
+- **Full-scale deployment (0-2, Stage 3 only)**: "shared evidence of full-scale live deployment
+  for target audience". We have none and will not by submission. Do not fabricate it.
+- The rubric does NOT award points for out-competing existing solutions. Our positioning work
+  (三者間同時通訳, NET119, VoiceTra) is for Q&A DEFENCE, not for the score sheet. Do not spend
+  more build time there.
+
+## ============ OPEN ITEMS REGISTER — 2026-08-22, RECONCILED AGAINST THE WHOLE LOG ============
+
+Every open item in this file, gathered in one place. Produced by reading all 1165 lines, not by
+scanning headings - an earlier list built from headings alone MISSED SIX live items, including
+the untested speakerphone assumption the whole product rests on.
+
+RULE: when something here is finished, mark it here AND at its detailed section. If it is not in
+this register, it is not outstanding. Nothing below this block needs to be searched again.
+
+### A. BLOCKS A PRESENTABLE PROTOTYPE
+
+    #   ITEM                                    WHERE THE DETAIL LIVES
+    1   Medical conditions ontology + その他     FOREIGN-LANGUAGE INPUT section
+        Profile holds English free text ("Heart problem") that feeds 持病は{...}です,
+        so the Japanese voice reads English aloud. romaji_fields() DETECTS it and there
+        is no way to FIX it - every other field got a lookup, this one never did.
+    2   CPA finding promoted in chunk order     Location goes FIRST / the protocol section
+    3   Chunk 0 still built unsplit             render_briefing_chunks vs render_location_pieces
+    4   Handoff: line-per-item, keep row order  founder decision 2026-08-22: ORDER STAYS
+    5   CLI default -> SLM, --no-slm escape     pipeline.py:239 still defaults to the
+        crude Week-1 keyword matcher, so anyone running the CLI without --slm sees
+        Week-1 behaviour and concludes that is the project.
+    6   romaji_fields label "Street & block"    stale after the 2026-08-22 address split
+    7   profile.example.json                    missing area/block_number + conditions format
+    8   UI pass                                 UI PRINCIPLE section; on founder's word
+    9   English on every played recording       INTEL JUDGE section - founder's own example
+    10  Handoff needs a subtitled demo variant  INTEL JUDGE section. The screen is correctly
+        Japanese-only for a real crew, which makes it unreadable to a judge.
+    11  Intel run + latency split               LATENCY BREAKDOWN section
+    12  Commit; strip Claude co-author trailers 4 of 12 commits carry them, incl. the root
+    13  SPEAKERPHONE TEST - NEVER DONE          MOBILE section, "honest risks"
+        *** The single genuine unknown. The entire product assumes a phone mic picks up
+        app audio over speakerphone during a live call. Nobody has ever tried it. It needs
+        two phones and five minutes, and if it fails the delivery path is wrong. Do this
+        BEFORE any further feature work - it is cheap and it gates everything. ***
+
+### B. DECISIONS THE FOUNDER MUST MAKE
+
+    D1  口頭指導 / CPR audio in the caller's language. Gap already logged at "Location goes
+        FIRST"; a judge who knows the field WILL ask. Content is a FIXED published protocol
+        (JRC guidelines), so it fits the closed-set architecture with no new AI. Assists the
+        dispatcher, never replaces them. Must be sourced and founder-verified, not drafted
+        from memory.
+    D1b RESEARCH FEEDING D1: how does NET119 deliver 口頭指導 to a user who cannot hear?
+        If the FDMA already does text/visual CPR guidance, we are localising an accepted
+        feature, not inventing one - much easier to defend. NOT VERIFIED; do not assert.
+        Note either way: NET119's users read Japanese, ours do not, so the gap stays ours.
+    D2  The 7 high-urgency 症候 the ontology LACKS: 頭痛 動悸 背部痛 腰痛 めまい 嘔気・嘔吐
+        しびれ. From our own protocol review. Each needs founder verification.
+
+### C. KNOWN-OPEN, NOT PROTOTYPE-BLOCKING (do not lose these)
+
+    C1  TRANSLATE MODE LOSES NEGATION. "there is no response" came back as its opposite in
+        BOTH tested languages. Did not reach the briefing only because consciousness is in
+        SLM_DISCARD and comes from a button. The same corruption could hit a symptom that is
+        NOT excluded. The confirm screen is the only backstop - and its labels are English,
+        which is weakest for exactly these callers. THE MOST DANGEROUS OPEN ITEM IN THIS FILE.
+    C2  7 of 9 offered languages never run end-to-end. Whisper is weakest on some (Nepali,
+        Burmese) whose speakers are most vulnerable. Do not claim uniform coverage.
+    C3  Contradictions pass through unflagged ("he's talking" + "he's unresponsive").
+        Partly mitigated: consciousness now comes from a button, not the SLM.
+    C4  Low-confidence -> auto-detect language fallback. The manual switch is built; this is
+        the net for code-switching under stress, when nobody thinks to touch a dropdown.
+    C5  Whisper anti-hallucination settings (condition_on_previous_text=False, no-speech /
+        logprob thresholds). Listed as a cheap win; never confirmed applied.
+    C6  Four ontology wording questions still recorded and unanswered - slurred_speech,
+        one_sided_weakness, face_drooping, difficulty_breathing. See "Ontology wording".
+    C7  source_dependent frame still renders as a direct assertion, stating the patient's
+        internal sensation as observed fact.
+    C8  NO PARAMEDIC OR DISPATCHER HAS EVER SEEN THIS. The KaiGo-AI comparison identified
+        this as our one real validation gap - they consulted actual caregivers.
+    C9  Two pitch numbers need sourcing: "~10 min ambulance travel time" (flagged
+        re-verify) and "30% Japanese-proficient" (uncited - source it or say "estimated").
+    C10 UI internationalisation. Filed as roadmap, but note it is the backstop in C1, so it
+        is a SAFETY item for non-English callers, not cosmetic.
+    C11 Verified-flag is not enforced in code. All 31 pass today by human habit alone.
+    C12b POST-SUBMISSION COMMITMENT (founder, 2026-08-22): replace the TTS engine with an
+        accent-aware one (VOICEVOX or OpenJTalk+neural vocoder). Deferred ONLY because
+        end-to-end functionality for the video outranks it. See the JAPANESE PROSODY section.
+        Build-time change, zero runtime risk. Also a 3rd Intel lifecycle stage if via OpenVINO.
+    C12 PITCH PREP: "why not just a GPS app that texts 119?" is a near-certain judge
+        question. Answer is written up in the "GPS-LINKED APP COMPARISON" section - lead
+        with ZERO DEPLOYMENT DEPENDENCY (all 720 departments, today, nothing to adopt).
+        Do NOT claim our architecture is superior; it is not. Verify the Safety Tips
+        feature claim before citing it either way.
+
+### D. DELIBERATELY NOT DOING (recorded so they are not re-litigated)
+
+    GPS (duplicates 緊急通報位置通知) · inbound translation · name transliteration ·
+    modifier system · noise filtering · mobile port · memory footprint · multi-person
+    profile · onomatopoeia · embedding retrieval for Stage A
+
+## ============ END OPEN ITEMS REGISTER ============
+
 ## ============ SESSION SUMMARY 2026-08-20 — READ THIS FIRST ============
 
 Written because the context window was closing. Everything below this block is detail; this
@@ -497,7 +742,8 @@ artefact of how Stage A is built (all entries pasted into the prompt, re-read ev
 disappears; entries become nearly free.
 
 The REAL constraints on ontology size, which do not go away:
-- **Verification effort** (founder time). 13 of 29 are still `verified: false`. At 200 entries
+- **Verification effort** (founder time). STATUS 2026-08-22: all 31 are now verified, so this
+  is no longer a live backlog - but it stays the binding constraint on GROWTH. At 200 entries
   this is the binding constraint, and it is human hours, not compute.
 - **Precision.** More near-identical neighbours (背中が痛い vs 腰が痛い) = more room to pick a
   plausible wrong one. Coverage up, accuracy risk up.
@@ -571,8 +817,10 @@ It is **"this delivers a verified patient record into the first 15 seconds of th
 
 This also RETIRES the "not at home" problem rather than solving it: away from the registered
 address every advantage this app has evaporates, and the caller is better served by the two
-systems above, which need no device at all. The app says 「今、別の場所にいます。」 and gets out
-of the way.
+systems above, which need no device at all. The app then says NOTHING about location and gets out
+of the way. (An earlier version of this line quoted 「今、別の場所にいます。」 as the app's
+response. That branch was DELETED ENTIRELY on 2026-08-20 - see "NOT AT THIS ADDRESS" in the
+session summary. Do not reinstate it from this paragraph.)
 
 ## Location goes FIRST - flow restructured 2026-08-12
 
@@ -890,23 +1138,27 @@ Fold the cheap wins into Week 2 alongside the OpenVINO work. All discussed 2026-
 - **Patient identity — RESOLVED (built in A.3).** `app.py` has an `ask_patient` confirmation
   step; if not confirmed, patient details (age/sex/conditions) are omitted from the briefing
   rather than stated wrong. `pipeline.py`'s `confirm_patient` does the same for the CLI.
-- **Unverified Japanese flows into briefings silently.** STATUS 2026-08-03: the original 16
-  terms ARE founder-verified; the 13 added from the 緊急度判定プロトコル (12 + `nausea`) are
-  `verified: false` and awaiting check. Nothing in the code enforces the flag - an unverified
-  term still reaches a briefing without warning.
+- **Unverified Japanese flows into briefings silently. RESOLVED 2026-08-22** - `grep -c
+  '"verified": false' data/ontology.json` returns 0; all 31 are founder-verified.
+  HISTORY: the original 16 were verified 2026-08-12; the 13 from the 緊急度判定プロトコル were
+  added `verified: false` and cleared in the 2026-08-19/20 passes.
+  STILL TRUE, and the reason to keep this entry: **nothing in the code enforces the flag.** Add
+  an entry with `verified: false` tomorrow and it reaches a briefing with no warning. The
+  guarantee is currently a human habit, not a mechanism.
 
 ## Must be handled — semantics, context, completeness
 
 Raised by the founder. These are things a human interpreter does that the system currently
 does not. Not hypothetical; each has a concrete failure case.
 
-- **Completeness is never checked.** The confirmation loop asks "did we hear you right?",
-  never "did you tell us enough?". "Please help, my father, please come" transcribes
-  perfectly, confirms happily, and produces a briefing with no symptoms and no breathing
-  status. Accurate and useless.
-  **Fix:** if the critical fields (breathing, consciousness) are absent from the transcript,
-  prompt for them — "Is he breathing?" / "Is he awake?" — in the caller's language.
-  Highest-value correctness work currently outstanding.
+- **Completeness is never checked. RESOLVED 2026-08-22 by the flow restructure, not by the
+  fix originally proposed here.** The failing case was "Please help, my father, please come" -
+  transcribes perfectly, confirms happily, briefing has no symptoms and no breathing status.
+  Accurate and useless. The proposed fix was to detect missing critical fields in the transcript
+  and prompt for them. What actually shipped is stronger: `ask_awake` -> `ask_breathing` ->
+  `ask_circulation` are MANDATORY phases every call passes through, so the fields cannot be
+  absent regardless of what the transcript contained. Detection was unnecessary once the
+  questions became unconditional.
 - **Contradictions pass straight through.** A transcript containing both "he's talking" and
   "he's unresponsive" emits 意識がある and 意識がない side by side, unflagged.
 - **Vague or context-dependent statements are lost.** "He's not doing well", "he took his
@@ -970,9 +1222,12 @@ does not. Not hypothetical; each has a concrete failure case.
   F1 0.94. All remaining misses are under-reporting (safe direction).
 - **Caveats:** verification adds per-candidate latency; synthetic test set is optimistic vs
   real panicked/accented Whisper output; recall 0.89 not perfect.
-- **Still needed:** interpretation-confirmation (human sees understood symptoms, can remove a
-  stray one AND add a missed one) — the final safety net on top of the SLM. Then wire SLM into
-  pipeline behind a flag. Files: `src/slm_classify.py`.
+- ~~**Still needed:** interpretation-confirmation, then wire the SLM into the pipeline~~
+  **BOTH BUILT.** `confirm_symptoms` in app.py is the human review step (remove a stray term,
+  add a missed one); the app calls `slm_matches` unconditionally.
+  NOTE the one piece that did NOT land as written: in the CLI the SLM is still behind an opt-in
+  `--slm` flag, so `python src/pipeline.py` with no arguments runs the crude Week-1 keyword
+  matcher. That default is backwards and is on the open list.
 
 ## Language support
 
@@ -985,14 +1240,16 @@ does not. Not hypothetical; each has a concrete failure case.
 - Plan: English-first for the demo, verify one non-English language end-to-end (blueprint
   suggests Vietnamese; Chinese would perform better).
 
-## Not-at-home line leaks app-internal jargon - RESOLVED 2026-08-04
+## Not-at-home line - SUPERSEDED, the whole branch was deleted 2026-08-20
 
-- Was 「今いる場所は登録した住所と違います」("different from the registered address") - leaked
-  our internal concept. Then 「今、自宅にいません。」, now 「今、別の場所にいます。」 after the
-  2026-08-20 location-neutral pass (自宅 hard-coded a home assumption into the one line the
-  dispatcher hears, and was simply false when the registered address is a dormitory). Marked
-  TODO(founder) in the code for a final naturalness check, but no longer blocking.
-  File: src/briefing_template.py, TEMPLATE_LOCATION_UNKNOWN.
+**`TEMPLATE_LOCATION_UNKNOWN` NO LONGER EXISTS.** Do not go looking for it in
+briefing_template.py. Kept here as history because three separate wordings failed for three
+different reasons, which is worth remembering:
+  「今いる場所は登録した住所と違います」 leaked our internal "registered address" concept
+  「今、自宅にいません。」               hard-coded HOME, false in a dormitory
+  「今、別の場所にいます。」             "different from WHAT?" - carries zero information
+The wording was never the problem. The BRANCH was: you must be at the device to use the app,
+and the device is at the registered address. Now: no address -> say nothing about location.
 
 ## Multi-person profile (raised 2026-07-30 by founder)
 
@@ -1002,9 +1259,12 @@ does not. Not hypothetical; each has a concrete failure case.
   the emergency. Real-product improvement; keep the safe one-person version for the PoC, build
   multi-person only if time allows.
 
-## Briefing delivery pacing (raised 2026-07-30 by founder)
+## Briefing delivery pacing - RESOLVED (raised 2026-07-30 by founder, built 2026-08-12)
 
-- The briefing is currently ONE long run-on sentence. A real 119 dispatcher takes notes at
+- **The briefing is no longer one run-on sentence** - `render_briefing_chunks()` returns ordered,
+  labelled chunks the caller plays one at a time, and the address is split further into three
+  pieces by `render_location_pieces()`. The original problem statement follows, as history.
+- The briefing WAS ONE long run-on sentence. A real 119 dispatcher takes notes at
   conversational pace and drives a back-and-forth (asks location, then symptoms, etc.), so a
   single blast would outrun them. Fine for the proof-of-concept (proves the content), but real
   use needs the briefing broken into PACED CHUNKS - lead with location + chief complaint (get
@@ -1020,15 +1280,17 @@ does not. Not hypothetical; each has a concrete failure case.
 - Secondary buttons (Start over, Yes/No, etc.) scoped to stay small/subdued; only
   `.st-key-emergency` gets the big styling.
 
-## TTS — built, with a portability caveat (2026-08-03)
+## TTS — built (2026-08-03). THE PORTABILITY RISK BELOW IS RESOLVED - see PRE-RENDERED AUDIO.
 
 - TTS is NOT optional: the caller does not read Japanese, so on-screen Japanese is text they
   cannot pronounce. The app must SAY it. Core delivery path, not decoration.
 - `src/speak.py` = pluggable offline backends: macOS `say -v Kyoko` (dev machine, working),
   then pyttsx3 (wraps the OS engine - SAPI5 on Windows) for the Intel/Windows demo machine.
-- **OPEN RISK:** pyttsx3 on Windows needs a Japanese voice installed in the OS (language pack).
-  UNTESTED on the Intel machine. If it fails there, fall back to a real offline model
-  (MeloTTS supports Japanese; Piper's Japanese is weak - espeak phonemization).
+- ~~**OPEN RISK:** pyttsx3 on Windows needs a Japanese voice installed in the OS.~~
+  **CLOSED 2026-08-14 by pre-rendering.** The shipped app plays WAV files and never synthesises,
+  so the Windows language-pack question cannot break the demo. pyttsx3 is now a BUILD-time
+  dependency only (tools/build_audio.py). The fallback options recorded at the time were MeloTTS
+  (Japanese OK) and Piper (Japanese weak, espeak phonemization) - neither was needed.
 - No autoplay by design: the caller CHOOSES to play each chunk (non-negotiable - an aid,
   never an automated broadcast into the 119 line).
 
@@ -1078,6 +1340,99 @@ as one of the three vital signs. We only cover breathing + consciousness.
 founder's plain-register call was right. Breathing+consciousness as critical = 2 of their 3
 vital signs. Their 通報内容 lists per symptom = exactly our trigger_phrases concept.
 
+## "GPS-LINKED APP" COMPARISON - a judge WILL raise this (analysed 2026-08-22)
+
+Founder pasted a claim: apps like JNTO **Safety Tips** or municipal disaster apps let a traveller
+tap a button which "transmits exact GPS coordinates directly to the 119 command center while
+concurrently displaying text-based medical questions in your native language."
+
+**FIRST, THE FACTUAL PROBLEM: that product, as described, does not appear to exist.** The claim
+conflates three real but different things:
+  Safety Tips (JNTO/JTA)  disaster INFORMATION push - earthquake/tsunami/weather alerts,
+                          evacuation guidance, multilingual. NOT a 119 reporting channel.
+  Municipal disaster apps same category - information and evacuation, not dispatch.
+  NET119                  IS real 119 reporting with GPS - but built BY the government,
+                          department by department, for hearing/speech disabilities,
+                          and its chat is in JAPANESE.
+The decisive test is one this log already established: **a third party CANNOT inject reports into
+119 dispatch infrastructure.** That is precisely why NET119 had to be built by the FDMA, one
+department at a time. Any app claiming to send data "directly to the 119 command center" either
+IS a government system or is not doing what the sentence says.
+=> VERIFY before ever citing this in a pitch, and do not let a judge's version go unchallenged.
+
+**SECOND, THE HONEST ARCHITECTURAL VERDICT - and it does not favour us.**
+For the problem "a non-Japanese speaker must report an emergency", a government-built GPS + text
+app IS the better architecture. Stated plainly rather than defended against:
+  - no two-device problem (our single ugliest UX compromise)
+  - no acoustic path, so the untested speakerphone assumption disappears entirely
+  - exact location automatically, outdoors, with no setup and no map picker
+  - no STT at all: no transcription error, no hallucination, no panic-speech degradation
+  - structured by construction - tapped answers are clean data
+  - serves the deaf/mute AND the non-speaker with one design
+  - needs no model, so it runs on any phone
+That list is why NET119 exists and why its design is right. **We should never claim our approach
+is architecturally superior. It is not.**
+
+**THIRD, WHY THE PROJECT IS STILL THE RIGHT THING TO BUILD.** The ideal product is
+"NET119, multilingual". The reason that does not exist is NOT that nobody thought of it - it is
+that only the government can build it. Our design is the best available approximation FROM
+OUTSIDE THE SYSTEM: it uses the one channel a third party can actually use - an ordinary voice
+call - and fills it with prepared, verified content.
+
+Our genuine advantages, in order of strength:
+1. **ZERO DEPLOYMENT DEPENDENCY.** Works with all 720 fire departments today, unmodified,
+   because it speaks Japanese down a normal phone line. NET119 needed department-by-department
+   rollout over years and 三者間同時通訳 still sits at 93.5%. Nothing has to be adopted,
+   procured, or integrated for this to work. THIS IS THE STRONGEST CLAIM WE HAVE.
+2. **The prepared profile.** A traveller-facing app has no medical history. Conditions,
+   anticoagulants, age, room number - none of it exists without pre-registration tied to a
+   fixed address, which is exactly what we have and a tourist app cannot.
+3. **A live human voice stays on the line.** Text is turn-based; the dispatcher cannot hear
+   panic, cannot interrupt, cannot redirect. Our caller keeps the voice channel and gains
+   structured content on top of it.
+4. **We serve foreign RESIDENTS, not travellers.** Different user: recurring risk at a known
+   address, not a one-off incident in an unknown place.
+
+**WHAT WOULD MAKE OURS DECISIVELY BETTER:** close the gap that BOTH a text app and a plain voice
+call leave open for a non-Japanese speaker - 口頭指導. See the CPR section. Neither Safety Tips
+nor a voice call gets a panicking foreigner through chest compressions.
+
+## 口頭指導 AND NET119 - how does a text-based system guide CPR? (raised by founder 2026-08-22)
+
+**The question is exactly right and the precedent matters.** NET119 users cannot HEAR spoken
+CPR instructions either, so Japan has ALREADY had to solve "guide someone through resuscitation
+without speech." If the FDMA solved it, we are not inventing an unprecedented feature - we are
+localising an accepted one, which is a much easier thing to defend to a judge.
+
+**NOT YET VERIFIED - this is a research task, do not assert it.** What must be true structurally:
+guidance has to arrive as text, images or video in the NET119 chat, because the channel has no
+audio. What to look for in FDMA's NET119 documentation: whether 口頭指導 for NET119 is text-only,
+or whether illustrated/video first-aid guidance is included, and whether it is standardised
+nationally or left to each department.
+
+**THE CRITICAL DIFFERENCE, whatever the answer:** NET119's users READ JAPANESE. Ours do not. So
+even a fully-solved NET119 text 口頭指導 does not help our caller - it would arrive in Japanese.
+That gap is ours alone to close, and it is real.
+
+**FOUNDER'S PROPOSAL (2026-08-22) - assessed.** Add CPR guidance as the next feature, on the
+grounds that it is PROTOCOL, not free speech; later, a purpose-made video guide with a visual
+metronome, possibly with fire-department consultation.
+  - The protocol-not-free-speech insight is CORRECT and is the whole reason this is safe to
+    build. Same closed-set property as the ontology.
+  - **One important simplification the founder did not claim, and it removes a dependency:
+    CPR guidance does NOT require inbound translation.** The trigger is OUR OWN DATA - the app
+    already asked whether the patient is breathing, so it already knows. It can offer guidance
+    with ZERO inbound capability. Inbound would REFINE it (knowing when the dispatcher says
+    "start now" vs "wait"), but is not a prerequisite. Do not let CPR wait on inbound.
+  - The video idea is sound: a motor skill is learned better by demonstration than by verbal
+    description, and that advantage is language-independent - which is why the founder's
+    instinct that it could beat audio guidance EVEN FOR JAPANESE USERS is plausible.
+  - **Fire-department consultation should be pursued harder than "a very slight possibility".**
+    One conversation would close C8, our single real validation gap against last year's winner.
+  - Constraints: source from JRC 蘇生ガイドライン, founder-verified, never drafted from an LLM's
+    memory; framed as ASSISTING the dispatcher's 口頭指導, never replacing it; must not delay or
+    distract from the dispatcher's own instructions.
+
 ## NET119 flow (2026-08-03)
 
 Minimum viable emergency report = **救急/火事 + location** → connects immediately → details
@@ -1105,7 +1460,7 @@ Source: FDMA 救急ボイストラ briefing PDFs (令和8年1月 / 平成30年4�
 - 2018 usage: 1,187 uses; Chinese + English dominate; several languages actually used had
   NO 定型文 (定型文なし) - a coverage gap even in the national system.
 
-## Forced language assumes the profile is right (raised 2026-08-03, NOT FIXED)
+## Forced language assumes the profile is right (raised 2026-08-03, HALF FIXED)
 
 - `src/stt.py` now forces Whisper to the caller's `profile.caller.native_language` instead of
   auto-detecting. Removes the wrong-guess failure class AND is ~20% faster (measured warm;
@@ -1114,12 +1469,22 @@ Source: FDMA 救急ボイストラ briefing PDFs (令和8年1月 / 平成30年4�
   a Vietnamese resident more comfortable in English; a mixed-language household; code-switching
   under stress. Forcing the WRONG language corrupts the entire transcript - the exact failure we
   were trying to prevent, just triggered differently.
-- **Needed:** a quick language switch on the recording screen, and/or fall back to auto-detect
-  when decode confidence is low. Neither built.
+- **Needed:** (a) a quick language switch on the recording screen - **BUILT**, app.py:640 has a
+  selectbox defaulting to the profile language, so a Vietnamese resident more comfortable in
+  English can switch in one tap; (b) fall back to auto-detect when decode confidence is low -
+  **NOT BUILT**, and still the right safety net for code-switching under stress, where the caller
+  will not think to touch a dropdown.
 
-## GPS location (planned - from NET119 precedent, 2026-08-03)
+## GPS location - REJECTED 2026-08-20. DO NOT BUILD THIS.
 
-- Send GPS coordinates instead of asking "are you at your registered address?".
+**Superseded by the 緊急通報位置通知 finding:** mobile 119 calls already transmit the caller's
+location automatically at carrier level, nationwide. Adding GPS would duplicate national
+infrastructure, worse - a laptop has no GPS receiver, WiFi positioning needs the internet, and
+no coordinate can ever give a room number. The room number is the thing carrier location cannot
+supply and we can. The original 2026-08-03 reasoning is kept below because the NET119 precedent
+it cites is still a good pitch argument - but the conclusion is dead.
+
+- ~~Send GPS coordinates instead of asking "are you at your registered address?".~~
 - Double win: more reliable on THE most critical field, AND removes a whole question/tap
   from a panicking person's flow.
 - Precedent: NET119 (the fire agency's own caller-side app for hearing/speech disabilities)
@@ -1127,9 +1492,11 @@ Source: FDMA 救急ボイストラ briefing PDFs (令和8年1月 / 平成30年4�
   pattern is already accepted by Japanese fire departments.
 - Founder notes GPS also solves >50% of the 火事 (fire) case, since location dominates there.
 
-## On-site handoff to the ambulance crew (LATER - after STT robustness)
+## On-site handoff to the ambulance crew - BUILT 2026-08-19 (`handoff` phase, render_handoff)
 
-- Idea: once the call is done, the app shows a simple list of confirmed symptoms + profile
+Positioning below is still the live argument for WHY it exists; the build is done.
+
+- Idea (as originally recorded): once the call is done, the app shows a simple list of confirmed symptoms + profile
   info that the caller can SHOW the arriving crew.
 - IMPORTANT positioning: do NOT compete with 救急ボイストラ on translation - it's deployed
   nationwide to fire departments already; duplicating it is a weak position. Our unique value
@@ -1143,7 +1510,8 @@ Source: FDMA 救急ボイストラ briefing PDFs (令和8年1月 / 平成30年4�
 
 - Live microphone recording — RESOLVED, built in A.2 (`st.audio_input` in app.py).
 - Inbound direction (dispatcher's Japanese → caller's language). Blueprint says cut this first if behind.
-- Name fields in `profile.json` — needed for predictable dispatcher questions like 「お名前は？」.
+- ~~Name fields in `profile.json`~~ - BUILT. Patient and caller names are stored, spoken
+  (TEMPLATE_CALLER_NAME) and optional-by-design; see the NAMES discussion in the session summary.
 
 ## Risks flagged
 

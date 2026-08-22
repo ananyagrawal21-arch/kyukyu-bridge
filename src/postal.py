@@ -337,3 +337,50 @@ def building_name_at(lat: float, lon: float) -> str:
     if not name or _KANJI.search(name) is None and name.isdigit():
         return ""
     return name if not re.fullmatch(r"[0-9０-９\-−]+", name) else ""
+
+
+def romaji_address_at(lat: float, lon: float) -> str:
+    """English/romaji READBACK for a coordinate, or "" if none is available.
+
+    WHY THIS EXISTS: GSI returns kanji only, and kana_to_romaji() cannot help - it converts
+    KANA, and returns "" the moment it meets a kanji, which every Japanese place name is made
+    of. So the map path had no readback at all: it showed the user 東京都江東区南砂四丁目 and
+    asked them to confirm the single most critical field in the app on faith. The postal-code
+    path had a readback; the map path silently did not.
+
+    Nominatim will answer the same coordinate in English (accept-language=en), using OSM's
+    name:en tags and transliteration. That is a SECOND LOOKUP, not a translation of GSI's
+    answer - the two are independent, and GSI stays authoritative for what is stored and
+    spoken. This string is shown and then thrown away; it never reaches the briefing.
+
+    Returns "" rather than a half-Japanese string: a readback the user still cannot read is
+    worse than none, because it looks like confirmation.
+    """
+    params = urllib.parse.urlencode({
+        "lat": float(lat), "lon": float(lon), "format": "json",
+        "accept-language": "en", "zoom": 18, "addressdetails": 1,
+    })
+    req = urllib.request.Request(f"{NOMINATIM_REVERSE}?{params}", headers={"User-Agent": _UA})
+    try:
+        with urllib.request.urlopen(req, timeout=_TIMEOUT) as r:
+            data = json.loads(r.read().decode("utf-8"))
+    except (urllib.error.URLError, OSError, TimeoutError, ValueError, json.JSONDecodeError):
+        return ""
+
+    # \u3000 is the IDEOGRAPHIC space - Nominatim leaves it inside romanised names
+    # ("Minami suna\u30002"), where it renders as a strange double-width gap. It is whitespace,
+    # so the _JAPANESE check below does not catch it.
+    raw = ((data or {}).get("display_name") or "").replace("\u3000", " ")
+    parts = [re.sub(r"\s+", " ", p).strip() for p in raw.split(",")]
+    keep = []
+    for part in parts:
+        if not part or part == "Japan":
+            continue
+        if re.fullmatch(r"[0-9\-\u2212]+", part):   # postcode / bare lot numbers
+            continue
+        if _JAPANESE.search(part):        # no name:en for this component - drop it, see above
+            continue
+        if part not in keep:
+            keep.append(part)
+    # Nominatim orders finest-first, which already reads naturally in English.
+    return ", ".join(keep[:4])

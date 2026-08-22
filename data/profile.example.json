@@ -1,16 +1,18 @@
 {
   "address": {
     "prefecture": "東京都",
-    "city_ward": "江東区〇〇",
-    "street_block": "1-2-3",
+    "city_ward": "江東区",
+    "area": "南砂四丁目",
+    "block_number": "24-5",
+    "street_block": "南砂四丁目24-5",
     "building": "〇〇マンション",
-    "room": "402"
+    "room": "405"
   },
   "patient": {
     "name": "山田花子",
     "age": 72,
     "sex": "female",
-    "known_conditions": ["高血圧"]
+    "known_conditions": ["高血圧", "糖尿病"]
   },
   "caller": {
     "name": "山田太郎",

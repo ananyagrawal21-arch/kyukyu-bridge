@@ -181,6 +181,38 @@ explained — recorded honestly rather than omitted. SLM numbers on Intel hardwa
 **Speech-to-text robustness** was tested on real non-native English from the L2-ARCTIC corpus
 (Vietnamese and Hindi speakers), not synthetic accents.
 
+## Cost and scale
+
+Because inference is on-device, the marginal cost of an emergency call is **zero** — no API call,
+no cloud inference, no per-seat licence, no subscription. That is not a pricing decision; it
+falls out of the architecture.
+
+| | |
+|---|---|
+| Classifier (Qwen2.5-3B, OpenVINO INT8) | 2.9 GB |
+| Speech recognition (Whisper small) | 926 MB |
+| Pre-rendered Japanese audio | 4.1 MB |
+| **Total footprint per installed device** | **~3.9 GB** |
+| **Marginal cost per emergency call** | **¥0** |
+| **Recurring cost per household** | **¥0** |
+| One-time setup | ~5 minutes, once, per address |
+
+The only real cost is a device that stays in the building — and the target user already owns one.
+An eight-year-old laptop is sufficient; there is no GPU requirement.
+
+**What scaling actually costs.** Adding a household costs nothing but the five-minute
+registration. Adding a **language** means translating the interface and verifying the caller-facing
+labels — the Japanese output is unchanged, because the briefing is generated from the same
+verified ontology regardless of what language the caller spoke. Adding a **region** costs nothing
+at all: the address lookups already cover all of Japan, and the app speaks standard Japanese to
+any of the 720 fire departments.
+
+**Compare this to what it replaces.** Japan's existing three-way interpretation service
+(三者間同時通訳) is excellent and we do not compete with it — but it carries a real per-call cost
+for a live human interpreter, and reaching 93.5% of fire departments took years of
+department-by-department procurement. This app requires no procurement, no integration and no
+adoption by any fire department, because it speaks Japanese down an ordinary phone line.
+
 ## Honest limitations
 
 - **It only asks questions it anticipated.** Open-ended clarification is the dispatcher's job.

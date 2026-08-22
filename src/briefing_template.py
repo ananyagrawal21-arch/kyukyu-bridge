@@ -122,6 +122,31 @@ def render_handoff(
     return rows
 
 
+def spoken_address(address: dict) -> str:
+    """An address written the way it is SPOKEN, with 読点 between the administrative levels.
+
+    THIS IS A PROSODY FIX, not decoration. Built as one string -
+        場所は東京都江東区南砂四丁目24の5です
+    - it is a single unbroken 20-character noun phrase with NO boundary cues, so the speech
+    engine has to guess where 東京都 / 江東区 / 南砂 / 四丁目 divide and where each accent
+    falls. It guesses inconsistently, and the result is heard as the pitch and emphasis
+    landing at random inside the sentence. Founder reported exactly this, 2026-08-22.
+    Switching to a better voice does NOT fix it, because the ambiguity is in the text.
+
+    Each 、 gives the engine a phrase boundary: correct accent reset per component, plus the
+    short pause a dispatcher writing the address down needs anyway.
+
+    Uses the separately-stored `area` and `block_number` when present (profiles written since
+    the 2026-08-22 address split), so the 丁目 and the lot number are their own phrases too.
+    """
+    parts = [address.get("prefecture", ""), address.get("city_ward", "")]
+    if address.get("area") or address.get("block_number"):
+        parts += [address.get("area", ""), address.get("block_number", "")]
+    else:
+        parts.append(address.get("street_block", ""))
+    return "、".join(p for p in parts if p)
+
+
 def render_location_pieces(address: dict = None) -> list[dict]:
     """The opening line split the way a person actually gives an address on the phone.
 
@@ -135,8 +160,10 @@ def render_location_pieces(address: dict = None) -> list[dict]:
     """
     if address is None:
         return [{"label": "Ambulance", "jp": TEMPLATE_HEAD}]
-    area = f"{address['prefecture']}{address['city_ward']}{address['street_block']}"
-    building = f"{address['building']} {address['room']}号室です。"
+    area = spoken_address(address)
+    # 、 before the room number too - "〇〇マンション405号室" is the same run-on problem in
+    # miniature, and the room is the one part a dispatcher most needs to catch.
+    building = f"{address['building']}、{address['room']}号室です。"
     return [
         {"label": "Ambulance", "jp": TEMPLATE_HEAD},
         {"label": "Area", "jp": f"場所は{area}です。"},
@@ -149,6 +176,20 @@ def _format_statement(term: str, frame: str) -> str:
         return f"{term}と言っています"
     # observed and source_dependent are stated as-is for now.
     return term
+
+
+# CARDIAC-ARREST CLASS. The official protocol (緊急度判定プロトコル Ver.1) runs
+# 119通報 → 年齢・性別・住所・通報概要 → **CPA疑い判定** → 呼吸・循環・意識 → 症候別:
+# arrest detection is its SECOND step, because it triggers 口頭指導 (telephone-guided CPR) and
+# changes the dispatch itself.
+#
+# Ours used to arrive FOURTH. The vital-sign answers land in the statements list, which renders
+# into the "What is happening" chunk - so a dispatcher heard an apology and the patient's age
+# before learning nobody was breathing. The bug was invisible in the chunk list: the ordering
+# error was in WHICH CHUNK the finding fell into, not in the order of the chunks.
+#
+# These are the protocol's own CPA keywords that we cover (呼吸なし・脈なし・喉が詰まった).
+CPA_IDS = frozenset({"not_breathing", "no_pulse", "choking"})
 
 
 def render_briefing_chunks(
@@ -173,8 +214,19 @@ def render_briefing_chunks(
     location = TEMPLATE_LOCATION_KNOWN.format(address=address) if address is not None else ""
     chunks.append({"label": "Emergency & location", "jp": TEMPLATE_HEAD + location})
 
-    # SECOND, deliberately - see TEMPLATE_TAIL. Sets the dispatcher's expectations before the
-    # long pauses start, rather than explaining them after everything else is done.
+    # CPA FINDINGS JUMP THE QUEUE - ahead of even the "replies are slow" line. If the patient
+    # is not breathing, that beats an apology: it is what starts telephone-guided CPR.
+    # They are REMOVED from `statements` here so the later symptom chunk cannot repeat them.
+    cpa = [s for s in statements if s.get("id") in CPA_IDS]
+    if cpa:
+        statements = [s for s in statements if s.get("id") not in CPA_IDS]
+        chunks.append({
+            "label": "CRITICAL",
+            "jp": "。".join(_format_statement(s["term"], s["frame"]) for s in cpa) + "。",
+        })
+
+    # THEN the slow-replies line - see TEMPLATE_TAIL. Sets the dispatcher's expectations before
+    # the long pauses start, rather than explaining them after everything else is done.
     chunks.append({"label": "Why replies are slow", "jp": TEMPLATE_TAIL})
 
     if age is not None:

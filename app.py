@@ -401,8 +401,11 @@ if phase == "setup":
                     from postal import building_name_at
                     st.session_state.map_building = building_name_at(lat, lon)
                     # Same readback reason as the postal lookup: the user cannot check kanji.
-                    from postal import kana_to_romaji  # noqa: F811
-                    st.session_state.map_town_romaji = kana_to_romaji(got["town"])
+                    # kana_to_romaji() was used here and could NEVER work - it converts kana and
+                    # bails on kanji, which every place name is. A second, independent lookup
+                    # answers the same coordinate in English instead.
+                    from postal import romaji_address_at
+                    st.session_state.map_town_romaji = romaji_address_at(lat, lon)
                     st.session_state.map_open = True
                     st.rerun()
                 else:
@@ -415,9 +418,17 @@ if phase == "setup":
                 f"**{st.session_state.pc_result['prefecture']}"
                 f"{st.session_state.pc_result['city_ward']}{st.session_state['map_town']}**"
             )
+            # THE ENGLISH IS MANDATORY, the Japanese is shown alongside for transparency.
+            # Without this the map path asked a user who cannot read kanji to confirm the one
+            # field that decides where the ambulance goes. Shown only - never stored, never spoken.
+            if st.session_state.get("map_town_romaji"):
+                st.markdown(
+                    f'<div class="caption" style="text-align:left;margin-top:-0.6rem">'
+                    f'{st.session_state["map_town_romaji"]}</div>',
+                    unsafe_allow_html=True,
+                )
 
     st.markdown("#### Step 2 — the rest")
-    st.warning("Type in Japanese, not romaji. Numbers are fine as digits.", icon="⚠️")
 
     with st.form("setup"):
         st.markdown("**Where the ambulance should come**")
