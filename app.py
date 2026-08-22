@@ -40,7 +40,9 @@ if os.path.isdir(_MODEL_DIR):
 from pipeline import (  # noqa: E402
     build_briefing_chunks, slm_matches, _statement_from, _humanize,
 )
-from briefing_template import render_location_pieces, HANDOFF_LABELS  # noqa: E402
+from briefing_template import (  # noqa: E402
+    render_location_pieces, HANDOFF_LABELS, HANDOFF_LABELS_EN,
+)
 from pipeline import build_handoff  # noqa: E402
 from slm_classify import SLM_DISCARD  # noqa: E402
 from ontology import load_ontology  # noqa: E402
@@ -515,6 +517,10 @@ if phase == "setup":
                 PROFILE_PATH.write_text(_json.dumps({
                     "address": {
                         "prefecture": prefecture, "city_ward": city_ward,
+                        # Japan Post's PUBLISHED READING for this postal code. This is what the
+                        # app actually speaks - see spoken_address(). Kanji is what we show;
+                        # kana is what we say, because proper-noun readings cannot be inferred.
+                        "kana": (st.session_state.get("pc_result") or {}).get("kana", ""),
                         "street_block": street_block,  # joined - what gets spoken
                         "area": area, "block_number": block_no,  # parts, for re-editing
                         "building": building, "room": room,
@@ -886,15 +892,33 @@ elif phase == "handoff":
         st.session_state.entries, st.session_state.extras, profile, ontology,
         st.session_state.patient_ok, st.session_state.at_registered_address,
     )
-    # Label and value on ONE line, label in a fixed-width column so all four line up and the
-    # crew's eye runs straight down the values. All Japanese, nothing to scan past.
+    # DEMO ONLY. The crew screen is Japanese-only on purpose - that is correct for the people
+    # who actually read it. But an Intel judge cannot read it at all, so the whole point of the
+    # screen is invisible in a presentation. This toggle is OFF by default and never appears in
+    # the real flow's path; it exists so the demo can show what the crew is being told.
+    show_en = st.toggle("Show English (for demonstration only)", value=False)
+
+    # ONE LINE PER ITEM, not a paragraph. A crew member reading a held-up phone in a hallway has
+    # about three seconds. Symptoms used to be joined with 。 into a single cell, making the row
+    # they most need to scan the one row that read as a run-on sentence.
     for row in rows:
+        items = ""
+        for l in row.get("lines") or [{"jp": row["jp"], "en": "", "critical": False}]:
+            # Cardiac-arrest findings must not look identical to a headache.
+            style = ("color:#ff6b6b;font-weight:700;font-size:1.85rem"
+                     if l["critical"] else "")
+            items += f'<div style="{style}">{l["jp"]}</div>'
+            if show_en and l["en"]:
+                items += (f'<div style="opacity:0.45;font-size:0.95rem;'
+                          f'margin-bottom:0.35rem">{l["en"]}</div>')
+        label = HANDOFF_LABELS[row["key"]]
+        if show_en:
+            label += f'<div style="font-size:0.8rem;opacity:0.5">{HANDOFF_LABELS_EN[row["key"]]}</div>'
         st.markdown(
             f'<div class="briefing-jp" style="display:flex;gap:1rem;align-items:baseline;'
             f'margin-bottom:0.6rem">'
-            f'<span style="flex:0 0 4.5em;opacity:0.6;font-size:1.2rem">'
-            f'{HANDOFF_LABELS[row["key"]]}</span>'
-            f'<span style="flex:1">{row["jp"]}</span>'
+            f'<span style="flex:0 0 4.5em;opacity:0.6;font-size:1.2rem">{label}</span>'
+            f'<span style="flex:1">{items}</span>'
             f'</div>',
             unsafe_allow_html=True,
         )

@@ -27,6 +27,31 @@ interaction.
 The real bottleneck in those opening seconds isn't translation *quality*. It's that a panicking
 person cannot produce structured, dispatcher-usable information at all — in any language.
 
+## The numbers, with sources
+
+| | | Source |
+|---|---|---|
+| Ambulance on scene | **9.8 min** average from the 119 call | FDMA, 令和7年版 救急・救助の現況 (2026) |
+| Handover to a doctor | **44.6 min** average from the 119 call | same |
+| Extra on-scene time for foreign patients | **3–6 min** | Sapporo City Fire Bureau, via FDMA |
+| Residents who converse freely in Japanese | **23.9%** | 出入国在留管理庁 基礎調査 令和3年度, n=40,000 |
+| Residents who can barely or not at all *read* Japanese | **13.3%** | same |
+
+Two of these decide the whole design.
+
+**44.6 minutes** is the real clock to definitive care — not 9.8. The 3–6 minutes lost to a
+language barrier is a meaningful slice of it, and it is time spent on scene, next to the patient,
+before treatment can be planned properly.
+
+**13.3% cannot read Japanese.** Japan's own caller-side emergency service, NET119, is a
+*text chat in Japanese*. For that group it is unreadable. This is the clearest evidence that a
+Japanese-text channel does not close the gap for a foreign resident.
+
+And the figure that is often quoted against projects like this: roughly 80% of foreign residents
+report Japanese "sufficient for daily life". That is true, and it is the wrong measure. Only
+23.9% converse freely across a wide range of topics — and ordering lunch is not describing
+呂律が回らない to a dispatcher while someone is collapsing in front of you.
+
 ## What this does differently
 
 The system's advantage is **preparation**, not out-comprehending panicked speech:
@@ -180,6 +205,23 @@ explained — recorded honestly rather than omitted. SLM numbers on Intel hardwa
 
 **Speech-to-text robustness** was tested on real non-native English from the L2-ARCTIC corpus
 (Vietnamese and Hindi speakers), not synthetic accents.
+
+## Intel optimisation, measured
+
+Both models in the emergency path run through OpenVINO, not just one.
+
+| Stage | Baseline | OpenVINO INT8 | |
+|---|---|---|---|
+| Speech recognition (Whisper small) | 1.92 s · 926 MB | **1.18 s · 242 MB** | 1.62× faster, 3.8× smaller |
+| Classification (Qwen2.5-3B) | — | 16.0 s total (Stage A 14.5 s, Stage B 1.5 s) | INT8 weight quantisation |
+
+Reproduce with `python benchmark/bench_stt_backends.py`. It times both backends **and diffs the
+transcripts**, because a speedup that changes what a panicking caller said is not a speedup.
+INT8 does alter transcription slightly — measured, and verified to produce identical ontology
+classification, so the Japanese a dispatcher hears is unchanged.
+
+If the OpenVINO build is absent or fails to load, speech recognition falls back to plain
+transformers rather than failing. This runs seconds before someone describes an emergency.
 
 ## Cost and scale
 

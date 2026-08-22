@@ -81,6 +81,125 @@ THIRD Intel lifecycle stage (alongside the SLM and a converted Whisper), feeding
 romaji_fields() flags it; the fix is picking the building from the map so it stores 日本語, or
 leaving the field blank. Cheap, and audible today.
 
+## WHISPER ON OPENVINO — BUILT AND MEASURED 2026-08-22 (rubric item R1)
+
+**Intel technology now runs in TWO pipeline stages, not one.** This was the single highest-value
+engineering task identified by the rubric analysis: Metric 03 scores "extent of use" 0-4 for
+hardware and software each, asking "across the lifecycle / 2-3 stages / only 1 stage?".
+OpenVINO previously ran the SLM alone.
+
+    MEASURED (Mac, best of 3, data/bench_clip.wav, benchmark/bench_stt_backends.py)
+    transformers (CPU fp32) : 1.92 s      926 MB on disk
+    OpenVINO INT8           : 1.18 s      242 MB on disk
+                              1.62x           3.8x smaller
+
+**FILES:** benchmark/convert_whisper.py (mirrors convert_slm.py), src/stt.py autodetects
+models/whisper-small-ov-int8, benchmark/bench_stt_backends.py.
+
+**THE FALLBACK IS DELIBERATE AND BROAD.** get_asr() catches ANY exception from the OpenVINO path
+and drops to plain transformers. This runs seconds before someone describes a medical emergency:
+a missing dependency or a bad IR must degrade to the working CPU path, never take speech
+recognition down. A machine that has not run the conversion simply uses transformers.
+
+### TWO REAL BUGS THE BENCHMARK CAUGHT
+
+1. **MPS tensors.** transformers auto-selects Apple's MPS backend when torch sees it, then hands
+   OpenVINO an `mps:0` tensor it cannot convert. `device=-1` is REQUIRED on that pipeline, not a
+   stylistic default. Would have broken the app on Apple Silicon while working fine on Intel -
+   the worst kind of bug to find at a demo.
+2. **INT8 changes the transcript slightly.** Measured, not assumed:
+       transformers: "...trouble breathing and HE IS not responding to me properly."
+       openvino    : "...trouble breathing and not responding to me properly."
+   **VERIFIED HARMLESS:** both transcripts classify to exactly
+   ['chest_pain', 'collapsed', 'difficulty_breathing'] - identical. The briefing a dispatcher
+   hears is unchanged. This is why bench_stt_backends.py diffs transcripts as well as timing:
+   a speedup that quietly alters what a panicking caller said is not a win, and we would not
+   have known without checking.
+
+**STILL TO MEASURE ON THE INTEL MACHINE:** these numbers are from a Mac. The Intel figures are
+the ones that belong in the pitch, and if the machine is a Core Ultra the NPU is worth targeting
+(rubric scores AI-specific hardware above general-purpose, 0-3).
+
+## C9 RESOLVED — the two uncited pitch numbers, now sourced to primary documents (2026-08-22)
+
+Citations are worth 6 rubric points ("evidence the problem exists" 0-3 + "evidence it is time
+critical" 0-3), and both questions ask explicitly "supported by citations/references?".
+
+### 1. AMBULANCE RESPONSE TIME — was "~10 min, worth re-verifying". CONFIRMED AND UPDATED.
+
+Source: 消防庁「令和７年版 救急・救助の現況」, published 2026-01-20, covering 令和6年 (2024).
+https://www.fdma.go.jp/pressrelease/houdou/items/kyuuki_20260116.pdf
+
+    現場到着所要時間 (119 call -> ambulance on scene)      avg 9.8 min   (prev yr 10.0)
+    病院収容所要時間 (119 call -> handover to a doctor)     avg 44.6 min  (prev yr 45.6)
+    救急出動件数                                            7,720,740 (record high)
+    搬送人員                                                6,771,193
+Both times are LONGER than pre-COVID 令和元年: +1.1 min to scene, +5.1 min to hospital.
+
+**USE 44.6 MINUTES IN THE PITCH, not just 9.8.** 9.8 min is how long the caller is alone; 44.6
+min is the real clock to definitive care. The FDMA's own measured 3-6 minute EXTRA on-scene time
+for foreign patients is a meaningful slice of that, and stating it against 44.6 makes the size
+of the loss legible instead of abstract.
+
+### 2. "30% JAPANESE-PROFICIENT" — was UNCITED. Now sourced, and it holds up.
+
+Source: 出入国在留管理庁「在留外国人に対する基礎調査」令和3年度, 40,000 respondents randomly
+sampled from mid/long-term residents and special permanent residents aged 18+.
+https://www.moj.go.jp/isa/content/001415908.pdf
+
+    話す・聞く  幅広い話題について自由に会話ができる      23.9%
+                日本語での会話はほとんどできない           3.4%
+    読む        幅広い場面で使われる日本語を理解できる    26.7%
+                あまり分からない                          10.0%
+                全く分からない                             3.3%
+
+**REPLACE "30%" WITH 23.9% AND CITE IT.** The real figure is close to what we were claiming, but
+uncited it was a liability in a citation-scored item; cited it is an asset.
+
+**IMPORTANT NUANCE - do not overclaim, and we do not need to.** Cumulatively, ~80% of residents
+report conversational Japanese "sufficient for daily life" or better. Anyone quoting that at us
+is quoting it correctly. The answer is NOT to dispute it:
+
+  1. **Daily-life Japanese is not emergency Japanese.** Only 23.9% converse freely across a wide
+     range of topics. Ordering food and describing 呂律が回らない to a dispatcher while panicking
+     are not the same skill, and this is the project's founding claim (see WHAT THIS PROJECT IS,
+     claim 1: the bottleneck is producing STRUCTURED information under panic, not translation).
+  2. **13.3% can barely read Japanese at all** (10.0% + 3.3%). This is the number that matters
+     for NET119 specifically - it is a TEXT-based service in Japanese, so the government's own
+     caller-side solution is unreadable to that group. Strongest single data point we have for
+     why a Japanese-text channel does not close this gap.
+
+### MARKET MATHS — the earlier unit error still stands corrected
+
+The "2.88M language-isolated residents x 58% home-incident rate = 1.67M potential users" figure
+remains WRONG (the 58% applies to EVENTS, not PEOPLE). Correct phrasing: "2.88M people at risk,
+and the app addresses ~58% of the emergencies they would experience." With the proficiency figure
+now sourced, re-derive the 2.88M from 23.9% rather than from the uncited 30% before using it.
+
+## REGRESSION CHECK AFTER THE 2026-08-22 CHANGES — CLEAN, no new failures
+
+briefing_template.py, pipeline.py and stt.py all changed in one day (CPA promotion, statement
+ids, spoken_address, empty-room fix, CLI default flip, Whisper->OpenVINO). Nothing had
+re-verified classification since. Re-ran the full 52-case set rather than spot-checking - the
+rule this project already learned the hard way is that ANY ontology or prompt-adjacent change
+can perturb UNRELATED cases.
+
+    Exact-match  48/52 (92%)    Precision 0.98    Recall 0.94    F1 0.96    Fabrications 1
+    SLM latency (plain PyTorch, Mac CPU): median 11.7s  mean 13.8s  max 89.2s
+
+**IDENTICAL to the last recorded state, and all four failures are the SAME documented ones:**
+    FABRICATED  "stomach is killing her, doubled over"     -> added vomiting
+    MISSED      "she feels boiling hot to the touch"       -> high_fever
+    MISSED      "collapsed and now convulsing on the floor"-> seizure
+    MISSED      "clutching his chest, pale and sweating"   -> pale_complexion
+No new breakage from any of today's work. README's published figures already match, so nothing
+in the documentation is stale.
+
+**NOTE ON THE RUN:** SLM_OV_DIR was exported but the eval still reported plain PyTorch, so these
+are UNOPTIMIZED baseline numbers - fine for a regression check (failures are backend-independent
+here), but the 89.2s max is a real outlier worth understanding before quoting any latency figure
+from this run. Quote the LATENCY BREAKDOWN section's OpenVINO numbers instead.
+
 ## ============ RUBRIC ANALYSIS — read before prioritising anything (2026-08-22) ============
 
 Source: references/document.md (official rubric, converted). STRUCTURE:
@@ -183,8 +302,21 @@ this register, it is not outstanding. Nothing below this block needs to be searc
     10  Handoff needs a subtitled demo variant  INTEL JUDGE section. The screen is correctly
         Japanese-only for a real crew, which makes it unreadable to a judge.
     11  Intel run + latency split               LATENCY BREAKDOWN section
+        R1 WHISPER->OPENVINO IS DONE (1.62x, 3.8x smaller) - see its own section.
+        What remains here is running BOTH models on the Intel machine for real numbers,
+        plus targeting the NPU if it is a Core Ultra.
     12  Commit; strip Claude co-author trailers 4 of 12 commits carry them, incl. the root
-    13  SPEAKERPHONE TEST - NEVER DONE          MOBILE section, "honest risks"
+    13  SPEAKERPHONE TEST - DONE 2026-08-22, PASSED WITH ONE CAVEAT
+        Founder ran it: audio came through "absolutely clear" at sensible volume.
+        THE PRODUCT'S CENTRAL UNTESTED ASSUMPTION IS NO LONGER UNTESTED.
+        Distance is a NON-ISSUE and was ruled out: the acoustic hop is speaker->mic, a few
+        tens of cm; past that it is a digital call and the dispatcher's distance is irrelevant.
+        CAVEAT: the test was a WHATSAPP call - wideband Opus over data. A real 119 call is
+        cellular voice (AMR, 8kHz, ~300-3400Hz), much narrower. Simulated that channel
+        locally (scipy resample + bandpass) to check intelligibility; a real cellular call
+        would still close it properly. NOT blocking.
+        STILL UNTESTED: background noise (shouting, alarms) - in the honest-limits list.
+    13b OLD ENTRY, kept for context           MOBILE section, "honest risks"
         *** The single genuine unknown. The entire product assumes a phone mic picks up
         app audio over speakerphone during a live call. Nobody has ever tried it. It needs
         two phones and five minutes, and if it fails the delivery path is wrong. Do this
@@ -217,16 +349,20 @@ this register, it is not outstanding. Nothing below this block needs to be searc
         Partly mitigated: consciousness now comes from a button, not the SLM.
     C4  Low-confidence -> auto-detect language fallback. The manual switch is built; this is
         the net for code-switching under stress, when nobody thinks to touch a dropdown.
-    C5  Whisper anti-hallucination settings (condition_on_previous_text=False, no-speech /
-        logprob thresholds). Listed as a cheap win; never confirmed applied.
+    C5  ~~Whisper anti-hallucination settings~~ ALREADY DONE - ROBUST_GENERATE_KWARGS in
+        src/stt.py has condition_on_prev_tokens=False, temperature fallback, compression-ratio,
+        logprob and no-speech thresholds. Verified 2026-08-22. Nothing to do.
     C6  Four ontology wording questions still recorded and unanswered - slurred_speech,
         one_sided_weakness, face_drooping, difficulty_breathing. See "Ontology wording".
     C7  source_dependent frame still renders as a direct assertion, stating the patient's
         internal sensation as observed fact.
     C8  NO PARAMEDIC OR DISPATCHER HAS EVER SEEN THIS. The KaiGo-AI comparison identified
         this as our one real validation gap - they consulted actual caregivers.
-    C9  Two pitch numbers need sourcing: "~10 min ambulance travel time" (flagged
-        re-verify) and "30% Japanese-proficient" (uncited - source it or say "estimated").
+    C9  ~~Two pitch numbers need sourcing~~ RESOLVED 2026-08-22 - both traced to primary
+        government documents; see the C9 RESOLVED section. Ambulance 9.8 min to scene /
+        44.6 min to hospital (FDMA 令和7年版). Proficiency 23.9% free conversation, 13.3%
+        can barely read (MOJ 基礎調査 令和3年度, n=40,000). ACTION LEFT: replace "30%" with
+        23.9% wherever it appears in pitch material, and re-derive the 2.88M from it.
     C10 UI internationalisation. Filed as roadmap, but note it is the backstop in C1, so it
         is a SAFETY item for non-English callers, not cosmetic.
     C11 Verified-flag is not enforced in code. All 31 pass today by human habit alone.

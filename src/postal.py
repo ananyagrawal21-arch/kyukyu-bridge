@@ -86,10 +86,23 @@ def lookup(code: str):
         kana_to_romaji(top.get("kana2", "")),
         kana_to_romaji(top.get("kana3", "")),
     )))
+    # THE KANA IS NOT A CAPTION - IT IS WHAT WE SPEAK. Japan Post publishes the official
+    # reading for every postal code, and it is the ONLY authoritative source of the reading we
+    # have. Japanese proper nouns have irregular readings that no grapheme-to-phoneme system can
+    # infer: Open JTalk, the reference Japanese G2P, reads 江東区立第三砂町小学校 as
+    # コートークリツダイミサゴマチショーガッコー - 第三砂町 became ダイミサゴマチ instead of
+    # ダイサンスナマチ. macOS Kyoko mangles it differently. A misread address sends an ambulance
+    # to the wrong place, so we do not let ANY engine guess: we speak the published reading.
+    kana = " ".join(filter(None, (
+        halfwidth_to_katakana(top.get("kana1", "")),
+        halfwidth_to_katakana(top.get("kana2", "")),
+        halfwidth_to_katakana(top.get("kana3", "")),
+    )))
     return {
         "prefecture": top.get("address1", ""),
         "city_ward": f"{top.get('address2', '')}{top.get('address3', '')}",
         "romaji": romaji,
+        "kana": kana,
     }
 
 
@@ -384,3 +397,30 @@ def romaji_address_at(lat: float, lon: float) -> str:
             keep.append(part)
     # Nominatim orders finest-first, which already reads naturally in English.
     return ", ".join(keep[:4])
+
+
+# Japan Post publishes readings in HALF-WIDTH katakana (ﾄｳｷｮｳﾄ). Speech engines handle
+# full-width (トウキョウト) reliably and half-width inconsistently, so normalise on the way in.
+_HW_BASE = "ｦｧｨｩｪｫｬｭｮｯｰｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ"
+_FW_BASE = "ヲァィゥェォャュョッーアイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワン"
+_HW_MAP = str.maketrans(_HW_BASE, _FW_BASE)
+_HW_VOICED = {"ｶ": "ガ", "ｷ": "ギ", "ｸ": "グ", "ｹ": "ゲ", "ｺ": "ゴ", "ｻ": "ザ", "ｼ": "ジ",
+              "ｽ": "ズ", "ｾ": "ゼ", "ｿ": "ゾ", "ﾀ": "ダ", "ﾁ": "ヂ", "ﾂ": "ヅ", "ﾃ": "デ",
+              "ﾄ": "ド", "ﾊ": "バ", "ﾋ": "ビ", "ﾌ": "ブ", "ﾍ": "ベ", "ﾎ": "ボ", "ｳ": "ヴ"}
+_HW_SEMI = {"ﾊ": "パ", "ﾋ": "ピ", "ﾌ": "プ", "ﾍ": "ペ", "ﾎ": "ポ"}
+
+
+def halfwidth_to_katakana(text: str) -> str:
+    """ﾄｳｷｮｳﾄ -> トウキョウト. Combining marks (ﾞﾟ) follow their base character, so they are
+    merged first: ｴﾄﾞｶﾞﾜｸ must become エドガワク, not エトﾞカﾞワク."""
+    if not text:
+        return ""
+    out = []
+    for ch in text:
+        if ch == "ﾞ" and out and out[-1] in _HW_VOICED:
+            out[-1] = _HW_VOICED[out[-1]]
+        elif ch == "ﾟ" and out and out[-1] in _HW_SEMI:
+            out[-1] = _HW_SEMI[out[-1]]
+        else:
+            out.append(ch)
+    return "".join(out).translate(_HW_MAP)

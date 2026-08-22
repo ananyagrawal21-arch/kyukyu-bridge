@@ -1,3 +1,4 @@
+import re
 # The briefing is SPOKEN ALOUD by the caller, in the first person. So it is written as
 # natural speech with subjects dropped (Japanese does this freely), not as a terse
 # third-person report. "通報者は日本語が不自由です" became "日本語が話せません".
@@ -93,6 +94,17 @@ HANDOFF_LABELS = {
 }
 
 
+# ENGLISH LABELS FOR DEMO MODE ONLY. The real screen stays Japanese-only - see HANDOFF_LABELS.
+# These exist because a competition judge with no Japanese cannot otherwise see what the crew
+# is being handed, which makes the strongest on-scene feature invisible in a presentation.
+HANDOFF_LABELS_EN = {
+    "patient": "Patient",
+    "conditions": "Conditions",
+    "symptoms": "Symptoms",
+    "caller": "Caller",
+}
+
+
 def render_handoff(
     *,
     statements: list[dict],
@@ -101,24 +113,66 @@ def render_handoff(
     name: str = None,
     conditions_ja: list[str] = None,
 ) -> list[dict]:
-    """Rows for the crew-facing summary. Same rule as everywhere else: nothing unconfirmed."""
+    """Rows for the crew-facing summary. Same rule as everywhere else: nothing unconfirmed.
+
+    Each row carries BOTH forms:
+      "jp"    - the row joined into one string. Kept for the CLI and any existing caller.
+      "lines" - the row as SEPARATE ITEMS, which is what the screen should render.
+
+    WHY "lines" EXISTS: symptoms used to be joined with 。 into a single cell, so the one row an
+    arriving crew most needs to scan was the one row that rendered as a run-on paragraph. A crew
+    member reading a held-up phone in a hallway has about three seconds; a stacked list is read
+    at a glance, a paragraph is not. Founder, 2026-08-22: "it is obviously harder for them to
+    understand quickly, a paragraph than a clearly organized visual layout."
+
+    Each line also carries:
+      "en"       - English gloss, for the DEMO subtitle mode only. Never shown to a real crew.
+      "critical" - a cardiac-arrest-class finding, so the screen can give it visual weight.
+                   息をしていません must not look identical to 頭が痛い.
+    """
+    def line(jp, en="", critical=False):
+        return {"jp": jp, "en": en, "critical": critical}
+
     rows = []
     if age is not None:
         who = f"{age}歳の{sex_ja}" if sex_ja else f"{age}歳"
+        en = f"{age} y/o {'male' if sex_ja == '男性' else 'female' if sex_ja == '女性' else ''}".strip()
         if name:
             who = f"{name}（{who}）"
-        rows.append({"key": "patient", "jp": who})
+            en = f"{name}, {en}"
+        rows.append({"key": "patient", "jp": who, "lines": [line(who, en)]})
+
     if conditions_ja is not None:
-        rows.append({
-            "key": "conditions",
-            "jp": "、".join(conditions_ja) if conditions_ja else "なし",
-        })
+        if conditions_ja:
+            lines = [line(c) for c in conditions_ja]
+            jp = "、".join(conditions_ja)
+        else:
+            lines, jp = [line("なし", "none")], "なし"
+        rows.append({"key": "conditions", "jp": jp, "lines": lines})
+
     if statements:
+        lines = [
+            line(
+                _format_statement(s["term"], s["frame"]),
+                (s.get("id") or "").replace("_", " "),
+                s.get("id") in CPA_IDS,
+            )
+            for s in statements
+        ]
+        # Cardiac-arrest findings first WITHIN the row. The row ORDER stays as the founder
+        # settled it (患者 → 持病 → 症状 → 通報者); this only sorts inside the symptom list.
+        lines.sort(key=lambda l: not l["critical"])
         rows.append({
             "key": "symptoms",
-            "jp": "。".join(_format_statement(s["term"], s["frame"]) for s in statements) + "。",
+            "jp": "。".join(l["jp"] for l in lines) + "。",
+            "lines": lines,
         })
-    rows.append({"key": "caller", "jp": HANDOFF_CALLER})
+
+    rows.append({
+        "key": "caller",
+        "jp": HANDOFF_CALLER,
+        "lines": [line(HANDOFF_CALLER, "does not speak Japanese")],
+    })
     return rows
 
 
@@ -139,11 +193,30 @@ def spoken_address(address: dict) -> str:
     Uses the separately-stored `area` and `block_number` when present (profiles written since
     the 2026-08-22 address split), so the 丁目 and the lot number are their own phrases too.
     """
-    parts = [address.get("prefecture", ""), address.get("city_ward", "")]
-    if address.get("area") or address.get("block_number"):
-        parts += [address.get("area", ""), address.get("block_number", "")]
+    # PREFER THE PUBLISHED READING. `kana` is Japan Post's official reading for this postal
+    # code, captured at setup. Speaking it instead of the kanji removes the reading question
+    # entirely - katakana has one pronunciation, so no engine can get it wrong.
+    #
+    # This is not a refinement, it is a correctness fix. Japanese proper nouns carry irregular
+    # readings that no G2P can infer: Open JTalk renders 第三砂町 as ダイミサゴマチ rather than
+    # ダイサンスナマチ, and Kyoko mangles it differently again. A misread address sends the
+    # ambulance somewhere else, which is the worst failure this app has.
+    kana = address.get("kana", "")
+    if kana:
+        parts = [kana]
+        # The 丁目 suffix stays as written: numbers + 丁目 are REGULAR, and both engines read
+        # them correctly (verified 四丁目 -> ヨンチョーメ). Only the proper noun needed replacing.
+        area = address.get("area") or address.get("street_block", "")
+        chome = re.search(r"[0-9０-９一二三四五六七八九十]+丁目$", area)
+        if chome:
+            parts.append(chome.group(0))
+        parts.append(address.get("block_number", ""))
     else:
-        parts.append(address.get("street_block", ""))
+        parts = [address.get("prefecture", ""), address.get("city_ward", "")]
+        if address.get("area") or address.get("block_number"):
+            parts += [address.get("area", ""), address.get("block_number", "")]
+        else:
+            parts.append(address.get("street_block", ""))
     return "、".join(p for p in parts if p)
 
 
@@ -163,12 +236,29 @@ def render_location_pieces(address: dict = None) -> list[dict]:
     area = spoken_address(address)
     # 、 before the room number too - "〇〇マンション405号室" is the same run-on problem in
     # miniature, and the room is the one part a dispatcher most needs to catch.
-    building = f"{address['building']}、{address['room']}号室です。"
-    return [
+    #
+    # BOTH PARTS ARE OPTIONAL. An empty room used to still emit 号室, producing 「…、号室です」-
+    # "the room number is." with no number, which is broken Japanese and tells the dispatcher
+    # nothing. Same omit-rather-than-guess rule as everywhere else: say the part we have.
+    pieces = [
         {"label": "Ambulance", "jp": TEMPLATE_HEAD},
         {"label": "Area", "jp": f"場所は{area}です。"},
-        {"label": "Building & room", "jp": building},
     ]
+    # THE BUILDING NAME IS NO LONGER SPOKEN UNLESS WE HAVE ITS READING.
+    # Founder, 2026-08-22: the app rendered 江東区立第三砂町小学校 as garbage. Building and
+    # facility names are exactly where irregular readings live, and NO lookup gives us their
+    # reading - Japan Post publishes readings for postal codes, not for buildings.
+    # So this follows the project's own standing rule: OMIT RATHER THAN GUESS. The building
+    # still appears on screen and on the crew handoff, where a Japanese reader reads the kanji
+    # perfectly well; it is only kept out of the caller's mouth. Address + room already locates
+    # someone without it, which is why the field was optional in the first place.
+    # `building_kana` is honoured when a reading was captured at setup.
+    spoken_building = address.get("building_kana") or ""
+    room = f"{address['room']}号室" if address.get("room") else ""
+    spoken = "、".join([p for p in (spoken_building, room) if p])
+    if spoken:
+        pieces.append({"label": "Building & room", "jp": spoken + "です。"})
+    return pieces
 
 
 def _format_statement(term: str, frame: str) -> str:
