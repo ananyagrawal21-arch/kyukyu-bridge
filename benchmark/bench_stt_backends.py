@@ -40,7 +40,13 @@ def load_clip(path):
 def timed(pipe, clip):
     """Warm once (first call pays graph-compile/allocation), then take the best of RUNS.
     Best rather than mean: we are measuring the machine, and the outliers are other processes."""
-    call = lambda: pipe(dict(clip), generate_kwargs={"language": "en", "task": "transcribe"})
+    # THE SAME KWARGS THE APP USES. An earlier version passed only {language, task}, which
+    # measured a configuration the app never runs and hid a crash: ROBUST_GENERATE_KWARGS turns
+    # on temperature-fallback decoding, and the OpenVINO wrapper does not implement the
+    # prepare_inputs_for_generation signature that path needs. Benchmarking anything other than
+    # the shipped settings is how you publish a speedup for code nobody executes.
+    kw = dict(stt.ROBUST_GENERATE_KWARGS, language="en", task="transcribe")
+    call = lambda: pipe(dict(clip), generate_kwargs=kw)
     call()
     best, text = float("inf"), ""
     for _ in range(RUNS):
@@ -67,7 +73,13 @@ def main():
         return
 
     stt._asr_cache.clear()
-    t_ov, txt_ov = timed(stt.get_asr(), clip)
+    stt._OV_ENABLED = True   # the app keeps this OFF; force it on to measure
+    try:
+        t_ov, txt_ov = timed(stt.get_asr(), clip)
+    except Exception as exc:  # noqa: BLE001
+        print(f"\nOpenVINO path FAILED with the app's real settings:\n  {type(exc).__name__}: {exc}")
+        print("  This is why the app runs transformers - see _OV_ENABLED in src/stt.py.")
+        return
     print(f"OpenVINO INT8           : {t_ov:6.2f}s   ({t_base / t_ov:.2f}x)")
 
     print("\ntranscripts identical:", txt_base == txt_ov)

@@ -285,10 +285,36 @@ if phase == "setup":
     # STAYS OPEN once engaged. It used to be `expanded=not found`, so clicking your building
     # set a result -> rerun -> the map COLLAPSED, hiding the confirmation you had just produced.
     map_open = st.session_state.get("map_open", False) or not found
-    with st.expander("📍 Or point at it on a map — no typing at all", expanded=map_open):
+    # THE MAP IS THE MAIN MECHANISM, so its instruction cannot be vague. "Click your building"
+    # assumed the user already knew the map was zoomed to their street, that clicking sets an
+    # address, and that this is how the ambulance is told where to come. Founder, 2026-08-23:
+    # "Click your building is a vague instruction... That feature is the main thing, so that
+    # must be clear." Now it states, in order: what to do, how to get there, and what happens.
+    step = "Step 2" if found else "Step 1"
+    with st.expander(f"📍 {step} — find it on the map", expanded=map_open):
         st.session_state.map_open = True
+        # TWO STEPS, NAMED, POINTING AT THE CONTROL THAT DOES IT.
+        # A paragraph explaining the mechanism was the wrong shape: the user does not need to
+        # understand how the map works, they need to know which thing to press first. The
+        # LocateControl crosshair was already on the map and nothing ever told anyone it was
+        # there, so the one control that gets you to your own street was invisible.
+        # Founder, 2026-08-23: "how will they know that is how they will get near them".
         st.markdown(
-            '<div class="caption" style="text-align:left">Click your building.</div>',
+            '<div class="caption" style="text-align:left;font-size:1.15rem">'
+            # The glyph here MUST look like the button actually on the map. It was the 📍
+            # emoji, which renders bright red, while the control in the corner is a dark grey
+            # map-marker - so the instruction pointed at something the user could not find.
+            # This is an inline SVG of the same marker, in the same colour.
+            '<b>1.</b> Tap '
+            '<span style="display:inline-flex;vertical-align:-3px;background:#fff;'
+            'border:1px solid #999;border-radius:4px;padding:2px 4px">'
+            '<svg width="13" height="16" viewBox="0 0 384 512" fill="#3b3b3b">'
+            '<path d="M192 0C86 0 0 86 0 192c0 77 27 99 173 309 9 13 29 13 38 0'
+            'C357 291 384 269 384 192 384 86 298 0 192 0zm0 272a80 80 0 110-160 80 80 0 010 160z"/>'
+            '</svg></span>'
+            ' on the map to jump to where you are '
+            '&nbsp;→&nbsp; <b>2.</b> Tap your building'
+            '</div>',
             unsafe_allow_html=True,
         )
         import folium
@@ -374,7 +400,15 @@ if phase == "setup":
         # Jumps to roughly where this device is. On a LAPTOP this is WiFi-based and only
         # accurate to tens/hundreds of metres - useless for a room, but it saves all the
         # panning, and the user still clicks the exact building.
-        LocateControl(position="topleft", strings={"title": "Go to my rough location"}).add_to(fmap)
+        # Same wording as step 1 above, so the instruction and the control match.
+        # Location-pin glyph rather than Leaflet's default crosshair - the pin is the symbol
+        # people already associate with "find me" from every maps app they have used.
+        # NOTE: deliberately NOT Google's actual logo, which is trademarked.
+        LocateControl(
+            position="topleft",
+            strings={"title": "Jump to where I am now"},
+            icon="fa fa-map-marker",
+        ).add_to(fmap)
         MousePosition(position="bottomleft", prefix="").add_to(fmap)
 
         if st.session_state.get("map_pin"):
@@ -394,8 +428,23 @@ if phase == "setup":
                     got = reverse_geocode(lat, lon)
                 if got:
                     # town (丁目) goes into street_block; the user adds only the digits after it.
+                    # KEEP THE POSTAL LOOKUP'S KANA if the map landed in the same city.
+                    # This used to REPLACE pc_result outright, which silently destroyed the
+                    # Japan Post reading captured moments earlier - and since the intended flow
+                    # is postal code (step 1) THEN map (step 2), the reading was being wiped on
+                    # essentially every run. The app then fell back to speaking kanji, which is
+                    # the guessing this was built to eliminate.
+                    #
+                    # Dropped when the map moves to a DIFFERENT city, because the old reading
+                    # would then belong to somewhere else - a wrong reading is worse than none.
+                    prev = st.session_state.get("pc_result") or {}
+                    same_place = (
+                        prev.get("prefecture") == got["prefecture"]
+                        and got["city_ward"].startswith(prev.get("city_ward", "\0"))
+                    )
                     st.session_state.pc_result = {
                         "prefecture": got["prefecture"], "city_ward": got["city_ward"],
+                        "kana": prev.get("kana", "") if same_place else "",
                     }
                     st.session_state.map_town = got["town"]
                     # Building name too, if OSM knows it - a LOOKUP, never a guess. Often ""
@@ -420,15 +469,26 @@ if phase == "setup":
                 f"**{st.session_state.pc_result['prefecture']}"
                 f"{st.session_state.pc_result['city_ward']}{st.session_state['map_town']}**"
             )
+            st.caption("This is where the ambulance will be sent:")
             # THE ENGLISH IS MANDATORY, the Japanese is shown alongside for transparency.
             # Without this the map path asked a user who cannot read kanji to confirm the one
             # field that decides where the ambulance goes. Shown only - never stored, never spoken.
-            if st.session_state.get("map_town_romaji"):
+            #
+            # THREE OUTCOMES, ALL VISIBLE. Showing nothing on failure was the bug: the user
+            # could not tell whether the app had no English name, or had failed to ask.
+            romaji = st.session_state.get("map_town_romaji")
+            if romaji:
                 st.markdown(
                     f'<div class="caption" style="text-align:left;margin-top:-0.6rem">'
-                    f'{st.session_state["map_town_romaji"]}</div>',
+                    f'{romaji}</div>',
                     unsafe_allow_html=True,
                 )
+            elif romaji is None:
+                st.warning("Could not fetch the English name just now. Tap the building again "
+                           "to retry — the Japanese address above is already correct.", icon="⚠️")
+            else:
+                st.info("No English name exists for this spot. The Japanese address above is "
+                        "still correct and is what the ambulance will use.", icon="ℹ️")
 
     st.markdown("#### Step 2 — the rest")
 
@@ -479,10 +539,49 @@ if phase == "setup":
         page = c7.number_input("Age", 0, 120, int(pat.get("age") or 0))
         sexes = ["female", "male", "unknown"]
         psex = c8.selectbox("Sex", sexes, index=sexes.index(pat.get("sex", "female")))
-        conds = st.text_input(
-            "Known conditions (comma-separated)",
-            "、".join(pat.get("known_conditions") or []),
+        # PICK FROM A CLOSED LIST, NEVER TYPE. This was a free-text box, so a profile ended up
+        # holding "Heart problem, low blood pressure" - English words fed into 持病は{...}です
+        # and read aloud by a Japanese voice as literal noise. Exactly the romaji problem the
+        # address lookups were built to eliminate, in the one field that never got a lookup.
+        #
+        # You see ENGLISH, the profile stores JAPANESE. Same rule as the address: the user
+        # never has to produce Japanese, and no model ever invents any.
+        _cond_by_en = {c["label_en"]: c for c in ontology.get("conditions", [])}
+        _cond_by_jp = {c["japanese_term"]: c for c in ontology.get("conditions", [])}
+        _other = ontology.get("condition_other", {})
+        _groups = ontology.get("condition_groups", {})
+
+        # Grouped by body system so a 27-item list stays scannable, and so we can say plainly
+        # that no domain of illness is missing. Setup is a CALM task, unlike the emergency
+        # flow - the constraint here is scannability, not speed.
+        def _fmt(en):
+            c = _cond_by_en.get(en)
+            return f"{_groups.get(c['group'], '')} — {en}" if c else en
+
+        _saved = pat.get("known_conditions") or []
+        _default = [_cond_by_jp[j]["label_en"] for j in _saved if j in _cond_by_jp]
+        if _other and _other.get("japanese_term") in _saved:
+            _default.append(_other["label_en"])
+
+        _options = sorted(_cond_by_en, key=lambda en: (_cond_by_en[en]["group"], en))
+        if _other:
+            _options.append(_other["label_en"])
+
+        cond_labels = st.multiselect(
+            "Known conditions — type to search, pick as many as apply",
+            _options, default=_default, format_func=_fmt,
         )
+        # Stored as Japanese. "Other" emits 持病があります - says history EXISTS without naming
+        # it, so the crew knows to ask and we never invent a disease name.
+        cond_list = [
+            (_other if _other and l == _other.get("label_en") else _cond_by_en[l])["japanese_term"]
+            for l in cond_labels
+        ]
+        conds = "、".join(cond_list)
+        if _saved and not _default:
+            st.warning(
+                f"Previous entry could not be matched to the list and will be replaced: "
+                f"{'、'.join(_saved)}", icon="⚠️")
 
         st.markdown("**You**")
         c9, c10 = st.columns(2)
@@ -527,9 +626,7 @@ if phase == "setup":
                     },
                     "patient": {
                         "name": pname, "age": int(page), "sex": psex,
-                        "known_conditions": [
-                            c.strip() for c in conds.replace("、", ",").split(",") if c.strip()
-                        ],
+                        "known_conditions": cond_list,
                     },
                     "caller": {
                         "name": cname, "native_language": clang,

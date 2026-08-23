@@ -25,6 +25,7 @@ THE NETWORK BOUNDARY - read this before changing anything here
 """
 import json
 import re
+import time
 import urllib.error
 import unicodedata
 import urllib.parse
@@ -93,7 +94,10 @@ def lookup(code: str):
     # コートークリツダイミサゴマチショーガッコー - 第三砂町 became ダイミサゴマチ instead of
     # ダイサンスナマチ. macOS Kyoko mangles it differently. A misread address sends an ambulance
     # to the wrong place, so we do not let ANY engine guess: we speak the published reading.
-    kana = " ".join(filter(None, (
+    # JOINED WITH 読点, not spaces. Same reason the kanji form is: 「トウキョウトコウトウクミナミスナ」
+    # or a space-separated run gives the engine no phrase boundary, so it flattens the whole
+    # thing into one contour. 、 makes each administrative level its own phrase.
+    kana = "、".join(filter(None, (
         halfwidth_to_katakana(top.get("kana1", "")),
         halfwidth_to_katakana(top.get("kana2", "")),
         halfwidth_to_katakana(top.get("kana3", "")),
@@ -368,7 +372,19 @@ def romaji_address_at(lat: float, lon: float) -> str:
 
     Returns "" rather than a half-Japanese string: a readback the user still cannot read is
     worse than none, because it looks like confirmation.
+
+    RETURN CONTRACT - the distinction matters on screen:
+        str   an English readback
+        ""    the lookup SUCCEEDED and OSM simply has no English name here
+        None  the lookup FAILED (offline, throttled, timeout) - the user should retry
+    Collapsing the last two into "" made a rate-limited request look identical to a place with
+    no English name, so the screen showed nothing at all and the user could not tell which had
+    happened. search_place() already had to learn this same distinction.
     """
+    # Nominatim's usage policy is ONE request per second, and a single map tap makes TWO reverse
+    # lookups back to back - building_name_at() in Japanese, then this one in English. Unspaced,
+    # the second gets throttled, which is precisely how this silently returned nothing.
+    time.sleep(1.1)
     params = urllib.parse.urlencode({
         "lat": float(lat), "lon": float(lon), "format": "json",
         "accept-language": "en", "zoom": 18, "addressdetails": 1,
@@ -378,7 +394,7 @@ def romaji_address_at(lat: float, lon: float) -> str:
         with urllib.request.urlopen(req, timeout=_TIMEOUT) as r:
             data = json.loads(r.read().decode("utf-8"))
     except (urllib.error.URLError, OSError, TimeoutError, ValueError, json.JSONDecodeError):
-        return ""
+        return None
 
     # \u3000 is the IDEOGRAPHIC space - Nominatim leaves it inside romanised names
     # ("Minami suna\u30002"), where it renders as a strange double-width gap. It is whitespace,

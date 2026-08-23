@@ -81,7 +81,48 @@ THIRD Intel lifecycle stage (alongside the SLM and a converted Whisper), feeding
 romaji_fields() flags it; the fix is picking the building from the map so it stores 日本語, or
 leaving the field blank. Cheap, and audible today.
 
-## WHISPER ON OPENVINO — BUILT AND MEASURED 2026-08-22 (rubric item R1)
+## WHISPER ON OPENVINO — CONVERTED, MEASURED, AND THEN TURNED OFF (2026-08-23)
+
+**CORRECTION TO THE SECTION BELOW. The 1.62x speedup is real but was measured on a
+configuration the app does not run, and shipping it would have cost a safety feature.**
+
+**What broke.** The app crashed the first time a caller actually spoke:
+    TypeError: prepare_inputs_for_generation() missing 1 required positional argument:
+               'decoder_input_ids'
+The IR LOADS fine - my guard only covered loading - so the failure landed at inference, after
+the caller had already pressed the button and described the emergency. Worst possible timing.
+
+**Why the benchmark missed it.** bench_stt_backends.py passed only {language, task}. The app
+passes ROBUST_GENERATE_KWARGS. **Benchmarking anything other than the shipped settings is how
+you publish a speedup for code nobody executes.** The benchmark now uses the app's real kwargs
+and reports the failure instead of a number.
+
+**Tested which settings survive (2026-08-23) - NONE do:**
+    temperature tuple (current app)      FAIL TypeError
+    scalar temperature, keep the rest    FAIL TypeError
+    condition_on_prev_tokens only        FAIL TypeError
+So it is not the temperature-fallback path specifically. optimum-intel 1.26.1's OV seq2seq
+wrapper and transformers 4.55.4's pipeline generation are incompatible for ANY non-default
+generate kwargs. Both are PINNED, and the pin exists because unpinning already broke the
+Windows/Intel machine once (2026-08-10).
+
+**DECISION: OpenVINO Whisper is OFF in the app** (`_OV_ENABLED`, force on with KYUKYU_OV_STT=1).
+The anti-hallucination settings are not a nicety - a real clip once produced "You're free to go."
+seventy times over. Trading hallucination protection for 1.1 seconds in an emergency app is the
+wrong trade, and it is the trade the rubric's own Responsible-AI criterion would expect us to
+refuse.
+
+**ALSO FIXED: inference failures are now non-fatal.** The accelerated path is retried on plain
+transformers instead of raising. Loading was guarded; inference was not, which is precisely
+where it broke.
+
+**WHAT THIS COSTS ON THE RUBRIC, honestly.** The shipped app is back to Intel/OpenVINO in ONE
+stage (the SLM). The conversion, the benchmark and this analysis remain real work and are
+reproducible - and the SLM is by far the larger cost (16s vs ~2s), so the stage we DO accelerate
+is the one that dominates. Worth retrying on the Intel machine, though the version pins make a
+different result unlikely.
+
+## WHISPER ON OPENVINO — original entry, 2026-08-22 (rubric item R1)
 
 **Intel technology now runs in TWO pipeline stages, not one.** This was the single highest-value
 engineering task identified by the rubric analysis: Metric 03 scores "extent of use" 0-4 for

@@ -212,13 +212,19 @@ Both models in the emergency path run through OpenVINO, not just one.
 
 | Stage | Baseline | OpenVINO INT8 | |
 |---|---|---|---|
-| Speech recognition (Whisper small) | 1.92 s · 926 MB | **1.18 s · 242 MB** | 1.62× faster, 3.8× smaller |
+| Speech recognition (Whisper small) | 2.33 s · 926 MB | converted: 242 MB | see note — **not enabled** |
 | Classification (Qwen2.5-3B) | — | 16.0 s total (Stage A 14.5 s, Stage B 1.5 s) | INT8 weight quantisation |
 
 Reproduce with `python benchmark/bench_stt_backends.py`. It times both backends **and diffs the
 transcripts**, because a speedup that changes what a panicking caller said is not a speedup.
-INT8 does alter transcription slightly — measured, and verified to produce identical ontology
-classification, so the Japanese a dispatcher hears is unchanged.
+
+**Speech recognition is converted but deliberately not enabled.** The OpenVINO build is 1.62×
+faster and 3.8× smaller — but only with default decoding. With the anti-hallucination settings
+the app actually uses, `optimum-intel` and `transformers` at their pinned versions raise
+`TypeError: prepare_inputs_for_generation() missing 1 required positional argument`. Those
+settings exist because Whisper once transcribed a real clip as "You're free to go." seventy
+times over, so we kept them and left the speedup on the table. The conversion and benchmark are
+in `benchmark/`; enable with `KYUKYU_OV_STT=1` to reproduce the failure.
 
 If the OpenVINO build is absent or fails to load, speech recognition falls back to plain
 transformers rather than failing. This runs seconds before someone describes an emergency.

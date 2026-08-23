@@ -42,6 +42,22 @@ _OV_DIR = os.environ.get("WHISPER_OV_DIR") or str(
 )
 
 
+# OFF BY DEFAULT IN THE APP. The IR loads and runs, but ONLY without ROBUST_GENERATE_KWARGS.
+# Those settings turn on Whisper's temperature-fallback decoding, which routes through
+# generate_with_fallback -> prepare_inputs_for_generation with a signature optimum-intel's
+# OV seq2seq wrapper does not implement:
+#     TypeError: prepare_inputs_for_generation() missing 1 required positional argument:
+#                'decoder_input_ids'
+# It crashed the app the first time a caller actually spoke (founder, 2026-08-23).
+#
+# The anti-hallucination settings are NOT optional - they exist because a real clip once
+# produced "You're free to go." seventy times over. Trading them for latency in an emergency
+# app is the wrong trade, so the OV path stays off here until the incompatibility is fixed.
+# The conversion and the benchmark remain valid and reproducible; see benchmark/.
+# Set KYUKYU_OV_STT=1 to force it on for measurement.
+_OV_ENABLED = os.environ.get("KYUKYU_OV_STT", "") == "1"
+
+
 def _ov_available() -> bool:
     return Path(_OV_DIR).is_dir() and (Path(_OV_DIR) / "openvino_encoder_model.xml").exists()
 
@@ -58,7 +74,7 @@ def get_asr(model_name: str = DEFAULT_MODEL):
 
     from transformers import pipeline
 
-    if model_name == DEFAULT_MODEL and _ov_available():
+    if model_name == DEFAULT_MODEL and _ov_available() and _OV_ENABLED:
         try:
             from optimum.intel import OVModelForSpeechSeq2Seq
             from transformers import AutoProcessor
@@ -91,7 +107,11 @@ def get_asr(model_name: str = DEFAULT_MODEL):
 
 def backend_name() -> str:
     """Which runtime transcription would use - for the benchmark and the pitch."""
-    return "OpenVINO INT8" if _ov_available() else "transformers (CPU fp32)"
+    if _ov_available() and _OV_ENABLED:
+        return "OpenVINO INT8"
+    if _ov_available():
+        return "transformers (CPU fp32) - OV IR present but disabled, see _OV_ENABLED"
+    return "transformers (CPU fp32)"
 
 
 def prepare_audio(audio_array, sampling_rate: int):
@@ -146,8 +166,20 @@ def transcribe(source, language: str = None, model_name: str = DEFAULT_MODEL,
     if language:
         kwargs["language"] = language
 
-    result = get_asr(model_name)(
-        {"array": audio, "sampling_rate": WHISPER_SAMPLE_RATE},
-        generate_kwargs=kwargs,
-    )
+    clip = {"array": audio, "sampling_rate": WHISPER_SAMPLE_RATE}
+    try:
+        result = get_asr(model_name)(clip, generate_kwargs=kwargs)
+    except Exception as exc:  # noqa: BLE001
+        # LOADING was already guarded; INFERENCE was not, and that is where it actually broke.
+        # A caller had already pressed the button and spoken before this raised. Rebuild on the
+        # plain transformers path and transcribe anyway - a slower transcript beats a traceback
+        # where the emergency description should be.
+        print(f"[stt] accelerated path failed at inference ({exc}); retrying on transformers",
+              flush=True)
+        _asr_cache.pop(model_name, None)
+        from transformers import pipeline
+        _asr_cache[model_name] = pipeline(
+            "automatic-speech-recognition", model=model_name, device=-1
+        )
+        result = _asr_cache[model_name](clip, generate_kwargs=kwargs)
     return result["text"].strip()
