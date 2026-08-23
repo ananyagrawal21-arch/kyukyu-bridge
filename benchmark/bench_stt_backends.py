@@ -78,7 +78,6 @@ def main():
         t_ov, txt_ov = timed(stt.get_asr(), clip)
     except Exception as exc:  # noqa: BLE001
         print(f"\nOpenVINO path FAILED with the app's real settings:\n  {type(exc).__name__}: {exc}")
-        print("  This is why the app runs transformers - see _OV_ENABLED in src/stt.py.")
         return
     print(f"OpenVINO INT8           : {t_ov:6.2f}s   ({t_base / t_ov:.2f}x)")
 

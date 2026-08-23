@@ -81,6 +81,24 @@ def get_asr(model_name: str = DEFAULT_MODEL):
 
             model = OVModelForSpeechSeq2Seq.from_pretrained(_OV_DIR)
             processor = AutoProcessor.from_pretrained(_OV_DIR)
+
+            # VERSION-BRIDGE SHIM. optimum-intel 1.26.1 declares
+            #     prepare_inputs_for_generation(self, decoder_input_ids, ...)
+            # while transformers 4.55.4's generation loop calls it with `input_ids` as a
+            # KEYWORD. The result is
+            #     TypeError: prepare_inputs_for_generation() missing 1 required positional
+            #                argument: 'decoder_input_ids'
+            # which crashed the app the first time a caller spoke. Both packages are pinned -
+            # unpinning previously broke the Windows machine - so bridging the call here is
+            # safer than moving either version. Renames the argument and changes nothing else.
+            _orig_prep = model.prepare_inputs_for_generation
+
+            def _prep(*args, **kwargs):
+                if not args and "decoder_input_ids" not in kwargs and "input_ids" in kwargs:
+                    kwargs["decoder_input_ids"] = kwargs.pop("input_ids")
+                return _orig_prep(*args, **kwargs)
+
+            model.prepare_inputs_for_generation = _prep
             _asr_cache[model_name] = pipeline(
                 "automatic-speech-recognition",
                 model=model,
