@@ -241,6 +241,35 @@ are UNOPTIMIZED baseline numbers - fine for a regression check (failures are bac
 here), but the 89.2s max is a real outlier worth understanding before quoting any latency figure
 from this run. Quote the LATENCY BREAKDOWN section's OpenVINO numbers instead.
 
+## WHISPER ON INTEL HARDWARE — MEASURED 2026-08-23, THE NUMBER THAT MATTERS
+
+Ran on the actual Intel laptop, with the shim (see WHISPER ON OPENVINO section) and the full
+anti-hallucination settings the app actually uses - not bare defaults.
+
+    transformers (CPU fp32) : 15.66s
+    OpenVINO INT8           : 10.52s    (1.49x faster)
+    transcripts identical: True
+
+**THIS IS THE OPPOSITE RESULT FROM THE MAC.** On Apple Silicon, OpenVINO was 7x SLOWER with the
+same settings (17.10s vs 2.37s) - transformers' Apple-tuned path had nothing for OpenVINO to
+beat. On Intel CPU, where OpenVINO is actually built to help, it wins by a real margin, and the
+transcript is byte-identical so nothing was traded for the speed.
+
+**CONSEQUENCE: `_OV_ENABLED` should be TRUE on Intel hardware, FALSE on Apple Silicon.** Not a
+single global default - a per-machine one. Whisper on OpenVINO is genuinely worth shipping on
+the Intel machine the competition runs on, and the shim that makes it possible (renaming
+`input_ids` -> `decoder_input_ids` for optimum-intel's Whisper wrapper) is doing real work, not
+just satisfying a rubric checkbox.
+
+**STILL TRUE, unaffected by this:** the transformers BASELINE itself is 6-7x slower on this
+Intel laptop than the Mac (15.66s vs 2.37s) - a hardware/OS difference having nothing to do with
+OpenVINO. That gap is exactly why the OpenVINO win matters more here: the laptop that needs
+acceleration most is the one that has it.
+
+**ACTION:** flip `_OV_ENABLED` to auto-detect (Intel CPU -> True, else False) rather than a
+static default, OR simply set KYUKYU_OV_STT=1 in the deployment environment for the Intel
+machine. Verified 2026-08-23; no further re-measurement needed unless the pins move.
+
 ## ============ RUBRIC ANALYSIS — read before prioritising anything (2026-08-22) ============
 
 Source: references/document.md (official rubric, converted). STRUCTURE:
