@@ -220,6 +220,26 @@ def spoken_address(address: dict) -> str:
     return "、".join(p for p in parts if p)
 
 
+def spoken_full_address(address: dict) -> str:
+    """Every address component that is safe to say in one combined sentence.
+
+    A building's written name is not necessarily its pronunciation. Keep it out unless setup
+    stored an explicit reading; never manufacture the dangling ``、号室`` when no room exists.
+    This is shared by the UI and CLI so the two paths cannot disagree about safe speech.
+    """
+    from speak import room_to_kana
+
+    parts = [spoken_address(address)]
+    if address.get("building_kana"):
+        parts.append(address["building_kana"])
+    if address.get("room"):
+        # room_to_kana, same as render_location_pieces. Without it this path said ヨンヒャクゴ
+        # ("four hundred and five") while the split-piece path said ヨンマルゴ - the same room
+        # pronounced two different ways depending on which button the caller pressed.
+        parts.append(f"{room_to_kana(address['room'])}号室")
+    return "、".join(p for p in parts if p)
+
+
 def render_location_pieces(address: dict = None) -> list[dict]:
     """The opening line split the way a person actually gives an address on the phone.
 
@@ -243,6 +263,14 @@ def render_location_pieces(address: dict = None) -> list[dict]:
     pieces = [
         {"label": "Ambulance", "jp": TEMPLATE_HEAD},
         {"label": "Area", "jp": f"場所は{area}です。"},
+        # SAID HERE, ON THE DISPATCH SCREEN - not later in the briefing.
+        # This line exists to explain the silence that is ABOUT TO HAPPEN: the caller now goes
+        # quiet for a minute recording, confirming the transcript, checking symptoms and
+        # answering the vital-sign questions. Delivered afterwards it explains a pause the
+        # dispatcher has already spent a minute worrying about, which is too late to be any
+        # use. Founder, 2026-08-23: "shouldn't it be right after the address and before the
+        # whole transcript starts?" - yes, and that is the entire point of the line.
+        {"label": "Why replies are slow", "jp": TEMPLATE_TAIL},
     ]
     # THE BUILDING NAME IS NO LONGER SPOKEN UNLESS WE HAVE ITS READING.
     # Founder, 2026-08-22: the app rendered 江東区立第三砂町小学校 as garbage. Building and
@@ -253,8 +281,9 @@ def render_location_pieces(address: dict = None) -> list[dict]:
     # perfectly well; it is only kept out of the caller's mouth. Address + room already locates
     # someone without it, which is why the field was optional in the first place.
     # `building_kana` is honoured when a reading was captured at setup.
+    from speak import room_to_kana
     spoken_building = address.get("building_kana") or ""
-    room = f"{address['room']}号室" if address.get("room") else ""
+    room = f"{room_to_kana(address['room'])}号室" if address.get("room") else ""
     spoken = "、".join([p for p in (spoken_building, room) if p])
     if spoken:
         pieces.append({"label": "Building & room", "jp": spoken + "です。"})
@@ -315,9 +344,10 @@ def render_briefing_chunks(
             "jp": "。".join(_format_statement(s["term"], s["frame"]) for s in cpa) + "。",
         })
 
-    # THEN the slow-replies line - see TEMPLATE_TAIL. Sets the dispatcher's expectations before
-    # the long pauses start, rather than explaining them after everything else is done.
-    chunks.append({"label": "Why replies are slow", "jp": TEMPLATE_TAIL})
+    # Kept in the chunk list as a REPLAY, not as its first delivery - render_location_pieces
+    # now says it on the dispatch screen, before the caller goes quiet. A dispatcher who asks
+    # "are you still there?" mid-call can still press it again here.
+    chunks.append({"label": "Why replies are slow (replay)", "jp": TEMPLATE_TAIL})
 
     if age is not None:
         if sex_ja:

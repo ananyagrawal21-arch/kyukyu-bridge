@@ -247,3 +247,23 @@ if __name__ == "__main__":
     print("backend:", available_backend())
     audio = speak_japanese("救急です。場所は東京都江東区です。息が苦しいです。")
     print("wav bytes:", len(audio) if audio else "FAILED")
+
+
+# Room numbers are read DIGIT BY DIGIT in Japanese: 405号室 is ヨンマルゴ, never ヨンヒャクゴ.
+# Left as "405" the engine reads it as the quantity four hundred and five, which is not how
+# anyone says a room number - and a dispatcher writing it down hears the wrong shape.
+# 番地 numbers are NOT affected: 24-5 really is にじゅうよんのご, a number, not a digit string.
+_ROOM_DIGITS = {"0": "マル", "1": "イチ", "2": "ニ", "3": "サン", "4": "ヨン",
+                "5": "ゴ", "6": "ロク", "7": "ナナ", "8": "ハチ", "9": "キュウ"}
+
+
+def room_to_kana(room: str) -> str:
+    """405 -> ヨンマルゴ. Anything not a plain digit string is returned unchanged, so
+    "B1" or "201号" still work - they just do not get the digit treatment.
+
+    マル for 0, settled by the founder 2026-08-23 - the usual reading in addresses and room
+    numbers. ゼロ is heard too but is not what a dispatcher expects here."""
+    room = (room or "").strip()
+    if not room or not room.isdigit():
+        return room
+    return "".join(_ROOM_DIGITS[d] for d in room)

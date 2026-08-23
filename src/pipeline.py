@@ -84,8 +84,8 @@ def build_handoff(*args) -> list:
 
 def _format_address(address: dict) -> str:
     """Spoken form - see spoken_address() for why the 読点 matter."""
-    from briefing_template import spoken_address
-    return f"{spoken_address(address)}、{address['building']}、{address['room']}号室"
+    from briefing_template import spoken_full_address
+    return spoken_full_address(address)
 
 
 def confirm(transcript: str) -> bool:
@@ -165,8 +165,19 @@ def _find_entry(ontology: dict, entry_id: str) -> dict:
 
 
 def _statement_from(ontology: dict, entry_id: str) -> dict:
+    """A statement dict for a known ontology id.
+
+    `id` MUST be carried. Two things downstream key off it and both fail silently without it:
+      1. CPA promotion (CPA_IDS in briefing_template) - not_breathing / no_pulse / choking are
+         delivered SECOND instead of buried in the symptom list. These answers arrive from the
+         forced breathing/circulation buttons, i.e. through THIS function, so dropping the id
+         meant the promotion never fired on the path that actually produces them.
+      2. The English gloss on the handoff screen's demo subtitles, which was blank for exactly
+         the consciousness and breathing rows.
+    Both were invisible in testing because hand-built statements in test code included the id.
+    """
     entry = _find_entry(ontology, entry_id)
-    return {"term": entry["japanese_term"], "frame": entry["frame"]}
+    return {"term": entry["japanese_term"], "frame": entry["frame"], "id": entry["id"]}
 
 
 def slm_matches(transcript: str, ontology: dict) -> dict:

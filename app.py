@@ -192,7 +192,7 @@ def show_progress(phase):
 def reset():
     for k in ("phase", "transcript", "entries", "extras", "need_breathing", "history",
               "need_circulation", "at_registered_address", "patient_ok", "chunks", "chunk_i", "stt_language",
-              "transcript_en"):
+              "transcript_en", "other_form", "other_patient"):
         st.session_state.pop(k, None)
     # The per-symptom aspect radios are keyed by symptom id, so they are not in the list above.
     # Left behind, a previous call's "Has stopped" would silently pre-select on the next one.
@@ -203,6 +203,23 @@ def reset():
 
 
 profile, ontology = get_data()
+
+
+def _briefing_profile():
+    """The profile the briefing should speak from.
+
+    When the call is about SOMEONE ELSE, the caller may still have told us their age and
+    conditions - see ask_patient. Swap those details in for this call only. profile.json is
+    never touched: it is another person's medical information and storing it silently would
+    be wrong.
+    """
+    other = st.session_state.get("other_patient")
+    if not other:
+        return profile
+    merged = dict(profile)
+    merged["patient"] = dict(profile["patient"], **other)
+    return merged
+
 
 
 @st.cache_resource(show_spinner="Preparing the emergency assistant… (loads once at startup; stays ready while open)")
@@ -438,9 +455,15 @@ if phase == "setup":
                     # Dropped when the map moves to a DIFFERENT city, because the old reading
                     # would then belong to somewhere else - a wrong reading is worse than none.
                     prev = st.session_state.get("pc_result") or {}
+                    # Postal lookup contains ward + town (e.g. 江東区南砂), while GSI
+                    # returns the ward alone (江東区). The old comparison was backwards,
+                    # so the normal postal-code → map flow always discarded the published
+                    # kana reading. Preserve it only when the map's municipality is a prefix
+                    # of the postal result: same place, not merely a similar-looking town.
                     same_place = (
                         prev.get("prefecture") == got["prefecture"]
-                        and got["city_ward"].startswith(prev.get("city_ward", "\0"))
+                        and bool(prev.get("city_ward"))
+                        and prev["city_ward"].startswith(got["city_ward"])
                     )
                     st.session_state.pc_result = {
                         "prefecture": got["prefecture"], "city_ward": got["city_ward"],
@@ -909,26 +932,62 @@ elif phase == "ask_circulation":
 # ---- 8. Patient identity ----
 elif phase == "ask_patient":
     p = profile["patient"]
+    # ENGLISH ON SCREEN, JAPANESE UNDERNEATH - the same rule as the whole setup screen.
+    # This showed the stored 高血圧、糖尿病 to a user defined as someone who cannot read
+    # Japanese, and asked them to confirm it.
+    _en = {c["japanese_term"]: c["label_en"] for c in ontology.get("conditions", [])}
+    _en[(ontology.get("condition_other") or {}).get("japanese_term", "")] = "Other condition"
     desc = f"{p['age']}-year-old {p.get('sex', '')}"
     if p.get("known_conditions"):
-        desc += f" · {', '.join(p['known_conditions'])}"
+        desc += " · " + ", ".join(_en.get(c, c) for c in p["known_conditions"])
     st.markdown('<div class="status">Is the emergency about this person?</div>', unsafe_allow_html=True)
     st.markdown(f'<div class="caption">{desc}</div>', unsafe_allow_html=True)
     c1, c2 = st.columns(2)
-    picked = None
     if c1.button("Yes", use_container_width=True):
-        picked = True
-    if c2.button("No, someone else", use_container_width=True):
-        picked = False
-    if picked is not None:
-        st.session_state.patient_ok = picked
+        st.session_state.patient_ok = True
+        st.session_state.pop("other_patient", None)
         go("briefing")
+    if c2.button("No, someone else", use_container_width=True):
+        st.session_state.other_form = True
+        st.session_state.patient_ok = False
+        st.rerun()
+
+    # "No" used to go straight to the briefing with ALL patient details omitted - safe, but it
+    # threw away information the caller HAS. If your neighbour collapses you still know roughly
+    # how old they are. This asks for that instead of discarding it.
+    # Used for THIS CALL ONLY and never written to profile.json: it is someone else's medical
+    # information, and storing it silently would be wrong.
+    if st.session_state.get("other_form"):
+        st.markdown('<div class="caption">Tell us what you know about them. '
+                    'Skip anything you are unsure of.</div>', unsafe_allow_html=True)
+        with st.form("other_patient"):
+            o1, o2 = st.columns(2)
+            oage = o1.number_input("Age (0 = unknown)", 0, 120, 0)
+            osex = o2.selectbox("Sex", ["unknown", "female", "male"])
+            _by_en = {c["label_en"]: c["japanese_term"] for c in ontology.get("conditions", [])}
+            oconds = st.multiselect("Known conditions, if you know any", sorted(_by_en))
+            if st.form_submit_button("Continue", use_container_width=True):
+                st.session_state.other_patient = {
+                    "age": int(oage) or None, "sex": osex, "name": None,
+                    "known_conditions": [_by_en[c] for c in oconds],
+                }
+                # A caller may know a condition or sex but not an age. The temporary profile
+                # deliberately omits unknown fields, so it is safe to include the information
+                # they *do* know; tying this to age silently threw the rest away.
+                st.session_state.patient_ok = True
+                st.session_state.other_form = False
+                go("briefing")
+        if st.button("Skip — I do not know anything about them", use_container_width=True):
+            st.session_state.pop("other_patient", None)
+            st.session_state.patient_ok = False
+            st.session_state.other_form = False
+            go("briefing")
 
 # ---- 9. The Japanese briefing, delivered one paced chunk at a time ----
 elif phase == "briefing":
     if "chunks" not in st.session_state:
         st.session_state.chunks = build_briefing_chunks(
-            st.session_state.entries, st.session_state.extras, profile, ontology,
+            st.session_state.entries, st.session_state.extras, _briefing_profile(), ontology,
             st.session_state.patient_ok, st.session_state.at_registered_address,
         )
         # Start at 1, not 0: chunk 0 is the emergency+location line, already delivered back in
@@ -984,16 +1043,16 @@ elif phase == "briefing":
 # have is the PREPARED profile plus what was actually confirmed during the call. That is what
 # this shows, in verified Japanese, big enough to read at arm's length.
 elif phase == "handoff":
-    st.markdown('<div class="status">Show this to the ambulance crew</div>', unsafe_allow_html=True)
+    st.markdown('<div class="status">Show this to the ambulance crew when they arrive</div>', unsafe_allow_html=True)
     rows = build_handoff(
-        st.session_state.entries, st.session_state.extras, profile, ontology,
+        st.session_state.entries, st.session_state.extras, _briefing_profile(), ontology,
         st.session_state.patient_ok, st.session_state.at_registered_address,
     )
     # DEMO ONLY. The crew screen is Japanese-only on purpose - that is correct for the people
     # who actually read it. But an Intel judge cannot read it at all, so the whole point of the
     # screen is invisible in a presentation. This toggle is OFF by default and never appears in
     # the real flow's path; it exists so the demo can show what the crew is being told.
-    show_en = st.toggle("Show English (for demonstration only)", value=False)
+    show_en = st.toggle("Show English", value=False)
 
     # ONE LINE PER ITEM, not a paragraph. A crew member reading a held-up phone in a hallway has
     # about three seconds. Symptoms used to be joined with 。 into a single cell, making the row
@@ -1021,10 +1080,14 @@ elif phase == "handoff":
         )
 
     st.markdown("<br>", unsafe_allow_html=True)
-    c1, c2 = st.columns(2)
-    if c1.button("← Back to briefing", use_container_width=True):
+    # No "Done" button, deliberately - it read as the natural thing to press after playing the
+    # briefing, but it RESETS the app while the crew is still in the room.
+    # "Home" is the deliberate exit instead: named for where it goes, placed away from the
+    # briefing button, and secondary so it is not the obvious next tap.
+    h1, h2 = st.columns([2, 1])
+    if h1.button("← Back to briefing", use_container_width=True):
         back()
-    if c2.button("✓ Done", use_container_width=True):
+    if h2.button("🏠 Home", use_container_width=True):
         reset()
 
 # Rendered last so it sits at the bottom of every screen in the flow (returns silently on
