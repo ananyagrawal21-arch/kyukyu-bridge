@@ -270,6 +270,176 @@ acceleration most is the one that has it.
 static default, OR simply set KYUKYU_OV_STT=1 in the deployment environment for the Intel
 machine. Verified 2026-08-23; no further re-measurement needed unless the pins move.
 
+## SLM ON INTEL HARDWARE — MEASURED 2026-08-23, DECISIVE RESULT
+
+    plain PyTorch  : 511.39s   (over 8 minutes, ONE classification call)
+    OpenVINO INT8  :  73.34s
+    speedup: 6.97x     same result: True
+
+**This is not a nice-to-have on this laptop. Without OpenVINO the SLM stage is unusable as a
+product** - 8.5 minutes is not "slow", it is broken. With OpenVINO it becomes a real, if still
+slow, feature. This is the strongest Intel-necessity evidence in the whole project and belongs
+in the pitch verbatim: "on the competition hardware, OpenVINO is the difference between this
+feature working and not working at all."
+
+Both numbers are far above the Mac's (16s total, Stage A+B combined) - this Intel laptop's CPU
+is markedly weaker for plain PyTorch than Apple Silicon, consistent with the Whisper baseline
+also being 6-7x slower here. Report hardware honestly in the pitch: OpenVINO's win is LARGER on
+weaker hardware, which is the correct framing, not a caveat to hide.
+
+**STILL OPEN: prefix caching / OpenVINO GenAI API for the SLM.** 73s per call is still too slow
+for the pitch's own standard. Diagnosed but NOT implemented pre-submission - it touches the
+two-stage anti-fabrication safety code and needs a full re-run against the 52-case eval before
+shipping, which today's eval already proved is necessary (one ontology entry alone perturbed
+unrelated cases). Scoped for the post-2026-08-25 window, same bucket as TTS.
+
+## LATENCY WORK — 2026-08-23, TESTED NOT THEORISED
+
+Founder pushed back: 10s for Whisper and 73s for the SLM on Intel is not acceptable as "the
+heart of the model." Investigated every lever, tested rather than assumed, before the 25th.
+
+**INT4 quantization — TESTED, REJECTED.** Same Mac, same case: INT8 9.65s, INT4 (mixed
+precision, ratio=0.8) 13.25s - SLOWER despite a smaller file. Dequantization overhead on this
+CPU path outweighs the smaller weights. Deleted the test build. Do not retry without a different
+runtime that handles INT4 dequant more efficiently.
+
+**Cross-call prefix caching — DIAGNOSED, DEFERRED, and now precisely.** Confirmed the OV Qwen
+model IS stateful (`stateful: True`, `use_cache: True`). This does NOT give free cross-call
+caching - stateful here means efficient step-by-step decoding WITHIN one generate() call, the
+mechanism every causal LM already uses. Making the FIXED prefix (system prompt + 31-entry menu +
+few-shot, ~884 tokens, confirmed by direct tokenisation) survive BETWEEN separate calls requires
+OpenVINO's raw VariableState API - hand-managing position offsets and attention masks below
+optimum-intel's public interface. That is real engineering, correctness-sensitive in a way that
+fails silently (corrupted classification, not a crash) rather than loudly. NOT attempted
+pre-submission - scoped for the post-2026-08-25 window alongside OpenVINO GenAI API migration,
+which is the properly-supported way to get this.
+
+**max_new_tokens 64 -> 32 for Stage A — TESTED, SAFE, SHIPPED.** Built a deliberately
+worst-case 5-symptom transcript. Output identical at 64/40/32 tokens - the JSON array never
+approached 64, so the extra budget was pure decode time paid on every call for nothing.
+Verified against the FULL 52-case eval afterwards (the project's own standing rule): 48/52,
+precision 0.98, recall 0.94, F1 0.96, 1 fabrication - IDENTICAL to the pre-trim baseline, same
+three misses. Zero accuracy cost.
+
+**NOTE, already flagged once: eval_slm.py's printed "SLM latency" line says "plain PyTorch -
+UNoptimized baseline" even when SLM_OV_DIR is exported.** Cosmetic labelling bug in the eval
+script's own print statement, not a backend regression - the classification RESULTS come from
+whichever backend was actually loaded (verified by import call). Do not trust that line for
+timing; use LATENCY BREAKDOWN / the dedicated bench_slm_backends.py numbers instead.
+
+## LATENCY: TWO MORE LEVERS TESTED AND REJECTED (2026-08-24)
+
+Founder asked for broad exploration rather than accepting 73s on Intel. Both candidates were
+built and measured against the full 52-case eval, not reasoned about.
+
+### Qwen2.5-1.5B — 2.4x FASTER, REJECTED ON SAFETY
+
+    MODEL   exact-match   precision  recall   F1     FABRICATIONS   speed (Mac)
+    3B      48/52 (92%)   0.98       0.94     0.96   1              9.65s
+    1.5B    44/52 (85%)   0.96       0.87     0.91   2              4.08s
+
+**The rationale for re-testing was sound and is worth recording:** 1.5B was rejected 2026-07-29
+because it INVERTED CRITICAL FIELDS (said conscious for an unconscious patient). That failure
+mode is now structurally impossible - consciousness/breathing/circulation moved to forced
+buttons (SLM_EXCLUDE) and never reach the model. So the old verdict genuinely was stale and
+deserved re-measurement rather than assumption.
+
+**But it still fails, for a different reason: fabrications DOUBLE (1 -> 2).** Precision on clean
+English is the metric the entire safety story rests on. Trading it for 2.4x in an app that
+speaks to emergency dispatchers is the wrong direction. 7 misses vs 3 compounds it.
+**DO NOT revisit for speed.** 1.5B retains ONE legitimate role, already noted in convert_slm.py:
+a low-memory fallback for machines that cannot fit the 3B - accuracy-degraded but running beats
+not running. Converted IR kept at models/qwen2.5-1.5b-ov-int8 for that purpose only.
+
+### INT4 quantization — REJECTED (see earlier entry): 13.25s vs INT8's 9.65s. Slower.
+
+### WHAT REMAINS UNTESTED, ranked
+
+1. **Intel iGPU (`device="GPU"`) - THE BIG UNKNOWN, and only testable on the Intel laptop.**
+   The Mac exposes CPU only (Apple M5). An Intel laptop almost certainly exposes a GPU device.
+   Intel iGPUs handle INT8 matmul well, and this machine's CPU is demonstrably weak (511s
+   PyTorch / 73s OpenVINO). One-line change: OVModelForCausalLM.from_pretrained(dir,
+   device="GPU"). Check first with:
+       python -c "import openvino; print(openvino.Core().available_devices)"
+2. **OpenVINO runtime config knobs** - KV_CACHE_PRECISION=u8, DYNAMIC_QUANTIZATION_GROUP_SIZE.
+   Sweep attempted on Mac but each 3B load costs ~1min so it did not finish. Defaults are
+   already sensible (PERFORMANCE_HINT was already LATENCY). Expect modest gains.
+3. **OpenVINO GenAI API / cross-call prefix caching** - the real fix, ~884 fixed prefix tokens
+   reprocessed every call. Deferred post-25th; needs a new dependency and full re-verification.
+
+**HONEST POSITION FOR THE PITCH:** two credible optimisations were built, measured, and rejected
+on evidence - INT4 for being slower, 1.5B for degrading safety. That is a stronger engineering
+story than an untested claim of speed, and it is exactly what "did the team clearly outline
+their reasoning" is asking for.
+
+## ============ ON HOLD — TWO ITEMS TO RETURN TO (raised 2026-08-24) ============
+
+### HOLD-1: GenAI DISCLOSURE DEFENCE — analysis of an external (Gemini) action plan
+
+**FOUNDER'S REAL CONCERN, and it is legitimate:** the visible repo makes it LOOK like GenAI did
+95% of the work, while the founder's actual contribution - ontology design, all Japanese
+verification, the safety architecture, the FDMA research, every correction of the assistant's
+errors - is invisible to anyone reading the code. That asymmetry is real and worth answering.
+
+**WHAT THE EXTERNAL PLAN GOT WRONG ABOUT THIS REPO (verify before acting on any of it):**
+  - "Fix the OpenVINO Whisper prepare_inputs_for_generation TypeError" - ALREADY DONE
+    2026-08-23. Shim in src/stt.py, measured 1.49x on Intel. It is describing solved work.
+  - "Write a hardcoded regex/keyword fallback engine (src/heuristics.py)" - ALREADY EXISTS as
+    match_all/_phrase_in in src/ontology.py, the Week-1 matcher, still wired to the CLI's
+    --no-slm flag. Writing it again would be duplicating existing code.
+  - Memory-footprint guard before loading the 3B - genuinely not built; already in this log as
+    a deferred item. This one is a fair suggestion.
+
+**THE ADVICE TO REJECT, explicitly:** "This directly dilutes the percentage of your app relying
+on a black box." Writing code for the purpose of moving a disclosure metric is gaming the
+metric. It is also unnecessary - see below - and if a judge probes it, a manufactured answer
+collapses where an honest one holds.
+
+**ALSO REJECT the suggested script line** "the LLM did not design this system; it merely
+generated standard boilerplates." That is not accurate to what happened and DISCLOSURE.md
+already says so plainly. An overstatement that unravels in a live Q&A costs far more than the
+point it buys - and the accurate version is genuinely strong.
+
+**THE HONEST DEFENCE, which is stronger than the engineered one:**
+  1. Architecture decisions are documented WITH DATES AND REVERSALS in this log - that is
+     evidence a person was deciding, not a model. Point at the 倒れました correction (founder
+     overruled the assistant on clinical meaning), the fall/転倒/転落 three-way split, the
+     rejection of care homes as a market, the deleted "not at this address" branch.
+  2. Every Japanese term was human-verified as RENDERED OUTPUT, which caught two real defects
+     (polite-form-before-と言っています, and the 脈がありません over-claim). No model caught those.
+  3. The safety architecture - closed ontology, deterministic vitals bypass, omit-rather-than-
+     guess - exists BECAUSE the founder distrusted model output. Its whole design premise is
+     "do not let the model do this."
+  4. This log itself, kept as an honest record including mistakes, is the artefact that proves
+     the reasoning was human. Highlight-reel documentation would not.
+
+### HOLD-2: THE 2-MINUTE VIDEO — strategy notes, to be developed when the video is made
+
+Founder (2026-08-24) considers the video the decisive judged asset, since Intel's own scoring is
+not visible to entrants. Constraint: the end-to-end flow is LONGER than 2 minutes, so it cannot
+be shown in full - what to cut is the central decision.
+
+**Material that must survive the cut (highest evidence-per-second):**
+  - The 15-second dispatch. 救急です + address plays before any AI runs. This is the product's
+    single strongest claim and it demos in seconds.
+  - "On this hardware, OpenVINO is the difference between working and not working": 511s ->
+    73s (6.97x). Not a percentage - a feasibility threshold. Strongest Intel evidence we have.
+  - The confirmation loop: caller sees and can correct what the app understood before it speaks.
+  - The handoff screen with the English toggle ON, so a judge can read what the crew is handed.
+  - 13.3% of foreign residents can barely read Japanese (MOJ, n=40,000) - the number that
+    explains why NET119's Japanese text chat does not close this gap.
+
+**Do NOT spend video seconds on:** the setup/registration flow (it is one-time and calm),
+the map picker mechanics, or competitor comparison (scored nowhere; it is Q&A armour).
+
+**Cross-reference:** the FOR AN INTEL JUDGE WITH ZERO JAPAN KNOWLEDGE section lists what must be
+made explicit for a non-Japan audience (119 is not 911; addresses have no street names; three
+writing systems). The video is exactly where that applies.
+
+**Check the competition submission form for video requirements before scripting.**
+
+## ============ END ON-HOLD ITEMS ============
+
 ## ============ RUBRIC ANALYSIS — read before prioritising anything (2026-08-22) ============
 
 Source: references/document.md (official rubric, converted). STRUCTURE:

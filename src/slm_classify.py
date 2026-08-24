@@ -273,7 +273,10 @@ def classify(transcript, ontology=None, verify=True):
     valid_ids = {sid for sid, _ in menu}
 
     pipe = _load_pipe()
-    out = pipe(_build_messages(transcript, menu), max_new_tokens=64, do_sample=False)
+    # 64 -> 32, tested 2026-08-23: a deliberately worst-case 5-symptom transcript produced
+    # byte-identical output at 64/40/32 tokens. The JSON array of ids never gets close to 64;
+    # the extra budget was pure decode time paid on every single call for nothing.
+    out = pipe(_build_messages(transcript, menu), max_new_tokens=32, do_sample=False)
     candidates = _parse_ids(out[0]["generated_text"][-1]["content"], valid_ids)
 
     if verify:
