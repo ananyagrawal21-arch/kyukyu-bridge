@@ -372,6 +372,56 @@ on evidence - INT4 for being slower, 1.5B for degrading safety. That is a strong
 story than an untested claim of speed, and it is exactly what "did the team clearly outline
 their reasoning" is asking for.
 
+## PREFIX CACHING — MEASURED 2026-08-24, THE PROJECT'S BIGGEST OPTIMISATION
+
+    prefix caching OFF : 42.11s mean (4 calls)
+    prefix caching ON  :  3.85s mean
+    speedup: 10.94x    output byte-identical: True
+
+Measured on the Intel laptop with openvino_genai.LLMPipeline + SchedulerConfig
+(enable_prefix_caching=True, cache_size=2GB). Identical output is the point: unlike INT4 or the
+1.5B model, this trades NOTHING - same model, same weights, same answer.
+
+**HOW IT WAS FOUND, because the method matters more than the number.** Direct measurement of
+the prefill/decode split: a Stage A call with max_new_tokens=1 took 7.90s, and raising it to 32
+added almost nothing. So ~100% of the cost was READING THE PROMPT, not generating the answer.
+Of the 884 prompt tokens, ~800 are identical every call (system prompt + few-shot + the
+31-entry menu); only the transcript changes. The entire problem was re-reading a menu the model
+had already read hundreds of times.
+
+**This also explains the two failed experiments** - INT4 and 1.5B both attack compute-per-weight,
+when the bottleneck was tokens-read. Right diagnosis invalidates whole categories of fix.
+
+**INTEL-EXCLUSIVE, structurally.** Prefix caching runs on OpenVINO's paged-attention executor,
+which requires x64 (or ARM with SVE). It refuses to initialise on the Apple-Silicon dev Mac:
+    make_pa_executor: only support x64 platform or ARM with SVE support
+So it cannot be developed or demoed on the Mac at all. This is a genuine Intel-hardware
+optimisation, not a portable one - a stronger "why Intel" claim than any percentage.
+
+**CAVEAT, do not overstate:** 3.85s is ONE generate call. A full classify() is Stage A + Stage B,
+so expect ~7-8s end to end, not 3.85s. Against 73s that is still ~9-10x.
+
+**GOTCHA for integration:** LLMPipeline needs openvino_tokenizer.xml / openvino_detokenizer.xml
+(its own IR), which convert_slm.py does not produce. Generate with openvino_tokenizers.
+convert_tokenizer(). Failure mode is "Tokenizer::encode is not available".
+
+## DEBUGGING MARATHON — planned, founder-led, post-latency (logged 2026-08-24)
+
+**Founder will drive; assistant advises.** Rationale, stated plainly: much of this code was
+AI-generated at speed, and today alone the founder found three real defects by USING the app
+that no amount of my own review had surfaced - the OV inference crash, the wiped kana, the
+silent English-readback failure. That pattern is the argument for a systematic pass.
+
+**METHOD (assistant to expand into a checklist when the marathon starts):**
+  1. Walk EVERY screen in the state machine, including back-navigation and reset paths.
+  2. For every network call (postal, GSI, Nominatim x2): force failure and confirm the UI SAYS
+     so rather than silently showing nothing. This class already produced two bugs.
+  3. For every optional profile field: empty, romaji, and very long values.
+  4. Confirm every claim in README/RESPONSIBLE_AI is actually true in code - documentation
+     drift is the highest-risk category because it is what a judge reads.
+  5. Re-run the 52-case eval after ANY change touching Stage A or the ontology. Non-negotiable;
+     one ontology entry once perturbed unrelated cases.
+
 ## ============ ON HOLD — TWO ITEMS TO RETURN TO (raised 2026-08-24) ============
 
 ### HOLD-1: GenAI DISCLOSURE DEFENCE — analysis of an external (Gemini) action plan

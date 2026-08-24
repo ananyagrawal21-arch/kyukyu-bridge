@@ -222,7 +222,7 @@ def _briefing_profile():
 
 
 
-@st.cache_resource(show_spinner="Preparing the emergency assistant… (loads once at startup; stays ready while open)")
+@st.cache_resource(show_spinner="Preparing the emergency assistant…")
 def warm_brain():
     """Load + compile the brain when the app OPENS, not during an emergency. Cached, so it
     runs once per server session; the on-disk compile cache makes even that fast after the
@@ -251,10 +251,6 @@ if phase == "setup":
     addr, pat, cal = p.get("address", {}), p.get("patient", {}), p.get("caller", {})
 
     st.markdown('<div class="status">Your details</div>', unsafe_allow_html=True)
-    st.markdown(
-        '<div class="caption">Fill this in once. It stays on this device.</div>',
-        unsafe_allow_html=True,
-    )
 
     # POSTAL CODE FIRST, and outside the form - a non-submit button inside an st.form does
     # nothing until submit, and this has to work on its own. Placed at the top because it is
