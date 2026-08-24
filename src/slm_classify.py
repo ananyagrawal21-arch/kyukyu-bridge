@@ -15,6 +15,7 @@ import re
 from ontology import load_ontology
 
 import os
+from pathlib import Path
 
 # MUST stay 3B. 1.5B was measured UNRELIABLE - it inverted critical binary fields ("still
 # awake" -> unconscious), which is the single most dangerous error this system can make.
@@ -35,16 +36,64 @@ SLM_DISCARD = {"conscious", "unconscious", "not_breathing"}
 SLM_EXCLUDE = set()  # nothing is hidden from the menu any more
 
 _pipe = None
+_backend = None      # "genai" | "optimum" | "pytorch" - which path actually loaded
+_tokenizer = None    # only the genai path needs it: it takes a prompt STRING, not messages
 _ALIAS_TIERS = None  # cached; rebuilt aliases on every parse otherwise
 
 
+def _ensure_ov_tokenizer(ov_dir):
+    """OpenVINO GenAI needs the tokenizer as its OWN IR, which convert_slm.py does not produce.
+    Without it LLMPipeline fails with 'Tokenizer::encode is not available'. Built once, then
+    cached on disk beside the model."""
+    if (Path(ov_dir) / "openvino_tokenizer.xml").exists():
+        return True
+    try:
+        import openvino as ov
+        from openvino_tokenizers import convert_tokenizer
+        from transformers import AutoTokenizer
+        hf = AutoTokenizer.from_pretrained(ov_dir)
+        tok_ir, detok_ir = convert_tokenizer(hf, with_detokenizer=True)
+        ov.save_model(tok_ir, str(Path(ov_dir) / "openvino_tokenizer.xml"))
+        ov.save_model(detok_ir, str(Path(ov_dir) / "openvino_detokenizer.xml"))
+        return True
+    except Exception as exc:  # noqa: BLE001
+        print(f"[slm_classify] could not build OpenVINO tokenizer IR ({exc})", flush=True)
+        return False
+
+
 def _load_pipe():
-    global _pipe
+    global _pipe, _backend, _tokenizer
     if _pipe is None:
         from transformers import pipeline, AutoTokenizer
         ov_dir = os.environ.get("SLM_OV_DIR")
         if ov_dir and os.path.isdir(ov_dir):
-            # OpenVINO INT8 path (the optimized/shippable one).
+            # ---- FASTEST PATH: OpenVINO GenAI with PREFIX CACHING ----
+            # ~800 of Stage A's ~888 prompt tokens are identical on every call (system prompt
+            # + few-shot + the 31-entry menu); only the transcript changes. Measured on the
+            # Intel laptop 2026-08-24: 41.85s -> 4.16s, 10.05x, byte-identical output.
+            #
+            # x64 ONLY. Prefix caching runs on OpenVINO's paged-attention executor, which
+            # refuses to initialise on ARM without SVE, so on the Apple-Silicon dev machine
+            # this ALWAYS falls through to optimum-intel below. Expected, not a failure.
+            # KYUKYU_SLM_GENAI=0 forces the older path.
+            if os.environ.get("KYUKYU_SLM_GENAI", "1") == "1" and _ensure_ov_tokenizer(ov_dir):
+                try:
+                    import openvino_genai as og
+                    sched = og.SchedulerConfig()
+                    sched.enable_prefix_caching = True
+                    sched.cache_size = 2  # GB reserved for the KV cache
+                    _pipe = og.LLMPipeline(ov_dir, "CPU", scheduler_config=sched)
+                    _tokenizer = AutoTokenizer.from_pretrained(ov_dir)
+                    _backend = "genai"
+                    print("[slm_classify] OpenVINO GenAI + prefix caching", flush=True)
+                    return _pipe
+                except Exception as exc:  # noqa: BLE001
+                    # Deliberately broad: this runs moments before a medical emergency, so an
+                    # unavailable acceleration path must degrade, never take classification down.
+                    print(f"[slm_classify] prefix caching unavailable "
+                          f"({type(exc).__name__}); using optimum-intel", flush=True)
+
+            # ---- OpenVINO INT8 via optimum-intel (previous shippable path) ----
             from optimum.intel import OVModelForCausalLM
             # (Disk compile-cache was tried and dropped: only ~20s saved for 6 GB on this
             #  ARM Mac. The real win is the app-open warm-up keeping the model warm in RAM.
@@ -52,6 +101,7 @@ def _load_pipe():
             model = OVModelForCausalLM.from_pretrained(ov_dir)
             tok = AutoTokenizer.from_pretrained(ov_dir)
             _pipe = pipeline("text-generation", model=model, tokenizer=tok, device=-1)
+            _backend = "optimum"
         else:
             # Plain PyTorch fallback (the slow baseline). Say so loudly - silently running
             # unoptimized is how a demo machine ends up several seconds slower than the
@@ -63,7 +113,37 @@ def _load_pipe():
                 flush=True,
             )
             _pipe = pipeline("text-generation", model=MODEL_ID, device=-1)
+            _backend = "pytorch"
     return _pipe
+
+
+def _complete(messages, max_new_tokens):
+    """One completion, whichever backend loaded. Returns the assistant's text.
+
+    Exists so classify() and _review_list() need not care which runtime is underneath:
+    LLMPipeline takes a prompt STRING and returns a string, while the transformers pipeline
+    takes MESSAGES and returns a list of dicts.
+    """
+    pipe = _load_pipe()
+    if _backend == "genai":
+        import openvino_genai as og
+        prompt = _tokenizer.apply_chat_template(
+            messages, tokenize=False, add_generation_prompt=True
+        )
+        cfg = og.GenerationConfig()
+        cfg.max_new_tokens = max_new_tokens
+        cfg.do_sample = False
+        return str(pipe.generate(prompt, cfg))
+    out = pipe(messages, max_new_tokens=max_new_tokens, do_sample=False)
+    return out[0]["generated_text"][-1]["content"]
+
+
+def backend_name():
+    """Which runtime is live - for warm-up diagnostics and the benchmarks."""
+    _load_pipe()
+    return {"genai": "OpenVINO GenAI + prefix caching",
+            "optimum": "OpenVINO INT8 (optimum-intel)",
+            "pytorch": "plain PyTorch (unoptimized)"}.get(_backend, "unknown")
 
 
 def _situation_menu(ontology):
@@ -253,8 +333,7 @@ def _review_list(pipe, transcript, candidate_ids):
             f'Statement: "{transcript}"\n\nProposed symptoms:\n{lines}\n\nNumbers to keep:'
         )},
     ]
-    out = pipe(messages, max_new_tokens=32, do_sample=False)
-    reply = out[0]["generated_text"][-1]["content"]
+    reply = _complete(messages, max_new_tokens=32)
 
     match = re.search(r"\[.*?\]", reply, re.DOTALL)
     if not match:
@@ -276,8 +355,8 @@ def classify(transcript, ontology=None, verify=True):
     # 64 -> 32, tested 2026-08-23: a deliberately worst-case 5-symptom transcript produced
     # byte-identical output at 64/40/32 tokens. The JSON array of ids never gets close to 64;
     # the extra budget was pure decode time paid on every single call for nothing.
-    out = pipe(_build_messages(transcript, menu), max_new_tokens=32, do_sample=False)
-    candidates = _parse_ids(out[0]["generated_text"][-1]["content"], valid_ids)
+    reply = _complete(_build_messages(transcript, menu), max_new_tokens=32)
+    candidates = _parse_ids(reply, valid_ids)
 
     if verify:
         # Whole-list review pass: one call over the full candidate list to drop fabrications.

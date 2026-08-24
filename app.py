@@ -226,7 +226,16 @@ def _briefing_profile():
 def warm_brain():
     """Load + compile the brain when the app OPENS, not during an emergency. Cached, so it
     runs once per server session; the on-disk compile cache makes even that fast after the
-    first-ever launch."""
+    first-ever launch.
+
+    IT MUST CALL THE REAL classify(), NOT A SHORTCUT. Beyond loading weights, this call is what
+    POPULATES THE PREFIX CACHE: Stage A's prompt is system + few-shot + the 31-entry menu +
+    transcript, and ~800 of those tokens are identical on every call. Running the genuine
+    prompt here means the first real emergency finds the cache already warm.
+
+    Replace this with a cheaper warm-up (loading the model without a full classify, or a
+    trimmed prompt) and the cache stays empty, so THE FIRST EMERGENCY OF THE DAY pays the
+    uncached ~42s instead of ~4s - the worst possible call to be slow. Measured 2026-08-24."""
     from slm_classify import classify
     classify("warming up", ontology)
     return True
