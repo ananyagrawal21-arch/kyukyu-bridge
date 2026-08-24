@@ -206,6 +206,93 @@ explained — recorded honestly rather than omitted. SLM numbers on Intel hardwa
 **Speech-to-text robustness** was tested on real non-native English from the L2-ARCTIC corpus
 (Vietnamese and Hindi speakers), not synthetic accents.
 
+## Why these Intel technologies
+
+Two AI models run in this app: **Whisper** turns the caller's speech into text, and
+**Qwen2.5-3B** decides which of 31 pre-verified Japanese medical terms that text describes.
+Everything else — address lookups, the Japanese sentences, the spoken audio — is deterministic
+code, not AI. So there were exactly two places Intel tooling could apply, and it is applied to
+both.
+
+### What we use, and what each one is for
+
+| Component | Role | Where it runs |
+|---|---|---|
+| **OpenVINO 2025.3** | inference runtime | both models |
+| **NNCF 2.18** | INT8 weight compression | model conversion |
+| **optimum-intel 1.26** | Intel's HuggingFace integration | conversion + loading |
+| **openvino-tokenizers** | tokenisation inside the OV runtime | text pipeline |
+| **OpenVINO GenAI** | prefix caching for the classifier | measured, see below |
+
+### Why OpenVINO rather than running the models as-is
+
+Not a preference — a measured necessity. On the Intel laptop this project targets, one
+classification took **511 seconds** through plain PyTorch. That is not a slow feature; it is a
+broken one. The same call through OpenVINO takes **73 seconds** — a **6.97× speedup** that is
+the difference between the feature existing and not existing.
+
+This is the clearest statement of why Intel technology is *vital* here rather than merely
+helpful: without it, the product does not work on the hardware it is built for.
+
+### Why INT8 quantisation, and why not INT4
+
+INT8 compresses the models — Qwen to 2.9 GB, Whisper from 926 MB to **242 MB** — which matters
+because everything runs on-device with no cloud fallback.
+
+We tested INT4 as well. **It was slower**: 13.25s versus INT8's 9.65s on identical hardware and
+input. The smaller weights did not pay for the dequantisation overhead on this CPU. We also
+tested a smaller model (Qwen2.5-1.5B), which was 2.4× faster but **doubled fabrications** on our
+52-case test set — unacceptable in an app that speaks to emergency dispatchers. Both were
+rejected on evidence, and the results are in `OPEN_DECISIONS.md`.
+
+### Where Intel technology sits in the project lifecycle
+
+- **Modeling** — conversion to OpenVINO IR with NNCF INT8 compression
+  (`benchmark/convert_slm.py`, `benchmark/convert_whisper.py`)
+- **Evaluation** — every latency benchmark measures the OpenVINO runtime
+  (`benchmark/bench_slm_backends.py`, `bench_stt_backends.py`, `bench_prefix_cache.py`)
+- **Deployment** — the shipped app loads and runs the OpenVINO models
+
+### The optimisation that came from measuring, not guessing
+
+We measured *where* the classifier spent its time rather than assuming. A call capped at one
+output token still took 7.90s; allowing 32 tokens added almost nothing. So the cost was not
+generation — it was **reading the prompt**. And of those 884 prompt tokens, roughly 800 are
+identical on every single call: the system prompt, the few-shot examples, and the 31-term menu.
+The model was re-reading a menu it had already read hundreds of times.
+
+OpenVINO's **prefix caching** targets exactly this. Measured on the Intel laptop:
+
+```
+prefix caching OFF : 42.11s
+prefix caching ON  :  3.85s      10.94× faster, byte-identical output
+```
+
+Identical output is the point. Unlike INT4 or a smaller model, this trades nothing — same
+weights, same answer, simply without redoing work.
+
+**It is also Intel-exclusive.** Prefix caching runs on OpenVINO's paged-attention executor,
+which requires x64. On our Apple Silicon development machine it refuses to initialise:
+`make_pa_executor: only support x64 platform or ARM with SVE support`. This optimisation
+structurally cannot run on the ARM machine — it exists only because the target hardware is
+Intel.
+
+### What we evaluated and chose not to use
+
+- **Intel Gaudi** — datacentre accelerator. This app runs on a laptop that stays in someone's
+  home; there is no server.
+- **Intel AI Cloud** — would contradict the product's core guarantee that no data leaves the
+  device during an emergency. Rejected on privacy grounds, not technical ones.
+- **IPEX (Intel Extension for PyTorch)** — would optimise the PyTorch path we are replacing
+  with OpenVINO, not complement it.
+
+### An honest note on hardware
+
+OpenVINO is **not** a blanket speedup, and we will not claim it is. On Apple Silicon it made
+Whisper *slower* (17.10s vs 2.37s) because Apple's PyTorch path is heavily optimised already.
+On Intel CPU it wins across the board. That is the correct behaviour for a vendor-specific
+toolkit, and reporting both directions is more useful than reporting only the favourable one.
+
 ## Intel optimisation, measured
 
 Both models in the emergency path run through OpenVINO, not just one.
