@@ -58,6 +58,30 @@ def build_prompts():
     return prompts
 
 
+def ensure_ov_tokenizer():
+    """OpenVINO GenAI needs the tokenizer as its OWN IR, not the HuggingFace files.
+
+    convert_slm.py saves the HF tokenizer (which optimum-intel's OVModelForCausalLM uses
+    happily), but LLMPipeline requires openvino_tokenizer.xml / openvino_detokenizer.xml and
+    fails with:
+        Check 'm_ireq_queue_tokenizer' failed ... Tokenizer::encode is not available
+    Generated here rather than in convert_slm.py so this stays a measurement-only script that
+    changes nothing about how the app loads its model.
+    """
+    if (Path(OV) / "openvino_tokenizer.xml").exists():
+        return
+    print("generating OpenVINO tokenizer IR (one-time)...")
+    import openvino as ov
+    from openvino_tokenizers import convert_tokenizer
+    from transformers import AutoTokenizer
+
+    hf = AutoTokenizer.from_pretrained(OV)
+    ov_tok, ov_detok = convert_tokenizer(hf, with_detokenizer=True)
+    ov.save_model(ov_tok, str(Path(OV) / "openvino_tokenizer.xml"))
+    ov.save_model(ov_detok, str(Path(OV) / "openvino_detokenizer.xml"))
+    print("done.\n")
+
+
 def run(prompts, enable_prefix_caching):
     import openvino_genai as og
 
@@ -89,6 +113,7 @@ def main():
         sys.exit("openvino-genai not installed:  pip install openvino-genai==2025.3.0")
 
     prompts = build_prompts()
+    ensure_ov_tokenizer()
     try:
         off, out_off = run(prompts, False)
         on, out_on = run(prompts, True)
