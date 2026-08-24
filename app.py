@@ -64,6 +64,12 @@ st.markdown(
          should be as close to wordless as possible - and misleading here, because the buttons
          next to these boxes are what actually act. */
       [data-testid="InputInstructions"] {display: none !important;}
+      /* The warm-up spinner is the FIRST thing anyone sees on a cold start, and Streamlit
+         left-aligns it by default against an otherwise centred screen. */
+      [data-testid="stSpinner"] {
+        display: flex; justify-content: center; text-align: center;
+      }
+      [data-testid="stSpinner"] > div {margin: 0 auto;}
       /* Secondary buttons stay small and subdued - only the emergency button is huge. */
       div.stButton > button {font-size: 1.05rem; border-radius: 12px;}
       .caption {text-align: center; color: #bbb; font-size: 1.1rem; margin: 1vh 0 2vh;}
