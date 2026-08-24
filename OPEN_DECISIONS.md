@@ -405,6 +405,53 @@ so expect ~7-8s end to end, not 3.85s. Against 73s that is still ~9-10x.
 (its own IR), which convert_slm.py does not produce. Generate with openvino_tokenizers.
 convert_tokenizer(). Failure mode is "Tokenizer::encode is not available".
 
+## DEVICE MATRIX — MEASURED 2026-08-24 (Intel laptop, all four combinations)
+
+    CPU | prefix caching OFF : 41.85s
+    CPU | prefix caching ON  :  4.16s   <- FASTEST
+    GPU | prefix caching OFF : 23.20s
+    GPU | prefix caching ON  :  4.32s
+    all four produced identical output: True        10.05x vs CPU baseline
+
+**DECISION: CPU + prefix caching. Do not use the GPU.**
+
+**Why the GPU loses, and it is not a defect:** without caching the iGPU nearly HALVES the time
+(23.20 vs 41.85) - it is genuinely better at the heavy prefill compute. With caching there is
+almost no compute left to do, so the GPU's parallel advantage has nothing to work on while its
+dispatch overhead remains. Caching does not merely beat the GPU; it makes the GPU irrelevant.
+Bonus: CPU-only means no GPU driver dependency in deployment.
+
+**KEEP THIS RESULT even though the GPU is unused** - it is evidence the alternative was measured
+rather than ignored, which is what "appropriateness of hardware choice" asks for.
+
+## WILL THE PREFIX-CACHE WIN HOLD? (founder asked re: future scope, 2026-08-24)
+
+**Structurally yes, on x64, with one real caveat and one hard boundary.**
+
+**Why the cache hit rate is ~100% BY DESIGN, not by luck:** the cached prefix is the system
+prompt + few-shot examples + the 31-entry menu. Every emergency call sends exactly that, and
+only the caller's transcript differs. This is not a benchmark artefact that degrades on real
+input - the app's own architecture guarantees the hit.
+
+**THE REAL CAVEAT - COLD START.** The FIRST classification after app launch pays full price
+(~42s) because the cache is empty. warm_brain() already runs a dummy classify() at app open for
+exactly this class of reason, so it should populate the prefix - **BUT THIS MUST BE VERIFIED
+DURING INTEGRATION.** If warm_brain does not populate it, the first real emergency of the day
+pays 42s, which is the worst possible call to be slow.
+
+**Growing the ontology:** a longer menu makes the one-time cache-fill longer, not the per-call
+cost. Ontology growth stays bounded by verification effort and precision, as already recorded -
+latency is no longer a constraint on it.
+
+**Memory:** 2 GB reserved for the KV cache. Fine on a 16 GB laptop; check before claiming it
+runs on low-spec hardware.
+
+**THE HARD BOUNDARY - ARM/MOBILE.** OpenVINO's paged-attention executor requires x64 (or ARM
+with SVE). The planned iOS/Android port CANNOT use this optimisation. Mobile has its own
+equivalents (llama.cpp prompt caching, MLC, ExecuTorch KV reuse) and the same INSIGHT transfers
+- cache the fixed prefix - but the implementation does not. State this honestly in any
+future-scope discussion rather than implying the 10x carries over unchanged.
+
 ## DEBUGGING MARATHON — planned, founder-led, post-latency (logged 2026-08-24)
 
 **Founder will drive; assistant advises.** Rationale, stated plainly: much of this code was
