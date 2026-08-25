@@ -76,12 +76,25 @@ def _load_pipe():
             # refuses to initialise on ARM without SVE, so on the Apple-Silicon dev machine
             # this ALWAYS falls through to optimum-intel below. Expected, not a failure.
             # KYUKYU_SLM_GENAI=0 forces the older path.
-            if os.environ.get("KYUKYU_SLM_GENAI", "1") == "1" and _ensure_ov_tokenizer(ov_dir):
+            # SKIP ENTIRELY ON ARM - do not even attempt it. Paged attention requires x64,
+            # so on Apple Silicon the attempt ALWAYS fails - but not before LLMPipeline has
+            # reserved its KV cache (cache_size GB) and begun allocating. The failed attempt
+            # was not releasing that memory, and the fallback then loaded the model a second
+            # time on top of it: measured ~40 GB of application memory on an M-series Mac
+            # (founder, 2026-08-25). Checking the architecture first avoids the allocation
+            # rather than cleaning up after it.
+            import platform
+            _is_x64 = platform.machine().lower() in ("x86_64", "amd64")
+            if (_is_x64 and os.environ.get("KYUKYU_SLM_GENAI", "1") == "1"
+                    and _ensure_ov_tokenizer(ov_dir)):
                 try:
                     import openvino_genai as og
                     sched = og.SchedulerConfig()
                     sched.enable_prefix_caching = True
-                    sched.cache_size = 2  # GB reserved for the KV cache
+                    # 1 GB is ample: the cached prefix is ~800 tokens, not a long chat
+                    # history. 2 GB was an arbitrary starting value and is wasted RAM on a
+                    # machine that also holds Whisper and the app itself.
+                    sched.cache_size = 1
                     _pipe = og.LLMPipeline(ov_dir, "CPU", scheduler_config=sched)
                     _tokenizer = AutoTokenizer.from_pretrained(ov_dir)
                     _backend = "genai"
