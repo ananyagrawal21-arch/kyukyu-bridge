@@ -1,0 +1,22 @@
+{
+  "address": {
+    "prefecture": "東京都",
+    "city_ward": "江東区",
+    "area": "西葛西六丁目",
+    "block_number": "15-2",
+    "street_block": "西葛西六丁目15-2",
+    "building": "〇〇マンション",
+    "room": "405"
+  },
+  "patient": {
+    "name": "山田花子",
+    "age": 72,
+    "sex": "female",
+    "known_conditions": ["高血圧", "糖尿病"]
+  },
+  "caller": {
+    "name": "山田太郎",
+    "native_language": "en",
+    "japanese_fluency": "limited"
+  }
+}

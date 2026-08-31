@@ -1,0 +1,766 @@
+{
+  "_format_notes": [
+    "THE ONTOLOGY - maps what a panicking bystander says to the Japanese a dispatcher expects.",
+    "",
+    "REGISTER: polite (です/ます) throughout, founder's decision. NOTE the two 'reported' terms",
+    "(chest_pain, severe_abdominal_pain) are stored in PLAIN base form on purpose - the",
+    "'〜と言っています' wrapper added at render time makes them polite in the output. Every other",
+    "term is stored already-polite because it is stated directly.",
+    "",
+    "Terms use plain everyday words, NOT medical register (息が苦しい, not 呼吸困難) - founder",
+    "confirmed 119 dispatchers use ordinary language.",
+    "",
+    "FRAME - who the information comes from, clinically meaningful:",
+    "  observed         - only the caller can know it (not breathing). Stated directly.",
+    "  reported         - only the patient can know it (pain). Wrapped in 〜と言っています.",
+    "  source_dependent - could be either; the Week-2 SLM resolves per utterance. For now the",
+    "                     crude matcher states them directly. Do not hard-code a frame guess.",
+    "",
+    "verified: TRUE for all 31 - founder (fluent, resident in Japan) read every term and",
+    "confirmed each is natural, clear, non-diagnostic, and dispatcher-appropriate. The 13",
+    "added from the 緊急度判定プロトコル were reviewed 2026-08-12 as RENDERED OUTPUT (term +",
+    "frame wrapper), not as raw strings - that review is what caught the polite-form-before-",
+    "と言っています bug and the 脈がありません over-claim. 転倒/転落 signed off 2026-08-20."
+  ],
+  "sex_terms": {
+    "male": "男性",
+    "female": "女性",
+    "unknown": "不明"
+  },
+  "consciousness_states": [
+    {
+      "id": "conscious",
+      "trigger_phrases_en": [
+        "conscious",
+        "awake",
+        "responsive",
+        "responding",
+        "talking",
+        "still conscious"
+      ],
+      "japanese_term": "意識はあります",
+      "frame": "observed",
+      "verified": true,
+      "critical": true
+    },
+    {
+      "id": "unconscious",
+      "trigger_phrases_en": [
+        "unconscious",
+        "not responding",
+        "unresponsive",
+        "not responsive",
+        "passed out",
+        "won't wake up",
+        "wont wake up",
+        "blacked out",
+        "fainted"
+      ],
+      "japanese_term": "意識がありません",
+      "frame": "observed",
+      "verified": true,
+      "critical": true
+    },
+    {
+      "id": "confused",
+      "trigger_phrases_en": [
+        "confused",
+        "not making sense",
+        "doesn't make sense",
+        "talking nonsense",
+        "disoriented",
+        "acting strange",
+        "not himself",
+        "not herself",
+        "doesn't recognize me"
+      ],
+      "japanese_term": "受け答えがおかしいです",
+      "frame": "observed",
+      "verified": true,
+      "note": "Founder kept this term. Means: their responses when spoken to are strange/off."
+    }
+  ],
+  "symptoms": [
+    {
+      "id": "difficulty_breathing",
+      "trigger_phrases_en": [
+        "trouble breathing",
+        "having trouble breathing",
+        "difficulty breathing",
+        "can't breathe",
+        "cant breathe",
+        "hard to breathe",
+        "struggling to breathe",
+        "short of breath",
+        "gasping",
+        "wheezing",
+        "can't catch his breath",
+        "can't catch her breath"
+      ],
+      "japanese_term": "息が苦しいです",
+      "frame": "source_dependent",
+      "verified": true,
+      "critical": true,
+      "note": "Source-dependent: 'he says he can't breathe' (conscious) vs 'his breathing looks laboured' (observed). SLM resolves from phrasing."
+    },
+    {
+      "id": "not_breathing",
+      "trigger_phrases_en": [
+        "not breathing",
+        "is not breathing",
+        "isn't breathing",
+        "stopped breathing",
+        "no breathing",
+        "he's not breathing",
+        "she's not breathing"
+      ],
+      "japanese_term": "息をしていません",
+      "frame": "observed",
+      "verified": true,
+      "critical": true,
+      "note": "Must never be missed or invented - drives CPR. Deliberately not 心肺停止 (diagnosis)."
+    },
+    {
+      "id": "chest_pain",
+      "trigger_phrases_en": [
+        "chest pain",
+        "chest hurts",
+        "pain in his chest",
+        "pain in her chest",
+        "holding his chest",
+        "holding her chest",
+        "clutching his chest",
+        "clutching her chest",
+        "chest is tight",
+        "pressure in his chest",
+        "pressure in her chest"
+      ],
+      "japanese_term": "胸が痛い",
+      "frame": "reported",
+      "verified": true,
+      "note": "PLAIN base on purpose - wrapper -> 胸が痛いと言っています (polite in output)."
+    },
+    {
+      "id": "face_drooping",
+      "trigger_phrases_en": [
+        "face is drooping",
+        "face drooping",
+        "mouth is drooping",
+        "face looks crooked",
+        "face is twisted",
+        "one side of his face",
+        "one side of her face"
+      ],
+      "japanese_term": "顔がゆがんでいます",
+      "frame": "observed",
+      "verified": true,
+      "note": "Founder kept this term. Observable stroke sign - never 脳卒中."
+    },
+    {
+      "id": "slurred_speech",
+      "trigger_phrases_en": [
+        "slurred speech",
+        "slurring",
+        "speech is slurred",
+        "words are slurred",
+        "can't speak properly",
+        "can't get his words out",
+        "can't get her words out",
+        "speech sounds strange"
+      ],
+      "japanese_term": "呂律が回りにくいです",
+      "frame": "observed",
+      "verified": true,
+      "note": "Founder-verified term for slurred speech. です added for register consistency. Reintroduces the ろれつ sound (hard for a non-Japanese caller to say); Week-3 TTS mitigates this."
+    },
+    {
+      "id": "one_sided_weakness",
+      "trigger_phrases_en": [
+        "one side is weak",
+        "one side isn't moving",
+        "can't move his arm",
+        "can't move her arm",
+        "left side isn't working",
+        "right side isn't working",
+        "arm went limp",
+        "half his body",
+        "half her body",
+        "can't move one side"
+      ],
+      "japanese_term": "体の片側が動きません",
+      "frame": "observed",
+      "verified": true,
+      "note": "Avoided 片麻痺 as clinician language."
+    },
+    {
+      "id": "severe_abdominal_pain",
+      "trigger_phrases_en": [
+        "stomach pain",
+        "severe stomach pain",
+        "stomach hurts",
+        "abdominal pain",
+        "belly pain",
+        "terrible stomach ache",
+        "pain in his stomach",
+        "pain in her stomach",
+        "doubled over in pain"
+      ],
+      "japanese_term": "お腹がすごく痛い",
+      "frame": "reported",
+      "verified": true,
+      "note": "PLAIN base on purpose - wrapper -> お腹がすごく痛いと言っています (polite in output)."
+    },
+    {
+      "id": "high_fever",
+      "trigger_phrases_en": [
+        "high fever",
+        "fever",
+        "very high temperature",
+        "temperature is high",
+        "burning up",
+        "really hot"
+      ],
+      "japanese_term": "熱が高いです",
+      "frame": "observed",
+      "verified": true,
+      "note": "Most urgent in small children. Consider capturing an actual temperature separately."
+    },
+    {
+      "_added": "2026-08-03 from 緊急度判定プロトコルVer.1 - CIRCULATION was missing entirely. Dispatchers assess THREE vital signs (呼吸/循環/意識); we only had breathing + consciousness. Both terms below are adapted from the protocol's own questions.",
+      "id": "cold_sweat",
+      "trigger_phrases_en": [
+        "cold sweat",
+        "clammy",
+        "sweating a lot",
+        "drenched in sweat",
+        "sweaty and pale"
+      ],
+      "japanese_term": "冷や汗をかいています",
+      "frame": "observed",
+      "verified": true,
+      "critical": true,
+      "note": "CIRCULATION vital sign. Protocol asks 「冷や汗をかいていますか？」."
+    },
+    {
+      "id": "pale_complexion",
+      "trigger_phrases_en": [
+        "looks pale",
+        "turning pale",
+        "face is white",
+        "colour has drained",
+        "grey looking",
+        "ashen"
+      ],
+      "japanese_term": "顔色が悪いです",
+      "frame": "observed",
+      "verified": true,
+      "critical": true,
+      "note": "CIRCULATION vital sign. Protocol asks 「顔色は悪いですか？」."
+    },
+    {
+      "id": "headache",
+      "trigger_phrases_en": [
+        "headache",
+        "head hurts",
+        "bad headache",
+        "splitting headache",
+        "worst headache",
+        "head is pounding"
+      ],
+      "japanese_term": "頭が痛い",
+      "frame": "reported",
+      "verified": true,
+      "note": "Protocol lists 頭痛 as HIGH-URGENCY (緊急性が高い症候). Was missing."
+    },
+    {
+      "id": "palpitations",
+      "trigger_phrases_en": [
+        "heart is racing",
+        "palpitations",
+        "heart pounding",
+        "heart is fluttering",
+        "irregular heartbeat"
+      ],
+      "japanese_term": "動悸がする",
+      "frame": "reported",
+      "verified": true,
+      "note": "Protocol lists 動悸 as HIGH-URGENCY. Their 通報内容: 「どきどきする」「動悸がする」."
+    },
+    {
+      "id": "back_pain",
+      "trigger_phrases_en": [
+        "back pain",
+        "back hurts",
+        "pain in his back",
+        "pain in her back",
+        "severe back pain"
+      ],
+      "japanese_term": "背中が痛い",
+      "frame": "reported",
+      "verified": true,
+      "note": "Protocol lists 背部痛 as HIGH-URGENCY (aortic emergencies)."
+    },
+    {
+      "id": "lower_back_pain",
+      "trigger_phrases_en": [
+        "lower back pain",
+        "pain in his lower back",
+        "pain in her lower back",
+        "loin pain",
+        "kidney area pain"
+      ],
+      "japanese_term": "腰が痛い",
+      "frame": "reported",
+      "verified": true,
+      "note": "Protocol lists 腰痛 as HIGH-URGENCY."
+    },
+    {
+      "id": "dizziness",
+      "trigger_phrases_en": [
+        "dizzy",
+        "lightheaded",
+        "feels faint",
+        "room is spinning",
+        "vertigo",
+        "woozy"
+      ],
+      "japanese_term": "めまいがする",
+      "frame": "reported",
+      "verified": true,
+      "note": "Protocol lists めまい as a 症候. We previously treated 'dizzy' as out-of-scope - that was wrong."
+    },
+    {
+      "id": "vomiting",
+      "trigger_phrases_en": [
+        "vomiting",
+        "throwing up",
+        "been sick",
+        "keeps vomiting",
+        "threw up"
+      ],
+      "japanese_term": "吐いています",
+      "forms": {
+        "finished": "吐いていました"
+      },
+      "frame": "observed",
+      "verified": true,
+      "note": "OFFICIAL: protocol 通報内容 for 嘔気・嘔吐 is 「吐いた」「吐き気が強い」. This entry = actually vomiting (吐いた). Nausea-only is the separate `nausea` entry. ASPECT ASSUMPTION: 〜ています states this is ONGOING. If it already stopped the correct form is 吐いていました (founder-confirmed 2026-08-12). We cannot currently tell which - deliberate safe default, see the modifier-system entry in OPEN_DECISIONS.md."
+    },
+    {
+      "id": "nausea",
+      "trigger_phrases_en": [
+        "nauseous",
+        "feels sick",
+        "feels like throwing up",
+        "queasy",
+        "sick to his stomach",
+        "sick to her stomach"
+      ],
+      "japanese_term": "吐き気がある",
+      "frame": "reported",
+      "verified": true,
+      "note": "OFFICIAL: protocol asks 「吐き気がありますか？」 and lists 「吐き気が強い」 in 通報内容. Deliberately separate from `vomiting` - saying 吐いています when they have only felt sick would fabricate a symptom."
+    },
+    {
+      "id": "numbness",
+      "trigger_phrases_en": [
+        "numb",
+        "numbness",
+        "pins and needles",
+        "can't feel his arm",
+        "can't feel her leg",
+        "tingling"
+      ],
+      "japanese_term": "しびれがある",
+      "frame": "reported",
+      "verified": true,
+      "note": "Protocol lists しびれ as a 症候. Distinct from one_sided_weakness (can't move)."
+    },
+    {
+      "id": "no_pulse",
+      "trigger_phrases_en": [
+        "no pulse",
+        "can't find a pulse",
+        "there's no pulse",
+        "heart stopped"
+      ],
+      "japanese_term": "脈が見つかりません",
+      "frame": "observed",
+      "verified": true,
+      "critical": true,
+      "note": "CPA keyword -> immediate R1 in the protocol."
+    },
+    {
+      "id": "body_cold",
+      "trigger_phrases_en": [
+        "body is cold",
+        "gone cold",
+        "cold to the touch",
+        "he's cold",
+        "she's cold"
+      ],
+      "japanese_term": "体が冷たくなっています",
+      "frame": "observed",
+      "verified": true,
+      "critical": true,
+      "note": "CPA keyword (冷たくなっている) -> immediate R1."
+    }
+  ],
+  "events": [
+    {
+      "id": "collapsed",
+      "trigger_phrases_en": [
+        "collapsed",
+        "just collapsed",
+        "went down",
+        "dropped to the floor",
+        "crumpled",
+        "went limp and fell",
+        "passed out and fell"
+      ],
+      "japanese_term": "倒れました",
+      "note_correction_2026_08_19": "CORRECTED: 倒れる is CAUSE-NEUTRAL, not a medical-specific verb - it just means 'went down' and tells the dispatcher NOTHING about why. It is the right default ONLY when the caller gives no mechanism (sudden, unexplained). If a mechanism is stated, use `fall` or `fall_from_height` instead - do not use collapsed just because the cause sounds medical.",
+      "frame": "observed",
+      "verified": true
+    },
+    {
+      "id": "fall",
+      "trigger_phrases_en": [
+        "tripped",
+        "tripped and fell",
+        "slipped",
+        "slipped and fell",
+        "lost her footing",
+        "lost his footing",
+        "fell over"
+      ],
+      "japanese_term": "転倒しました",
+      "frame": "observed",
+      "verified": true,
+      "note": "LEVEL-GROUND trip/slip only - falling from height is the separate `fall_from_height` entry below, because it is a different clinical picture (higher risk of spinal/multiple injury) and the crew needs to know which. 転倒 means 'lost balance and fell' but does NOT say from where, so it must not be used for a stairs/ladder fall. English 'fell' does not distinguish these on its own - the SLM reads the whole sentence, caller can correct on the confirmation screen. NEEDS FOUNDER CHECK."
+    },
+    {
+      "id": "fall_down",
+      "trigger_phrases_en": [
+        "fell down the stairs",
+        "fell down stairs",
+        "fell from the stairs",
+        "fell down a slope",
+        "tumbled down",
+        "fell down the steps",
+        "rolled down the stairs"
+      ],
+      "japanese_term": "転落しました",
+      "frame": "observed",
+      "verified": true,
+      "note": "転落 = tumbling down WHILE IN CONTACT with a surface (stairs, slope). Standard Japanese EMS vocabulary, and morphologically parallel to 転倒 so the pair reads naturally. Distinct from 転倒 (level ground) and from 墜落 (free fall through air - ladder, roof, window), which is deliberately NOT modelled: rare in the domestic setting this app is scoped to, and a fourth lookalike entry is what made the model misclassify in the first place. Earlier draft used 階段から落ちました, which hardcoded 'stairs' while covering ladders/roofs - it would have told a dispatcher someone fell down stairs when they fell off a ladder. NEEDS FOUNDER CHECK: is 転落しました natural in a panicking caller's mouth, or too clinical?"
+    },
+    {
+      "id": "choking",
+      "trigger_phrases_en": [
+        "choking",
+        "is choking",
+        "something stuck in his throat",
+        "something stuck in her throat",
+        "food stuck",
+        "swallowed something",
+        "can't swallow"
+      ],
+      "japanese_term": "のどに何か詰まっています",
+      "forms": {
+        "finished": "のどに何か詰まっていました"
+      },
+      "frame": "source_dependent",
+      "verified": true,
+      "critical": true,
+      "note": "Usually observed, but a conscious patient may grab their throat and say it. Shortened from のどに物を詰まらせた for pronounceability."
+    },
+    {
+      "id": "seizure",
+      "trigger_phrases_en": [
+        "seizure",
+        "having a seizure",
+        "convulsing",
+        "convulsions",
+        "shaking uncontrollably",
+        "having a fit",
+        "body is jerking",
+        "twitching violently"
+      ],
+      "japanese_term": "けいれんしています",
+      "forms": {
+        "finished": "けいれんしていました"
+      },
+      "frame": "observed",
+      "note": "ASPECT ASSUMPTION: 〜ています states this is ONGOING - clinically the sharpest case of this, since 'seizing now' and 'had one and stopped' drive different responses. Finished form would be けいれんしていました (mechanical 〜ています->〜ていました, NOT founder-checked). Safe default is ongoing: over-preparing the crew is harmless, under-preparing is not. See OPEN_DECISIONS.md.",
+      "verified": true
+    },
+    {
+      "id": "head_injury",
+      "trigger_phrases_en": [
+        "hit his head",
+        "hit her head",
+        "banged his head",
+        "banged her head",
+        "head injury",
+        "struck his head",
+        "struck her head",
+        "fell and hit his head",
+        "fell and hit her head",
+        "head is bleeding"
+      ],
+      "japanese_term": "頭を打ちました",
+      "frame": "observed",
+      "verified": true
+    },
+    {
+      "id": "heavy_bleeding",
+      "trigger_phrases_en": [
+        "bleeding a lot",
+        "lots of blood",
+        "heavy bleeding",
+        "bleeding badly",
+        "severe bleeding",
+        "won't stop bleeding",
+        "wont stop bleeding",
+        "blood everywhere"
+      ],
+      "japanese_term": "血がたくさん出ています",
+      "forms": {
+        "finished": "血がたくさん出ていました"
+      },
+      "frame": "observed",
+      "note": "ASPECT ASSUMPTION: 〜ています states bleeding is ONGOING. Finished/controlled form would be 血がたくさん出ていました (mechanical, NOT founder-checked). Lower stakes than seizure - bleeding that has been stopped still matters to the crew. See OPEN_DECISIONS.md.",
+      "verified": true,
+      "critical": true
+    },
+    {
+      "id": "drowning",
+      "trigger_phrases_en": [
+        "drowned",
+        "drowning",
+        "fell in the water",
+        "pulled from the water",
+        "was underwater",
+        "fell in the bath"
+      ],
+      "japanese_term": "溺れました",
+      "frame": "observed",
+      "verified": true,
+      "critical": true,
+      "note": "CPA keyword (水没) -> immediate R1 in the protocol. Bathtub drowning is a common domestic emergency in Japan."
+    }
+  ],
+  "condition_groups": {
+    "circulatory": "Heart & circulation",
+    "respiratory": "Breathing",
+    "neuro": "Brain & nerves",
+    "metabolic": "Metabolic & hormonal",
+    "renal": "Kidneys",
+    "digestive": "Digestive & liver",
+    "blood": "Blood & clotting",
+    "allergy": "Allergies",
+    "psychiatric": "Mental health",
+    "oncology": "Cancer",
+    "obstetric": "Pregnancy",
+    "device": "Implants & equipment",
+    "infectious": "Infection"
+  },
+  "conditions": [
+    {
+      "id": "heart_disease",
+      "japanese_term": "心臓病",
+      "group": "circulatory",
+      "label_en": "Heart disease",
+      "verified": false
+    },
+    {
+      "id": "arrhythmia",
+      "japanese_term": "不整脈",
+      "group": "circulatory",
+      "label_en": "Irregular heartbeat",
+      "verified": false
+    },
+    {
+      "id": "hypertension",
+      "japanese_term": "高血圧",
+      "group": "circulatory",
+      "label_en": "High blood pressure",
+      "verified": false
+    },
+    {
+      "id": "hypotension",
+      "japanese_term": "低血圧",
+      "group": "circulatory",
+      "label_en": "Low blood pressure",
+      "verified": false
+    },
+    {
+      "id": "prior_heart_attack",
+      "japanese_term": "心筋梗塞の既往",
+      "group": "circulatory",
+      "label_en": "Previous heart attack",
+      "verified": false
+    },
+    {
+      "id": "pacemaker",
+      "japanese_term": "ペースメーカー",
+      "group": "device",
+      "label_en": "Pacemaker",
+      "verified": false
+    },
+    {
+      "id": "home_oxygen",
+      "japanese_term": "在宅酸素療法",
+      "group": "device",
+      "label_en": "Home oxygen therapy",
+      "verified": false
+    },
+    {
+      "id": "anticoagulant",
+      "japanese_term": "血液をサラサラにする薬（抗凝固薬）",
+      "group": "blood",
+      "label_en": "Blood thinners (anticoagulants)",
+      "verified": false
+    },
+    {
+      "id": "bleeding_disorder",
+      "japanese_term": "出血しやすい体質",
+      "group": "blood",
+      "label_en": "Bleeds easily",
+      "verified": false
+    },
+    {
+      "id": "prior_stroke",
+      "japanese_term": "脳卒中の既往",
+      "group": "neuro",
+      "label_en": "Previous stroke",
+      "verified": false
+    },
+    {
+      "id": "epilepsy",
+      "japanese_term": "てんかん",
+      "group": "neuro",
+      "label_en": "Epilepsy",
+      "verified": false
+    },
+    {
+      "id": "parkinsons",
+      "japanese_term": "パーキンソン病",
+      "group": "neuro",
+      "label_en": "Parkinson's disease",
+      "verified": false
+    },
+    {
+      "id": "dementia",
+      "japanese_term": "認知症",
+      "group": "neuro",
+      "label_en": "Dementia",
+      "verified": false
+    },
+    {
+      "id": "diabetes",
+      "japanese_term": "糖尿病",
+      "group": "metabolic",
+      "label_en": "Diabetes",
+      "verified": false
+    },
+    {
+      "id": "thyroid_disease",
+      "japanese_term": "甲状腺の病気",
+      "group": "metabolic",
+      "label_en": "Thyroid condition",
+      "verified": false
+    },
+    {
+      "id": "asthma",
+      "japanese_term": "ぜんそく",
+      "group": "respiratory",
+      "label_en": "Asthma",
+      "verified": false
+    },
+    {
+      "id": "copd",
+      "japanese_term": "慢性閉塞性肺疾患（COPD）",
+      "group": "respiratory",
+      "label_en": "COPD",
+      "verified": false
+    },
+    {
+      "id": "kidney_disease",
+      "japanese_term": "腎臓病",
+      "group": "renal",
+      "label_en": "Kidney disease",
+      "verified": false
+    },
+    {
+      "id": "dialysis",
+      "japanese_term": "人工透析",
+      "group": "renal",
+      "label_en": "On dialysis",
+      "verified": false
+    },
+    {
+      "id": "liver_disease",
+      "japanese_term": "肝臓病",
+      "group": "digestive",
+      "label_en": "Liver disease",
+      "verified": false
+    },
+    {
+      "id": "ulcer",
+      "japanese_term": "胃・十二指腸潰瘍",
+      "group": "digestive",
+      "label_en": "Stomach/duodenal ulcer",
+      "verified": false
+    },
+    {
+      "id": "drug_allergy",
+      "japanese_term": "薬のアレルギー",
+      "group": "allergy",
+      "label_en": "Drug allergy",
+      "verified": false
+    },
+    {
+      "id": "food_allergy",
+      "japanese_term": "食物アレルギー",
+      "group": "allergy",
+      "label_en": "Food allergy",
+      "verified": false
+    },
+    {
+      "id": "psychiatric",
+      "japanese_term": "精神疾患",
+      "group": "psychiatric",
+      "label_en": "Psychiatric condition",
+      "verified": false
+    },
+    {
+      "id": "cancer",
+      "japanese_term": "がん",
+      "group": "oncology",
+      "label_en": "Cancer",
+      "verified": false
+    },
+    {
+      "id": "pregnancy",
+      "japanese_term": "妊娠中",
+      "group": "obstetric",
+      "label_en": "Pregnant",
+      "verified": false
+    },
+    {
+      "id": "infectious",
+      "japanese_term": "感染症",
+      "group": "infectious",
+      "label_en": "Infectious disease",
+      "verified": false
+    }
+  ],
+  "condition_other": {
+    "id": "other",
+    "japanese_term": "持病があります",
+    "label_en": "Other / not listed",
+    "verified": false
+  }
+}

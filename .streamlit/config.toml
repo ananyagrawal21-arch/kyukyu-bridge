@@ -1,0 +1,20 @@
+# PRIVACY CONFIG. Both settings below close real leaks found in the 2026-08-14 audit. The
+# project's headline claim is that nothing leaves the device; these are what make that true
+# rather than merely intended.
+
+[browser]
+# Streamlit phones home with anonymous usage statistics BY DEFAULT. It does not send call
+# content, but it does make outbound network requests from a tool that claims to be fully
+# offline - and an emergency tool must not quietly depend on a network connection.
+gatherUsageStats = false
+serverAddress = "localhost"
+
+[server]
+# Streamlit binds ALL network interfaces by default, so anyone on the same wifi could open
+# http://<this-machine-ip>:8501 and see the app - including the stored home address and any
+# emergency in progress. Loopback only: reachable from this machine, nothing else.
+address = "localhost"
+
+# Uploaded audio is held in memory and discarded, never written to disk. Kept small so a stray
+# large file cannot be parked through this interface.
+maxUploadSize = 25

@@ -1,0 +1,449 @@
+# 救急ブリッジ / Kyūkyū-Bridge
+
+**An offline, on-device co-pilot for the first 60 seconds of a Japanese 119 emergency call,
+for callers who don't speak Japanese.**
+
+Press one button, say what's happening in your own language, confirm what the app understood,
+and it produces — and speaks aloud — a structured Japanese briefing a dispatcher can act on.
+Everything runs locally. No network, no cloud, no call data leaving the device.
+
+---
+
+## The problem
+
+Japan's Fire and Disaster Management Agency measures the cost of the language barrier directly:
+foreign patients' **on-scene time runs 3–6 minutes longer than average**, explicitly because
+communication takes time (Sapporo City Fire Bureau data). The agency links this to reduced
+survival rates.
+
+The agency is also blunt about why generic translation doesn't solve it:
+
+> 既存の多言語自動翻訳システムを導入する消防機関も出てきているが、救急用のフレーズや傷病者との
+> やり取りの面で使い勝手の良いものになっていない
+
+— existing general-purpose translation systems aren't fit for emergency phrasing or patient
+interaction.
+
+The real bottleneck in those opening seconds isn't translation *quality*. It's that a panicking
+person cannot produce structured, dispatcher-usable information at all — in any language.
+
+## The numbers, with sources
+
+| | | Source |
+|---|---|---|
+| Ambulance on scene | **9.8 min** average from the 119 call | FDMA, 令和7年版 救急・救助の現況 (2026) |
+| Handover to a doctor | **44.6 min** average from the 119 call | same |
+| Extra on-scene time for foreign patients | **3–6 min** | Sapporo City Fire Bureau, via FDMA |
+| Residents who converse freely in Japanese | **23.9%** | 出入国在留管理庁 基礎調査 令和3年度, n=40,000 |
+| Residents who can barely or not at all *read* Japanese | **13.3%** | same |
+
+Two of these decide the whole design.
+
+**44.6 minutes** is the real clock to definitive care — not 9.8. The 3–6 minutes lost to a
+language barrier is a meaningful slice of it, and it is time spent on scene, next to the patient,
+before treatment can be planned properly.
+
+**13.3% cannot read Japanese.** Japan's own caller-side emergency service, NET119, is a
+*text chat in Japanese*. For that group it is unreadable. This is the clearest evidence that a
+Japanese-text channel does not close the gap for a foreign resident.
+
+And the figure that is often quoted against projects like this: roughly 80% of foreign residents
+report Japanese "sufficient for daily life". That is true, and it is the wrong measure. Only
+23.9% converse freely across a wide range of topics — and ordering lunch is not describing
+呂律が回らない to a dispatcher while someone is collapsing in front of you.
+
+## What this does differently
+
+The system's advantage is **preparation**, not out-comprehending panicked speech:
+
+- Address, age, sex, known conditions, and names are stored in advance and delivered instantly.
+- Symptoms map onto a **fixed ontology of 31 Japanese terms** (29 human-verified, 2 pending final sign-off).
+- **The model never generates Japanese.** It *selects* from pre-verified terms. Every Japanese
+  string that reaches a dispatcher was checked by a fluent human beforehand.
+
+It's caller-side and pre-dispatch, which is a different problem from 救急ボイストラ — the
+Fire Agency's own crew-side phrasebook, deployed to 96% of fire departments. That tool
+translates what a panicking family says on scene; it structurally cannot know the patient's
+address, age, or medical history in advance. This can.
+
+## Who it's for
+
+**Any indoor place with a fixed, registered address**, where the people present may not speak
+Japanese. A home with an elderly relative is the obvious case, but nothing in the design is
+home-specific — a company dormitory, a care facility, a language school, a share house all work
+identically. The only requirement is that the address stored in the app is the address of the
+building the device sits in.
+
+Japan has roughly **4.1 million foreign residents** ([MOJ, 2026](https://www.moj.go.jp/isa/publications/press/13_00062.html?lang=en)),
+and **55–60% of ambulance dispatches are to incidents inside a private residence**.
+
+The app runs on a **device that stays in the building, already open**, model already warm. In an
+emergency the caller dials 119 on their **phone**, puts it on **speakerphone**, and works the app
+while holding the phone toward its speaker. Two devices, deliberately: a phone can't inject app
+audio into a live call — call and media audio are separate streams, and echo cancellation would
+suppress it anyway.
+
+### Why indoors is the right scope, not a retreat
+
+Japan already handles the outdoor and mobile case **better than this could**:
+
+- **Location is already automatic.** Dialling 119 from a mobile transmits the caller's position
+  to the fire department at carrier level ([緊急通報位置通知](https://www.docomo.ne.jp/service/position_notification/)),
+  nationwide. Adding GPS here would duplicate national infrastructure, worse.
+- **A human interpreter is already one button away.** 三者間同時通訳 patches a live professional
+  interpreter into any 119 call, 24/7, from any phone, with no app and no registration —
+  [673 of 720 fire departments, 93.5%](https://www.fdma.go.jp/mission/enrichment/gaikokujin_syougaisya_torikumi/sanshakan-douji-tsuuyaku.html)
+  as of January 2025.
+
+What **neither** can supply is the **room number** and the **patient's medical history**. Carrier
+location finds the building, not 405号室. An interpreter faithfully translates what the caller
+can say — not what they can't recall, spell, or pronounce under panic.
+
+That is the gap this fills, and it exists only where an address can be registered in advance:
+indoors. So the honest claim is not "this helps foreigners call 119" — the government largely
+solved that. It is **"this delivers a verified patient record into the first 15 seconds of the
+call."**
+
+It does **not** help someone alone, outdoors, or in a building that hasn't been set up.
+
+## How it works
+
+**Dial 119 first. Always** — never delay the call to prepare a better message.
+
+```
+  ☎️  119 dialled, phone on speakerphone
+        ↓
+  🚨 tap EMERGENCY  →  plays IMMEDIATELY, needs nothing computed:
+        「救急です。場所は東京都江東区…」
+        ↓  ~15 seconds in. Type + location. THE AMBULANCE IS DISPATCHED.
+        ↓
+        ↓   everything below happens while it is already en route
+        ↓
+  🎤 speech, in the caller's own language
+        ↓  Whisper small, language taken from the profile (override available)
+  📝 transcript in their language  →  shown for confirmation
+     + English translation (Whisper's translate task) → fed to the classifier
+        ↓  ← caller confirms: "is this what you said?"
+  🧠 SLM classification against the 31-entry ontology
+     Stage A  candidate generation (high recall)
+     Stage B  whole-list review pass (anti-fabrication)
+        ↓  ← caller confirms: "is this what you meant?"  (can remove AND add)
+  ❓ forced questions for the three vital signs dispatchers assess
+     consciousness · breathing · circulation  — never guessed by the model
+        ↓
+  🇯🇵 Japanese briefing, composed from verified terms only
+        ↓
+  🔊 spoken aloud, one paced chunk at a time
+```
+
+Emergency dispatch works on **location and call type, not diagnosis** — the ambulance rolls
+immediately and the crew is updated by radio while driving. Travel time dwarfs everything else,
+so gathering symptoms before dispatching would only add delay to every case. The remaining
+details still arrive minutes before the crew does, and they do real work: upgrading the response
+(PA連携 sends a fire engine alongside for a suspected arrest), pre-briefing the crew, and
+attacking the on-scene delay the FDMA measured.
+
+This is the NET119 pattern — the Fire Agency's own caller-side app for people with hearing and
+speech disabilities also connects on type + location first and handles details afterwards.
+
+It also means **inference latency is a polish problem, not a safety one.** Help is already moving
+before the model has finished thinking.
+
+### Safety architecture
+
+Three rules the design refuses to break:
+
+1. **No generated Japanese.** The model returns ontology *IDs*. Japanese is looked up, never
+   written. Hallucinated Japanese cannot reach a live emergency call.
+2. **Critical binary vitals bypass the model entirely.** Consciousness, breathing, and
+   circulation come from forced-choice buttons — a small model was measured inverting them
+   ("still awake" → unconscious), the most dangerous error possible here.
+3. **Two human confirmation loops.** One on the transcript (did we *hear* you right?), one on
+   the interpretation (did we *understand* you right?). Failures get caught, not delivered.
+
+Supporting decisions: unknown values are omitted rather than guessed — an unconfirmed patient
+identity drops age/sex/conditions entirely, and an unconfirmed location says 「今、別の場所にいます。」
+rather than asserting a possibly-wrong address. A wrong address is worse than no address.
+
+## Measured results
+
+**Classification** — 52-case labelled test set (`benchmark/eval_slm.py`), and the same cases
+perturbed to simulate panicked speech (`benchmark/eval_disfluent.py`):
+
+| | Clean | Panicked |
+|---|---|---|
+| Exact-match | 92% | — |
+| Precision | 0.98 | 0.96 |
+| Recall | 0.94 | 1.00 |
+| F1 | 0.96 | 0.98 |
+| Fabrications | 1 | 2 |
+
+(Clean-speech numbers as of the 31-entry ontology, 2026-08-20. Growing the ontology from 29 to
+31 entries — splitting `collapsed` into three cause-specific terms — cost a few points across
+the board. Most of that cost is not really about falls: because the model sees the *entire*
+ontology on every call, adding any entry slightly perturbs the prompt for *every* case, so one
+unrelated miss appeared alongside the expected ones. This is the concrete version of a risk
+already reasoned about in `OPEN_DECISIONS.md` — ontology growth is bounded by precision, not
+latency — and it's why every addition here was re-verified against the full test set, not just
+the new case.)
+
+Disfluency does not degrade accuracy overall — exact-match and F1 are essentially unchanged. It
+does shift the *kind* of error: under noise the model over-includes, so recall rises and
+precision falls. Over-reporting is the safer direction, but fabrications are not zero even on
+clean English speech, so the honest claim is "very low," not "none."
+
+**Intel / OpenVINO** — Whisper `small`, 6.5s clip, Intel CPU:
+
+| Runtime | Time | Speedup |
+|---|---|---|
+| PyTorch | 14.59s | 1.00× |
+| OpenVINO FP | 10.56s | 1.38× |
+| OpenVINO INT8 | 13.79s | 1.06× |
+
+All three produced matching transcripts. INT8 barely beating FP is unexpected and not yet
+explained — recorded honestly rather than omitted. SLM numbers on Intel hardware are pending.
+
+**Speech-to-text robustness** was tested on real non-native English from the L2-ARCTIC corpus
+(Vietnamese and Hindi speakers), not synthetic accents.
+
+## Why these Intel technologies
+
+Two AI models run in this app: **Whisper** turns the caller's speech into text, and
+**Qwen2.5-3B** decides which of 31 pre-verified Japanese medical terms that text describes.
+Everything else — address lookups, the Japanese sentences, the spoken audio — is deterministic
+code, not AI. So there were exactly two places Intel tooling could apply, and it is applied to
+both.
+
+### What we use, and what each one is for
+
+| Component | Role | Where it runs |
+|---|---|---|
+| **OpenVINO 2025.3** | inference runtime | both models |
+| **NNCF 2.18** | INT8 weight compression | model conversion |
+| **optimum-intel 1.26** | Intel's HuggingFace integration | conversion + loading |
+| **openvino-tokenizers** | tokenisation inside the OV runtime | text pipeline |
+| **OpenVINO GenAI** | prefix caching for the classifier | measured, see below |
+
+### Why OpenVINO rather than running the models as-is
+
+Not a preference — a measured necessity. On the Intel laptop this project targets, one
+classification took **511 seconds** through plain PyTorch. That is not a slow feature; it is a
+broken one. The same call through OpenVINO takes **73 seconds** — a **6.97× speedup** that is
+the difference between the feature existing and not existing.
+
+This is the clearest statement of why Intel technology is *vital* here rather than merely
+helpful: without it, the product does not work on the hardware it is built for.
+
+### Why INT8 quantisation, and why not INT4
+
+INT8 compresses the models — Qwen to 2.9 GB, Whisper from 926 MB to **242 MB** — which matters
+because everything runs on-device with no cloud fallback.
+
+We tested INT4 as well. **It was slower**: 13.25s versus INT8's 9.65s on identical hardware and
+input. The smaller weights did not pay for the dequantisation overhead on this CPU. We also
+tested a smaller model (Qwen2.5-1.5B), which was 2.4× faster but **doubled fabrications** on our
+52-case test set — unacceptable in an app that speaks to emergency dispatchers. Both were
+rejected on evidence, and the results are in `OPEN_DECISIONS.md`.
+
+### Where Intel technology sits in the project lifecycle
+
+- **Modeling** — conversion to OpenVINO IR with NNCF INT8 compression
+  (`benchmark/convert_slm.py`, `benchmark/convert_whisper.py`)
+- **Evaluation** — every latency benchmark measures the OpenVINO runtime
+  (`benchmark/bench_slm_backends.py`, `bench_stt_backends.py`, `bench_prefix_cache.py`)
+- **Deployment** — the shipped app loads and runs the OpenVINO models
+
+### The optimisation that came from measuring, not guessing
+
+We measured *where* the classifier spent its time rather than assuming. A call capped at one
+output token still took 7.90s; allowing 32 tokens added almost nothing. So the cost was not
+generation — it was **reading the prompt**. And of those 884 prompt tokens, roughly 800 are
+identical on every single call: the system prompt, the few-shot examples, and the 31-term menu.
+The model was re-reading a menu it had already read hundreds of times.
+
+OpenVINO's **prefix caching** targets exactly this. Measured on the Intel laptop:
+
+```
+prefix caching OFF : 42.11s
+prefix caching ON  :  3.85s      10.94× faster, byte-identical output
+```
+
+Identical output is the point. Unlike INT4 or a smaller model, this trades nothing — same
+weights, same answer, simply without redoing work.
+
+**It is also Intel-exclusive.** Prefix caching runs on OpenVINO's paged-attention executor,
+which requires x64. On our Apple Silicon development machine it refuses to initialise:
+`make_pa_executor: only support x64 platform or ARM with SVE support`. This optimisation
+structurally cannot run on the ARM machine — it exists only because the target hardware is
+Intel.
+
+### What we evaluated and chose not to use
+
+- **Intel Gaudi** — datacentre accelerator. This app runs on a laptop that stays in someone's
+  home; there is no server.
+- **Intel AI Cloud** — would contradict the product's core guarantee that no data leaves the
+  device during an emergency. Rejected on privacy grounds, not technical ones.
+- **IPEX (Intel Extension for PyTorch)** — would optimise the PyTorch path we are replacing
+  with OpenVINO, not complement it.
+
+### An honest note on hardware
+
+OpenVINO is **not** a blanket speedup, and we will not claim it is. On Apple Silicon it made
+Whisper *slower* (17.10s vs 2.37s) because Apple's PyTorch path is heavily optimised already.
+On Intel CPU it wins across the board. That is the correct behaviour for a vendor-specific
+toolkit, and reporting both directions is more useful than reporting only the favourable one.
+
+## Intel optimisation, measured
+
+Both models in the emergency path run through OpenVINO, not just one.
+
+| Stage | Baseline | OpenVINO INT8 | |
+|---|---|---|---|
+| Speech recognition (Whisper small) | 2.33 s · 926 MB | converted: 242 MB | see note — **not enabled** |
+| Classification (Qwen2.5-3B) | — | 16.0 s total (Stage A 14.5 s, Stage B 1.5 s) | INT8 weight quantisation |
+
+Reproduce with `python benchmark/bench_stt_backends.py`. It times both backends **and diffs the
+transcripts**, because a speedup that changes what a panicking caller said is not a speedup.
+
+**Speech recognition is converted but deliberately not enabled.** The OpenVINO build is 1.62×
+faster and 3.8× smaller — but only with default decoding. With the anti-hallucination settings
+the app actually uses, `optimum-intel` and `transformers` at their pinned versions raise
+`TypeError: prepare_inputs_for_generation() missing 1 required positional argument`. Those
+settings exist because Whisper once transcribed a real clip as "You're free to go." seventy
+times over, so we kept them and left the speedup on the table. The conversion and benchmark are
+in `benchmark/`; enable with `KYUKYU_OV_STT=1` to reproduce the failure.
+
+If the OpenVINO build is absent or fails to load, speech recognition falls back to plain
+transformers rather than failing. This runs seconds before someone describes an emergency.
+
+## Cost and scale
+
+Because inference is on-device, the marginal cost of an emergency call is **zero** — no API call,
+no cloud inference, no per-seat licence, no subscription. That is not a pricing decision; it
+falls out of the architecture.
+
+| | |
+|---|---|
+| Classifier (Qwen2.5-3B, OpenVINO INT8) | 2.9 GB |
+| Speech recognition (Whisper small) | 926 MB |
+| Pre-rendered Japanese audio | 4.1 MB |
+| **Total footprint per installed device** | **~3.9 GB** |
+| **Marginal cost per emergency call** | **¥0** |
+| **Recurring cost per household** | **¥0** |
+| One-time setup | ~5 minutes, once, per address |
+
+The only real cost is a device that stays in the building — and the target user already owns one.
+An eight-year-old laptop is sufficient; there is no GPU requirement.
+
+**What scaling actually costs.** Adding a household costs nothing but the five-minute
+registration. Adding a **language** means translating the interface and verifying the caller-facing
+labels — the Japanese output is unchanged, because the briefing is generated from the same
+verified ontology regardless of what language the caller spoke. Adding a **region** costs nothing
+at all: the address lookups already cover all of Japan, and the app speaks standard Japanese to
+any of the 720 fire departments.
+
+**Compare this to what it replaces.** Japan's existing three-way interpretation service
+(三者間同時通訳) is excellent and we do not compete with it — but it carries a real per-call cost
+for a live human interpreter, and reaching 93.5% of fire departments took years of
+department-by-department procurement. This app requires no procurement, no integration and no
+adoption by any fire department, because it speaks Japanese down an ordinary phone line.
+
+## Honest limitations
+
+- **It only asks questions it anticipated.** Open-ended clarification is the dispatcher's job.
+  The claim is "the opening 60 seconds", not "the conversation".
+- **Anything outside the ontology's 31 entries is not conveyed.** This is deliberate: the
+  alternative is unverified machine-generated Japanese on a live emergency call.
+- **Four terms are aspect-ambiguous** (vomiting, seizure, bleeding, choking) — a seizure that has
+  stopped reads differently in Japanese from one still happening. The caller chooses on the
+  confirmation screen rather than the model guessing, because a wrong guess could under-prepare
+  the crew.
+- **Whisper accuracy varies a lot by language**, and is weakest for some whose speakers are most
+  vulnerable. No claim of uniform coverage. Two of the nine offered languages (Chinese, Korean)
+  have been run end to end; the other seven have not.
+- **Translation loses negation.** Non-English speech is translated to English before
+  classification, and in testing "there is no response" came back as its opposite in both
+  languages. Consciousness is unaffected — it comes from a forced button, never the model — but
+  the risk is real for other symptoms, and the confirmation screen is the only backstop.
+- **The interface is in English**, including both confirmation screens. A caller who reads
+  neither Japanese nor English can still be guided by the flow, but cannot fully verify what the
+  app understood — which weakens the safety loop for exactly the people who need it most.
+- **Panicked, disfluent speech is untested.** Accent is tested; panic is not.
+- **Outbound only.** After dispatching, Japanese dispatchers give 口頭指導 — talking the caller
+  through CPR and positioning, in Japanese. That is genuinely life-saving and we don't handle it.
+- One stored patient profile, English-first in practice, and no GPS.
+
+On GPS specifically: it's absent by choice, not omission. A laptop has no GPS chip and locates by
+WiFi/IP triangulation, which cannot produce a room number — while `profile.json` already holds
+one, exactly. For an indoor emergency, a stored verified address beats an estimated position —
+and Japan already transmits mobile-caller location to 119 automatically at carrier level.
+
+## Running it
+
+Requires **Python 3.12** (OpenVINO has no wheels for 3.13+).
+
+```bash
+python3.12 -m venv .venv && source .venv/bin/activate    # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+streamlit run app.py
+```
+
+First run opens straight to a **setup screen** — no profile exists yet. Enter your postal code
+and it looks up your prefecture/city/ward in Japanese automatically (only place in the whole
+project that touches the network, and only when you press that button — the emergency path
+stays fully offline). Fill in the rest, save, and the app renders the Japanese audio for your
+details right there before returning you to the emergency button.
+
+(`tools/setup_profile.py` is the same thing as a terminal prompt, for a headless machine with
+no browser.)
+
+**The app never synthesises speech at runtime** — every sentence it can say is pre-rendered into
+`data/audio/`, which is why it doesn't need a Japanese voice installed on the machine running it.
+That works only because the ontology is a closed set. Rebuild with `python tools/build_audio.py`
+after changing the ontology; it needs a machine with a Japanese voice, and the output is portable.
+
+Optional but strongly recommended — convert the SLM to OpenVINO INT8 once:
+
+```bash
+python benchmark/convert_slm.py
+```
+
+Without `models/`, the app falls back to plain PyTorch and prints a warning. The conversion is
+memory-hungry — a 16 GB machine was measured being OOM-killed partway through loading the
+checkpoint. The resulting `models/` folder is portable across machines and architectures, so
+converting once on a larger machine and copying it across is a valid route.
+
+**Reproducing the measurements:**
+
+```bash
+SLM_MODEL="Qwen/Qwen2.5-3B-Instruct" python benchmark/eval_slm.py
+python benchmark/bench_whisper.py --audio data/bench_clip.wav
+```
+
+## Layout
+
+```
+app.py                      Streamlit UI — the one-button flow, as a phase state machine
+src/stt.py                  Whisper speech-to-text, language forced from the profile
+src/slm_classify.py         two-stage classifier — selects ontology IDs, never writes Japanese
+src/ontology.py             loads the ontology
+src/briefing_template.py    composes Japanese from verified terms; owns the register rules
+src/caller_profile.py       stored address / patient / caller details
+src/pipeline.py             wiring, plus a CLI for testing without the UI
+src/speak.py                offline Japanese TTS, pluggable backends
+data/ontology.json          the ontology (verified Japanese terms) — the heart of the project
+benchmark/                  evaluation and Intel/OpenVINO conversion scripts
+OPEN_DECISIONS.md           full dated decision log, including reversals and rejected ideas
+```
+
+`OPEN_DECISIONS.md` is the real record of how this was built — what was tried, measured,
+rejected, and why. Ideas that failed are kept there deliberately.
+
+## Notes
+
+Ontology terms were grounded in the FDMA's official 緊急度判定プロトコル Ver.1 and verified by a
+fluent speaker. Accent testing used L2-ARCTIC (CC BY-NC 4.0, gated access), which is not
+redistributed here. `data/profile.json` is gitignored — it holds a real home address and
+medical details.
+
+No license yet; all rights reserved for now.
