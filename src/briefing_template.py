@@ -25,6 +25,12 @@ import re
 # wrong place. The address is stated whenever we have one - never a silently-wrong location.
 TEMPLATE_HEAD = "救急です。"
 TEMPLATE_LOCATION_KNOWN = "場所は{address}です。"
+# The building and room are a SEPARATE sentence from the address above, not a continuation of
+# it. Two reasons: the address proper is what a dispatcher writes on one line, and splitting
+# means a repeat request only replays the half it applies to. TEMPLATE_ROOM is its own constant
+# because the room number is assembled (kana + 号室) before it can be spoken.
+BUILDING_ROOMNO = "{building_room}です。"
+TEMPLATE_ROOM = "{room}号室"
 # NO "not at this address" LINE EXISTS ANY MORE (removed 2026-08-20).
 # Three attempts all failed for the same underlying reason:
 #   「登録した住所と違います」 - leaked our internal concept of a registered address
@@ -253,25 +259,9 @@ def render_location_pieces(address: dict = None) -> list[dict]:
     """
     if address is None:
         return [{"label": "Ambulance", "jp": TEMPLATE_HEAD}]
+    from speak import room_to_kana
+
     area = spoken_address(address)
-    # 、 before the room number too - "〇〇マンション405号室" is the same run-on problem in
-    # miniature, and the room is the one part a dispatcher most needs to catch.
-    #
-    # BOTH PARTS ARE OPTIONAL. An empty room used to still emit 号室, producing 「…、号室です」-
-    # "the room number is." with no number, which is broken Japanese and tells the dispatcher
-    # nothing. Same omit-rather-than-guess rule as everywhere else: say the part we have.
-    pieces = [
-        {"label": "Ambulance", "jp": TEMPLATE_HEAD},
-        {"label": "Area", "jp": f"場所は{area}です。"},
-        # SAID HERE, ON THE DISPATCH SCREEN - not later in the briefing.
-        # This line exists to explain the silence that is ABOUT TO HAPPEN: the caller now goes
-        # quiet for a minute recording, confirming the transcript, checking symptoms and
-        # answering the vital-sign questions. Delivered afterwards it explains a pause the
-        # dispatcher has already spent a minute worrying about, which is too late to be any
-        # use. Founder, 2026-08-23: "shouldn't it be right after the address and before the
-        # whole transcript starts?" - yes, and that is the entire point of the line.
-        {"label": "Why replies are slow", "jp": TEMPLATE_TAIL},
-    ]
     # THE BUILDING NAME IS NO LONGER SPOKEN UNLESS WE HAVE ITS READING.
     # Founder, 2026-08-22: the app rendered 江東区立第三砂町小学校 as garbage. Building and
     # facility names are exactly where irregular readings live, and NO lookup gives us their
@@ -281,12 +271,37 @@ def render_location_pieces(address: dict = None) -> list[dict]:
     # perfectly well; it is only kept out of the caller's mouth. Address + room already locates
     # someone without it, which is why the field was optional in the first place.
     # `building_kana` is honoured when a reading was captured at setup.
-    from speak import room_to_kana
-    spoken_building = address.get("building_kana") or ""
-    room = f"{room_to_kana(address['room'])}号室" if address.get("room") else ""
-    spoken = "、".join([p for p in (spoken_building, room) if p])
-    if spoken:
-        pieces.append({"label": "Building & room", "jp": spoken + "です。"})
+    building = address.get("building_kana") or ""
+    # room_to_kana, not the raw digits: 405 read as a number is ヨンヒャクゴ ("four hundred and
+    # five"); a room number is said digit by digit, ヨンマルゴ.
+    room = TEMPLATE_ROOM.format(room=room_to_kana(address["room"])) if address.get("room") else ""
+    # 、 between them - "〇〇マンション405号室" is the same run-on problem in miniature, and the
+    # room is the one part a dispatcher most needs to catch.
+    #
+    # BOTH PARTS ARE OPTIONAL. An empty room used to still emit 号室, producing 「…、号室です」-
+    # "the room number is." with no number, which is broken Japanese and tells the dispatcher
+    # nothing. Same omit-rather-than-guess rule as everywhere else: say the part we have.
+    building_room = "、".join(p for p in (building, room) if p)
+
+    pieces = [
+        {"label": "Ambulance", "jp": TEMPLATE_HEAD},
+        {"label": "Area", "jp": TEMPLATE_LOCATION_KNOWN.format(address=area)},
+    ]
+    # BEFORE the apology, not after. The building and room finish the address; interrupting a
+    # dispatcher mid-address to apologise means they have to ask for the second half again.
+    if building_room:
+        pieces.append({
+            "label": "Building & room",
+            "jp": BUILDING_ROOMNO.format(building_room=building_room),
+        })
+    # SAID HERE, ON THE DISPATCH SCREEN - not later in the briefing.
+        # This line exists to explain the silence that is ABOUT TO HAPPEN: the caller now goes
+        # quiet for a minute recording, confirming the transcript, checking symptoms and
+        # answering the vital-sign questions. Delivered afterwards it explains a pause the
+        # dispatcher has already spent a minute worrying about, which is too late to be any
+        # use. Founder, 2026-08-23: "shouldn't it be right after the address and before the
+        # whole transcript starts?" - yes, and that is the entire point of the line.
+    pieces.append({"label": "Why replies are slow", "jp": TEMPLATE_TAIL})
     return pieces
 
 
