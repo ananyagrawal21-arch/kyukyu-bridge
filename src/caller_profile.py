@@ -22,12 +22,17 @@ def romaji_fields(profile: dict) -> list:
     addr = profile.get("address") or {}
     patient = profile.get("patient") or {}
     caller = profile.get("caller") or {}
+    # LABELS MUST MATCH THE SETUP SCREEN'S FIELD NAMES. This warning tells the user which box
+    # to go and fix, so a label that does not appear on screen sends them hunting for a field
+    # that is not there. That is exactly what happened when the address input was split into
+    # "Area" and "Block number" while this still said "Street & block".
     candidates = [
         ("Prefecture", addr.get("prefecture")),
-        ("City/ward", addr.get("city_ward")),
-        ("Area & block number", addr.get("street_block")),
-        ("Building", addr.get("building")),
-        ("Patient name", patient.get("name")),
+        ("City / ward", addr.get("city_ward")),
+        ("Area", addr.get("area") or addr.get("street_block")),
+        ("Block number", addr.get("block_number")),
+        ("Building name", addr.get("building")),
+        ("Name", patient.get("name")),
         ("Known conditions", "、".join(patient.get("known_conditions") or [])),
         ("Your name", caller.get("name")),
     ]

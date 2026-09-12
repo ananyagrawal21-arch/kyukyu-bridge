@@ -38,7 +38,7 @@ if os.path.isdir(_MODEL_DIR):
     os.environ.setdefault("SLM_OV_DIR", _MODEL_DIR)
 
 from pipeline import (  # noqa: E402
-    build_briefing_chunks, slm_matches, _statement_from, _humanize,
+    build_briefing_chunks, slm_matches, _statement_from, _humanize, _find_entry,
 )
 from briefing_template import (  # noqa: E402
     render_location_pieces, HANDOFF_LABELS, HANDOFF_LABELS_EN,
@@ -155,6 +155,40 @@ def back():
         st.rerun()
 
 
+# What each screen contributes to `extras`. Going back has to UNDO the answer belonging to the
+# screen you are returning to. Without this, a caller who answered "not breathing", went back
+# and corrected it to "breathing" still sent 息をしていません - the answer they had just
+# retracted, promoted to the CRITICAL chunk, driving telephone-guided CPR. `extras` is
+# append-only, so nothing else ever takes an answer back out.
+SCREEN_ANSWER_IDS = {
+    "ask_awake": {"conscious", "unconscious"},
+    "ask_breathing": {"not_breathing"},
+    "ask_circulation": {"pale_complexion", "cold_sweat"},
+}
+
+
+def back_clearing():
+    """Drop the destination screen's answer, then go back to it.
+
+    ORDER MATTERS. The removal must happen BEFORE back(), because back() ends in st.rerun(),
+    which raises to restart the script - anything written after it never executes at all.
+
+    Reads the destination WITHOUT popping it; back() does that. Reading it rather than
+    hard-coding one is what makes the skipped-screen paths correct: ask_patient is reached from
+    circulation, breathing or awake depending on what the caller already mentioned, so which
+    answer needs undoing is not knowable from the current screen alone.
+    """
+    hist = st.session_state.get("history", [])
+    if not hist:
+        return
+    ids = SCREEN_ANSWER_IDS.get(hist[-1], set())
+    if ids:
+        st.session_state.extras = [
+            s for s in st.session_state.get("extras", []) if s.get("id") not in ids
+        ]
+    back()
+
+
 # Screens that get the generic "previous step" button. Deliberately NOT every screen:
 #   idle                - it IS the start; there is nothing behind it.
 #   confirm_transcript  - already has "Say it again", which is the same move but clearer.
@@ -164,8 +198,9 @@ def back():
 # `briefing` DOES get one: it has its own back, but that only walks the chunks, so from the
 # final screen there was no way back to an earlier question at all. The two are disambiguated
 # by name - "Previous part" moves within the briefing, "Previous step" leaves it.
-BACKABLE = {"dispatch_now", "recording", "confirm_symptoms", "ask_awake", "ask_breathing",
-            "ask_circulation", "ask_patient", "briefing"}
+# ask_breathing / ask_circulation / ask_patient are NOT here: they carry their own button that
+# calls back_clearing() first. The generic one would leave the retracted answer behind.
+BACKABLE = {"dispatch_now", "recording", "confirm_symptoms", "ask_awake", "briefing"}
 
 
 # The flow in order. A panicking caller needs to see the end coming - an unbounded sequence of
@@ -634,39 +669,42 @@ if phase == "setup":
             # is worse - but the home screen keeps warning until it is fixed.
             # EVERY spoken field, not just the address. The patient's name, their conditions
             # and the caller's name are all read aloud by a Japanese voice too.
-            romaji = [
-                label for label, val in (
-                    ("Prefecture", prefecture), ("City/ward", city_ward),
-                    ("Street & block", street_block), ("Building", building),
-                    ("Patient name", pname), ("Known conditions", conds), ("Your name", cname),
-                )
-                if looks_romaji(val)
-            ]
+            # Build the profile FIRST, then check it, then save the same object. This used to
+            # inline its own copy of the romaji check with its own field labels - a second
+            # implementation of romaji_fields() that promptly drifted: it still said
+            # "Street & block" after that input was split into "Area" and "Block number", so
+            # the warning named a field no longer on screen. One definition now, in
+            # caller_profile.romaji_fields().
+            new_profile = {
+                "address": {
+                    "prefecture": prefecture, "city_ward": city_ward,
+                    # Japan Post's PUBLISHED READING for this postal code. This is what the
+                    # app actually speaks - see spoken_address(). Kanji is what we show;
+                    # kana is what we say, because proper-noun readings cannot be inferred.
+                    "kana": (st.session_state.get("pc_result") or {}).get("kana", ""),
+                    "street_block": street_block,  # joined - what gets spoken
+                    "area": area, "block_number": block_no,  # parts, for re-editing
+                    "building": building, "room": room,
+                },
+                "patient": {
+                    "name": pname, "age": int(page), "sex": psex,
+                    "known_conditions": cond_list,
+                },
+                "caller": {
+                    "name": cname, "native_language": clang,
+                    "japanese_fluency": cal.get("japanese_fluency", "limited"),
+                },
+            }
+            romaji = romaji_fields(new_profile)
+
             if missing:
                 st.error("Prefecture, city/ward, street & block, and age are required.")
             else:
                 import json as _json
                 from caller_profile import PROFILE_PATH
-                PROFILE_PATH.write_text(_json.dumps({
-                    "address": {
-                        "prefecture": prefecture, "city_ward": city_ward,
-                        # Japan Post's PUBLISHED READING for this postal code. This is what the
-                        # app actually speaks - see spoken_address(). Kanji is what we show;
-                        # kana is what we say, because proper-noun readings cannot be inferred.
-                        "kana": (st.session_state.get("pc_result") or {}).get("kana", ""),
-                        "street_block": street_block,  # joined - what gets spoken
-                        "area": area, "block_number": block_no,  # parts, for re-editing
-                        "building": building, "room": room,
-                    },
-                    "patient": {
-                        "name": pname, "age": int(page), "sex": psex,
-                        "known_conditions": cond_list,
-                    },
-                    "caller": {
-                        "name": cname, "native_language": clang,
-                        "japanese_fluency": cal.get("japanese_fluency", "limited"),
-                    },
-                }, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+                PROFILE_PATH.write_text(
+                    _json.dumps(new_profile, ensure_ascii=False, indent=2) + "\n",
+                    encoding="utf-8")
                 try:
                     PROFILE_PATH.chmod(0o600)  # owner-only; it holds a home address
                 except OSError:
@@ -867,10 +905,18 @@ elif phase == "confirm_symptoms":
     if st.button("Looks right  →", use_container_width=True):
         # Apply the aspect choices. Replace with a COPY rather than mutating in place - these
         # dicts come from the loaded ontology, and editing them would corrupt it for later runs.
+        # BOTH DIRECTIONS, every pass. This used to only ever swap IN the finished form, so a
+        # caller who went back and changed "Has stopped" to "Happening now" kept the past tense:
+        # japanese_term had already been overwritten and nothing restored it. Same shape as the
+        # back-navigation bug - a forward action wrote, and nothing unwrote. The ongoing wording
+        # is read back from the ontology, because by the second pass the entry no longer has it.
         for i, e in enumerate(entries):
             finished = e.get("forms", {}).get("finished")
-            if finished and st.session_state.get(f"aspect_{e['id']}") == "Has stopped":
-                entries[i] = {**e, "japanese_term": finished}
+            if not finished:
+                continue
+            stopped = st.session_state.get(f"aspect_{e['id']}") == "Has stopped"
+            ongoing = _find_entry(ontology, e["id"])["japanese_term"]
+            entries[i] = {**e, "japanese_term": finished if stopped else ongoing}
         st.session_state.extras = []
         st.session_state.need_breathing = not any(
             e["id"] in {"difficulty_breathing", "not_breathing"} for e in entries
@@ -910,6 +956,8 @@ elif phase == "ask_breathing":
         picked = "not_breathing"
     if c3.button("Not sure", use_container_width=True):
         picked = ""
+    if st.button("← Previous step", key=f"back_{phase}"):
+        back_clearing()
     if picked is not None:
         if picked:
             st.session_state.extras.append(_statement_from(ontology, picked))
@@ -930,6 +978,8 @@ elif phase == "ask_circulation":
         picked = ["pale_complexion", "cold_sweat"]
     if c4.button("Neither / not sure", use_container_width=True):
         picked = []
+    if st.button("← Previous step", key=f"back_{phase}"):
+        back_clearing()
     if picked is not None:
         for eid in picked:
             st.session_state.extras.append(_statement_from(ontology, eid))
@@ -947,7 +997,6 @@ elif phase == "ask_patient":
     # This showed the stored 高血圧、糖尿病 to a user defined as someone who cannot read
     # Japanese, and asked them to confirm it.
     _en = {c["japanese_term"]: c["label_en"] for c in ontology.get("conditions", [])}
-    _en[(ontology.get("condition_other") or {}).get("japanese_term", "")] = "Other condition"
     desc = f"{p['age']}-year-old {p.get('sex', '')}"
     if p.get("known_conditions"):
         desc += " · " + ", ".join(_en.get(c, c) for c in p["known_conditions"])
@@ -957,11 +1006,17 @@ elif phase == "ask_patient":
     if c1.button("Yes", use_container_width=True):
         st.session_state.patient_ok = True
         st.session_state.pop("other_patient", None)
+        # Also close the "someone else" form. Answering "No, someone else" and then changing
+        # your mind to "Yes" left it open, so returning to this screen later showed a
+        # half-filled form for a patient we had already discarded.
+        st.session_state.pop("other_form", None)
         go("briefing")
     if c2.button("No, someone else", use_container_width=True):
         st.session_state.other_form = True
         st.session_state.patient_ok = False
         st.rerun()
+    if st.button("← Previous step", key=f"back_{phase}"):
+        back_clearing()
 
     # "No" used to go straight to the briefing with ALL patient details omitted - safe, but it
     # threw away information the caller HAS. If your neighbour collapses you still know roughly

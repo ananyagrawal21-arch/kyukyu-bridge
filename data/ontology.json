@@ -756,11 +756,5 @@
       "label_en": "Infectious disease",
       "verified": false
     }
-  ],
-  "condition_other": {
-    "id": "other",
-    "japanese_term": "持病があります",
-    "label_en": "Other / not listed",
-    "verified": false
-  }
+  ]
 }
