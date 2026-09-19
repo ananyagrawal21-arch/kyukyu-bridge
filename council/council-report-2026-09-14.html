@@ -1,0 +1,523 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Council Verdict — Kyūkyū-Bridge</title>
+<style>
+:root{
+  --bg:#faf9f7; --panel:#fff; --ink:#1a1917; --muted:#6b6862; --line:#e4e0d9;
+  --accent:#c0392b; --accent-soft:#fdf0ee; --ok:#2d6a4f; --ok-soft:#eaf4ee;
+  --warn:#8a6d1f; --warn-soft:#fbf5e3;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161513; --panel:#1e1d1a; --ink:#ecebe7; --muted:#9c978d; --line:#33312c;
+  --accent:#e8705f; --accent-soft:#2a1d1a; --ok:#7dc4a0; --ok-soft:#17251e;
+  --warn:#d8b458; --warn-soft:#262015;
+}}
+:root[data-theme="dark"]{
+  --bg:#161513; --panel:#1e1d1a; --ink:#ecebe7; --muted:#9c978d; --line:#33312c;
+  --accent:#e8705f; --accent-soft:#2a1d1a; --ok:#7dc4a0; --ok-soft:#17251e;
+  --warn:#d8b458; --warn-soft:#262015;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 var(--sans);
+  -webkit-font-smoothing:antialiased}
+.wrap{max-width:800px;margin:0 auto;padding:0 22px 100px}
+header{padding:64px 0 36px;border-bottom:3px solid var(--accent)}
+.kicker{font:600 11px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:18px}
+h1{font-size:2.5rem;line-height:1.1;margin:0 0 14px;letter-spacing:-.022em;font-weight:700}
+.sub{color:var(--muted);font-size:1.02rem;margin:0}
+.meta{margin-top:22px;font:12px/1.7 var(--mono);color:var(--muted)}
+h2{font-size:1.42rem;margin:56px 0 6px;letter-spacing:-.015em;line-height:1.25}
+h2 .num{font:600 12px/1 var(--mono);color:var(--accent);display:block;margin-bottom:10px;
+  letter-spacing:.14em}
+h3{font-size:1.06rem;margin:32px 0 8px;letter-spacing:-.008em}
+p{margin:12px 0}
+strong{font-weight:650}
+code{font:0.88em/1 var(--mono);background:var(--accent-soft);color:var(--accent);
+  padding:2px 5px;border-radius:4px}
+.rule{height:1px;background:var(--line);border:0;margin:0}
+blockquote{margin:22px 0;padding:16px 22px;border-left:3px solid var(--accent);
+  background:var(--panel);font-style:italic;color:var(--ink);border-radius:0 8px 8px 0}
+blockquote p{margin:6px 0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+  padding:20px 24px;margin:18px 0}
+.card.kill{border-left:4px solid var(--accent)}
+.card.keep{border-left:4px solid var(--ok)}
+.card.watch{border-left:4px solid var(--warn)}
+.tag{display:inline-block;font:600 10px/1 var(--mono);letter-spacing:.12em;
+  text-transform:uppercase;padding:5px 9px;border-radius:5px;margin-bottom:12px}
+.tag.kill{background:var(--accent-soft);color:var(--accent)}
+.tag.keep{background:var(--ok-soft);color:var(--ok)}
+.tag.watch{background:var(--warn-soft);color:var(--warn)}
+ol,ul{padding-left:22px;margin:12px 0}
+li{margin:7px 0}
+.tblwrap{overflow-x:auto;margin:20px 0;-webkit-overflow-scrolling:touch}
+table{border-collapse:collapse;width:100%;font-size:.93rem;min-width:480px}
+th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:600 11px/1.3 var(--mono);letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+tbody tr:last-child td{border-bottom:0}
+details{border:1px solid var(--line);border-radius:10px;margin:10px 0;background:var(--panel);
+  overflow:hidden}
+summary{cursor:pointer;padding:15px 20px;font-weight:600;list-style:none;display:flex;
+  align-items:center;gap:12px}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";margin-left:auto;color:var(--muted);font:400 20px/1 var(--mono)}
+details[open] summary::after{content:"–"}
+details[open] summary{border-bottom:1px solid var(--line)}
+.dbody{padding:4px 20px 18px}
+.dbody p:first-child{margin-top:14px}
+.who{font:600 10px/1 var(--mono);letter-spacing:.11em;text-transform:uppercase;
+  color:var(--accent);padding:4px 8px;background:var(--accent-soft);border-radius:4px}
+.verdictbar{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;
+  margin:26px 0}
+.vb{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:15px 16px}
+.vb .n{font:700 1.65rem/1 var(--sans);letter-spacing:-.02em}
+.vb .l{font:500 11px/1.4 var(--mono);color:var(--muted);letter-spacing:.07em;
+  text-transform:uppercase;margin-top:7px}
+.vb.red .n{color:var(--accent)} .vb.green .n{color:var(--ok)} .vb.amber .n{color:var(--warn)}
+.first{background:var(--accent);color:#fff;border-radius:14px;padding:30px 32px;margin:30px 0}
+.first h2{color:#fff;margin:0 0 12px}
+.first h2 .num{color:rgba(255,255,255,.72)}
+.first p{color:rgba(255,255,255,.95)}
+.first code{background:rgba(255,255,255,.18);color:#fff}
+.first strong{color:#fff}
+footer{margin-top:70px;padding-top:22px;border-top:1px solid var(--line);
+  font:12px/1.7 var(--mono);color:var(--muted)}
+.jp{font-family:"Hiragino Sans","Yu Gothic",sans-serif}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="kicker">LLM Council · Verdict</div>
+  <h1>The two-device use case is dead.<br>Here is what replaces it.</h1>
+  <p class="sub">A rebuild of Kyūkyū-Bridge's real-world use case, under the constraint that no
+  panicking caller will ever operate two devices or own a warm laptop.</p>
+  <div class="meta">
+    5 advisors · 5 peer reviews · chairman synthesis<br>
+    2026-09-14 · repo verified: 49 WAVs · app.py 1,161 lines · src/ 2,089 lines
+  </div>
+</header>
+
+<div class="verdictbar">
+  <div class="vb red"><div class="n">~5 bits</div><div class="l">What the runtime AI actually moves</div></div>
+  <div class="vb green"><div class="n">4 MB</div><div class="l">The real deliverable (not 3.9 GB)</div></div>
+  <div class="vb amber"><div class="n">UNPROVEN</div><div class="l">Single-device uplink (item 13 retracted)</div></div>
+</div>
+
+<h2><span class="num">01</span>Where the Council Agrees</h2>
+
+<div class="card kill">
+<span class="tag kill">Confirmed dead</span>
+<p><strong>The warm-laptop, two-device use case — killed by its own logic, not by your
+instruction.</strong> All five advisors independently rejected it. The Outsider gave the reason the
+document never addressed: the README says the laptop "stays in the building," and treats that as if
+it meant <em>within arm's reach</em>. It doesn't. Emergencies happen in bathrooms, bedrooms,
+stairwells. Nobody stands next to the laptop when someone collapses, and nobody leaves the patient
+to go find it. <strong>Your constraint was correct before you justified it.</strong></p>
+</div>
+
+<p><strong>Almost none of the emergency-path value requires a model at runtime.</strong> The First
+Principles Thinker counted the bits and the count is not arguable. Address, room, age, sex,
+conditions: already in <code>profile.json</code>, zero entropy. Consciousness, breathing,
+circulation: forced buttons, and the model is explicitly <em>banned</em> from touching them. What
+remains for Whisper plus a 3-billion-parameter model over an 884-token prompt is <strong>one
+selection out of 28 — roughly five bits.</strong></p>
+
+<p><strong>The real deliverable is already built, and it is 4 MB.</strong> 49 pre-rendered WAVs
+(verified: 44 in <code>data/audio/</code>, 5 in <code>data/audio/profile/</code>) plus a 31-term
+human-verified ontology. Your README already concedes the app "never synthesises speech at
+runtime." The classifier does not <em>produce</em> Japanese — it picks which file to play.</p>
+
+<p><strong>C8 is not a wall, it is a booking form.</strong> Koto and Edogawa fire stations run free,
+publicly-enrollable <span class="jp">普通救命講習</span> — three hours in a room with a serving
+firefighter. You rated expert access 99.9% infeasible. You were wrong, and this is the cheapest
+correction available to you this week.</p>
+
+<p><strong>A full re-platform in seven days is impossible.</strong> Porting Whisper + Qwen2.5-3B to
+a phone is weeks of llama.cpp/ONNX work and destroys OpenVINO (prefix caching is x64-only). You do
+not need to: the WAVs are already rendered, and a tap-driven PWA over a closed audio set is HTML
+and <code>&lt;audio&gt;</code>.</p>
+
+<h2><span class="num">02</span>Where the Council Clashes</h2>
+
+<h3>Clash 1 — Does a laminated card make the product unnecessary?</h3>
+<p>The Contrarian's sharpest attack: the only gap you claim over <span class="jp">三者間同時通訳</span>
+is the room number and the medical history, and a laminated fridge card delivers that at 0% of the
+technology. The First Principles Thinker refuted it in one line, and the dissent reviewer confirmed
+it:</p>
+<blockquote><p>A caller who cannot read Japanese cannot pronounce <span class="jp">江東区南砂</span>.</p></blockquote>
+<p>Romaji read aloud by a panicked non-speaker through narrowband cellular is not intelligible.
+<strong>That single fact is the only thing keeping a device in the loop at all</strong> — and you
+should be able to say it in one breath, because it is now the load-bearing justification for your
+entire product.</p>
+
+<h3>Clash 2 — Tap grid versus speech. The consensus here is suspect.</h3>
+<p>Four advisors converged on "strip the AI, ship a tap grid." The dissent reviewer was right to be
+suspicious: four instances running the same cheap move — subtract the AI, find the residue, declare
+the residue the product — is weak evidence, not strong. The steelman nobody wrote: <strong>a
+panicking layperson does not know which of 28 categories "she's gone grey and floppy" belongs
+to.</strong> Mapping free description onto ontology IDs is precisely the classifier's job, and a
+grid silently hands that mapping back to the user while claiming to "hand them the structure."
+Twenty-eight alternatives under stress is search, not structure. The human-factors reviewer added
+the other half: a wrong tap speaks confidently wrong Japanese in an authoritative synthetic voice,
+and neither the caller nor the dispatcher can catch it.</p>
+
+<div class="card watch">
+<span class="tag watch">Chairman's resolution</span>
+<p>The panic-critical payload is <strong>one button, not 28.</strong> Your own README says the
+ambulance is dispatched on type + location at ~15 seconds. Every symptom tap happens <em>after</em>
+dispatch, while the ambulance is already moving and a dispatcher is guiding. So "28 icons under
+maximum stress" is a scenario your own architecture does not create. Ship the grid — but the drill
+must measure time-to-<strong>first-button</strong> <em>and</em> icon-find latency separately, or you
+are shipping your core assumption untested, which is the exact sin you convict the laptop of.</p>
+</div>
+
+<h3>Clash 3 — Does gutting the runtime AI destroy the Intel story?</h3>
+<p>The Expansionist's rescue was "the AI moves to registration." The strategy reviewer called that a
+rationalisation and is right: registration-time work is <strong>TTS of an address, not Qwen
+classification</strong>, and your 6.97× / 10.94× were measured on the inference path registration
+never touches. <strong>Do not use that framing</strong> — it will not survive a judge who reads your
+own benchmark files.</p>
+
+<h2><span class="num">03</span>Blind Spots the Council Caught</h2>
+
+<div class="card kill">
+<span class="tag kill">A · Your existing "PASSED" is void</span>
+<p>Phone-to-phone VoLTE negotiates AMR-<strong>WB</strong> (~50–7000 Hz). A real 119 call routinely
+lands on AMR-<strong>NB</strong> (300–3400 Hz) <strong>with a voice activity detector</strong>.
+Loudspeaker-to-mic TTS under AGC clamping is exactly the signal a VAD misclassifies as noise and
+replaces with comfort noise — a failure mode entirely independent of echo cancellation, which nobody
+named. <strong>This invalidates item 13 in <code>OPEN_DECISIONS.md</code>:</strong> that test was a
+<strong>WhatsApp</strong> call — wideband Opus, no cellular VAD. It does not prove what the register
+says it proves.</p>
+</div>
+
+<div class="card kill">
+<span class="tag kill">B · The duplex problem</span>
+<p>Nobody in the entire council designed for the dispatcher talking back. A recording cannot yield.
+A dispatcher who cannot interrupt will talk over it, and then neither party hears the other. Worse:
+while Japanese plays out the loudspeaker, <strong>the caller cannot hear the dispatcher's
+question</strong> — playback occupies their only audio channel. There is no STOP button anywhere in
+any proposal.</p>
+</div>
+
+<div class="card keep">
+<span class="tag keep">C · The downlink is your next product</span>
+<p>Every advisor treated this as getting information <em>to</em> the dispatcher. But a 119 dispatcher
+immediately talks <em>back</em>, in scripted Japanese the caller cannot understand — inside the same
+60 seconds. That failure needs <strong>no uplink injection, breaks no physics, and works on one
+device.</strong> The Outsider named the same thing from the other end: the frightening part is the
+nine minutes of <span class="jp">口頭指導</span> you dismiss in one line. <strong>This is where
+runtime AI genuinely earns its place, and naming it is what makes the ablation an advance rather
+than a retreat.</strong></p>
+</div>
+
+<div class="card kill">
+<span class="tag kill">D · Liability — raised by no advisor, demolished by one reviewer</span>
+<p>"Register 200 households in a weekend" is a 16-year-old, unsupervised, collecting
+<span class="jp">要配慮個人情報</span> — conditions, medications, ages of elderly dependents — from
+strangers in a school hall. No consent form, no APPI data controller, no stated storage location,
+and a minor cannot sign a data agreement. Beyond that: no incident record, no way to ever learn it
+was used, no recall path when a household moves and the stored address becomes wrong, and no
+instruction telling the caller what to do when it fails.</p>
+</div>
+
+<p><strong>E · The real incumbent is missing from your competitive analysis.</strong> Not NET119, not
+<span class="jp">三者間同時通訳</span>. It is: <em>dial 119, shout in English, then phone the one
+Japanese-speaking person you know and hand over.</em> You compare yourself only to government
+services, never to what people actually do.</p>
+
+<p><strong>F · Corrections to your own documents.</strong> 49 WAVs, not 46. <code>src/</code> is
+2,089 lines. And the README's 13.3%-cannot-read-Japanese statistic is doing work the product does
+not do — <strong>your interface is in English</strong>, including both confirmation screens, so your
+actual user is an English reader. Say that plainly.</p>
+
+<h2><span class="num">04</span>The Recommendation</h2>
+<p>Split the product along the only three moments that actually exist, and be honest that the AI
+currently sits in the wrong one.</p>
+
+<div class="card keep">
+<span class="tag keep">1 · Before — registration</span>
+<p>No panic, no clock, no second device. The laptop app survives here unchanged, building a
+household's verified Japanese audio bundle. This is the honest home of your Streamlit/OpenVINO
+stack. It is <strong>not</strong> where the 6.97× applies, and you must not claim it is.</p>
+</div>
+
+<div class="card keep">
+<span class="tag keep">2 · During, uplink — the phone in the caller's hand</span>
+<p>An offline PWA, ~4 MB, one home-screen icon. <strong>One red button</strong> that plays
+<span class="jp">救急です</span> + address + room. Three forced-choice vital buttons. A two-level
+symptom grid <em>after</em> dispatch. A permanent <strong>STOP</strong>. <strong>Zero AI at runtime
+— and you say that out loud, as a finding, not a confession.</strong></p>
+</div>
+
+<div class="card watch">
+<span class="tag watch">3 · During, downlink — the unbuilt half</span>
+<p>The dispatcher's Japanese, transcribed on-device and matched against a closed set of expected
+dispatcher questions, shown to the caller in their language. No uplink injection. No physics wall.
+One device. This is where Whisper and the classifier genuinely belong, and it is the strongest
+honest thing you can put in front of a judge.</p>
+</div>
+
+<h3>The festival framing — better than what you have now</h3>
+<blockquote>
+<p>We ablated our own model. We measured that the uplink carried five bits and did not need a 3B
+model to carry them — so we took it out and shipped the part that works on the phone people already
+hold. Then we measured where the model <em>is</em> necessary: understanding the dispatcher. Here is
+the benchmark for both.</p>
+</blockquote>
+<p>A rigorously documented negative result is judgeable work. Concealing it is the only thing that
+isn't. This also satisfies your own rule — the pitch follows the truth, rather than the truth being
+shaped for the pitch.</p>
+
+<h3>The single-device verdict, bluntly</h3>
+<p>Injecting audio into a live call's uplink is <strong>impossible on every platform.</strong> The
+<em>self-echo</em> loop — the phone playing its own audio out its own loudspeaker into its own
+microphone on speakerphone — is <strong>unproven, and your existing "PASSED" does not prove it</strong>,
+because it ran over WhatsApp. It may work. If it does, everything above ships. If it does not, the
+honest product is registration + downlink comprehension — and <strong>you must write down what each
+outcome means before you run the test, so the result cannot be negotiated afterwards.</strong></p>
+
+<h3>Seven days</h3>
+<div class="tblwrap">
+<table>
+<thead><tr><th>Day</th><th>Do</th></tr></thead>
+<tbody>
+<tr><td><strong>Mon</strong></td><td>The corrected echo test. Write the raw result into <code>OPEN_DECISIONS.md</code> <strong>before touching any code</strong>, including the retraction of item 13's "PASSED".</td></tr>
+<tr><td><strong>Tue–Wed</strong></td><td>The tap-only PWA: one red button, 3 vital buttons, 6 category tiles → terms, permanent STOP. Static HTML + <code>&lt;audio&gt;</code> over the 49 existing WAVs.</td></tr>
+<tr><td><strong>Thu</strong></td><td>Install on a real phone. Five timed drills with your family: stopwatch <strong>time-to-first-button</strong> <em>and</em> <strong>icon-find latency</strong>. Both numbers go in the README.</td></tr>
+<tr><td><strong>Fri</strong></td><td>Book and attend <span class="jp">普通救命講習</span> at Koto or Edogawa. Show it in the break. Write down verbatim what the firefighter says, good or bad.</td></tr>
+<tr><td><strong>Sat</strong></td><td>Rewrite README and <code>OPEN_DECISIONS.md</code> to the truth. Delete the false claims below.</td></tr>
+<tr><td><strong>Sun</strong></td><td>Buffer. Do not add features.</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Cut, without negotiation:</strong> the 7 untested languages, the map picker,
+<span class="jp">口頭指導</span>/CPR content, ontology expansion (D2), Japanese UI localisation, and
+any attempt to port models to a phone.</p>
+
+<h3>The Nishikasai path — grounded, and slower than the Expansionist wants</h3>
+<p>The Indian International School in Japan and the Nishikasai community are the right target and
+you are the right person to reach them. But <strong>do not run a registration desk.</strong> Ship
+the app so <strong>each family registers itself on its own phone</strong> and the data never leaves
+it — that removes the APPI problem, the consent problem, and the minor-as-data-controller problem in
+one design decision, and it is a <em>better</em> architecture, not a compromise. Your metric is
+<strong>installs with a completed profile, verified by a drill</strong> — not households processed.
+Ten real ones beat two hundred claimed. Find one adult sponsor — a teacher, a parent, a Nishikasai
+clinic doctor — before you approach any institution.</p>
+
+<h3>README claims that are now false and must be deleted</h3>
+<ol>
+<li><strong>Line 80</strong> — "The app runs on a device that stays in the building, already open,
+model already warm." Delete. This is the assumption you just killed.</li>
+<li><strong>Line 335</strong> — "The only real cost is a device that stays in the building." Delete.</li>
+<li><strong>"Two devices, deliberately"</strong> and the speakerphone choreography paragraph. Delete.</li>
+<li><strong>The 3–6 minute on-scene delay as <em>your</em> target.</strong> That clock starts when the
+crew arrives — after your window has closed. Cite it as context; do not claim to attack it.</li>
+<li><strong>The 13.3%-cannot-read-Japanese statistic as justification.</strong> Your UI is English.
+Keep the statistic only if you state that limitation in the same paragraph.</li>
+<li><strong><code>OPEN_DECISIONS.md</code> item 13, "PASSED WITH ONE CAVEAT."</strong> The caveat was
+the test. Downgrade to UNPROVEN until Monday's result.</li>
+<li><strong>Total footprint "~3.9 GB per installed device."</strong> After the split it is ~4 MB on
+the phone and 3.9 GB on the registration machine. Two numbers, stated separately.</li>
+</ol>
+
+<div class="first">
+<h2><span class="num">05</span>The One Thing to Do First</h2>
+<p><strong>Tonight, run the corrected echo test — over a real cellular call, not WhatsApp — and
+write the result into <code>OPEN_DECISIONS.md</code> before you write a line of code.</strong></p>
+<p>Phone A places a <strong>normal cellular call</strong> to Phone B (not WhatsApp, not LINE, not
+FaceTime — those are wideband Opus and are why your existing result is worthless). A on
+speakerphone, media volume maximum. Play <code>data/audio/03f4fc3c57a080a2.wav</code> out of A's own
+loudspeaker. <strong>Record what B receives.</strong> Repeat: A flat on a table, A held up, someone
+talking near A, and once with wired earbuds in A. Repeat the whole set on the other OS — Apple and
+each Android OEM implement echo cancellation differently, so one handset proves nothing.</p>
+<p>Then play the recording to a Japanese speaker who has never heard the line and ask them to write
+down the address. <strong>If they cannot write 江東区南砂四丁目24-5 405号室 from that recording, the
+single-device uplink is dead</strong> — and you will have learned it for the price of one phone call,
+before building anything on top of it.</p>
+<p>Decide now, in writing, what each outcome means. <strong>You do not get to decide after you see
+it.</strong></p>
+</div>
+
+<h2><span class="num">06</span>The Full Record</h2>
+
+<details><summary><span class="who">Contrarian</span> "It is not untested — it is adversely designed against you"</summary>
+<div class="dbody">
+<p>The single-device path is not "untested," it is adversely designed against you. On a speakerphone
+call, hardware AEC's reference signal is the speaker feed, not the downlink stream. Your app's media
+audio goes into that same mixer. You would be asking the phone's DSP to cancel everything coming out
+of its loudspeaker except the one thing you want it to pass. Worse, the mic is centimetres from a
+speaker at call volume: AGC clamps, and the caller's own voice is destroyed for the duration. On
+iOS, media playback during a cellular call is ducked or denied outright. Even in the lucky case
+where one handset leaks enough signal through, you have a life-safety product whose delivery
+mechanism is per-handset, per-OS, per-carrier lottery. "It worked on my Pixel" is not a mechanism.
+Test it — but plan for it failing, because it probably will, and an unreliable pass is worse than a
+clean fail.</p>
+<p>Here is the flaw you're avoiding. Strip out live injection and look at what's left. Your own log
+concedes a government text+GPS app beats you architecturally. Your README says the only real gap
+versus 三者間同時通訳 is the room number and the medical history. That gap is a profile.json lookup
+and a pre-rendered string. It needs no Whisper, no Qwen, no ontology, no OpenVINO, no 511s→73s. The
+part of your product that is uniquely valuable requires zero AI. The part that requires AI — live
+symptom classification into 31 terms — is precisely the part a human interpreter already does
+better, live, on 93.5% of departments, for free.</p>
+<p>So yes: a laminated card with your address, 405号室, age, 持病, in Japanese with romaji the caller
+can read aloud, delivers most of your defensible value at 0% of the technology. Say that out loud
+before a judge says it for you.</p>
+<p>Honest fallback: the app becomes a generator of that pre-call artifact — one phone, no call-time
+audio path, nothing to inject, no AEC. The AI earns its place only if it does something the card
+cannot: 口頭指導 in the caller's language, spoken to the caller's ear, after dispatch. That's a
+delivery-to-caller problem, which has no technical wall.</p>
+</div></details>
+
+<details><summary><span class="who">First Principles</span> "You run a 3B model to move five bits"</summary>
+<div class="dbody">
+<p>Strip the AI out and count what's left: 46 WAV files, 3.9 MB. That is the entire Japanese surface
+area of this product — every sentence it can ever utter, pre-rendered by tools/build_audio.py,
+human-verified, closed-set. The classifier does not produce Japanese. It picks which file to play.
+The irreducible unit of value is a verified Japanese audio sentence.</p>
+<p>Now count the bits. At the moment of the call: address, room, age, sex, conditions — all already
+in profile.json. Zero entropy. Consciousness, breathing, circulation — forced buttons, 3 bits, the
+model is explicitly banned from touching them. What remains is one selection from symptoms (20) plus
+events (8): roughly 4–5 bits of genuinely new information.</p>
+<p>The product runs Whisper, then a 3-billion-parameter model over an 884-token prompt, then two
+confirmation loops, to move five bits. OpenVINO's 6.97× and the x64-exclusive 10.94× are real
+engineering — applied to hauling five bits across a laptop.</p>
+<p>So the council is being asked the wrong question. "One device or two?" is downstream. The real
+question is: why is there a speech input at all? Your own README answers it against you: "a
+panicking person cannot produce structured, dispatcher-usable information at all — in any language."
+Correct. The response to <em>cannot produce structure</em> is to hand them the structure, not to
+infer it from unstructured speech. Speech re-injects exactly the entropy the stored profile was
+built to eliminate — and every open risk you logged lives in that lane: C1 negation inversion, C2's
+seven unrun languages, Whisper's "You're free to go." ×70, the English-only confirmation screens.</p>
+<p>And a laminated fridge card does not substitute, because a caller who cannot read Japanese cannot
+pronounce 江東区南砂. The real product is an offline Japanese soundboard with a stored profile. Say
+that out loud. Then decide, honestly, whether the Intel story survives it — not the reverse.</p>
+</div></details>
+
+<details><summary><span class="who">Expansionist</span> "The 3.9 GB is not the product. The 4 MB is."</summary>
+<div class="dbody">
+<p>Everyone is reasoning as if the asset pile is a model stack. It isn't. data/audio/ is pre-rendered
+WAVs and data/ontology.json is 31 human-verified terms plus 27 conditions and 13 condition groups.
+Neither needs Whisper, Qwen, OpenVINO, or a warm anything. The README already concedes the app
+"never synthesises speech at runtime." That means the inference can happen once, at registration, on
+a machine that is not the user's, and the household walks away with a phone-sized bundle of verified
+Japanese audio keyed to their address, their room number, their grandmother's anticoagulants. The
+hard constraint kills the runtime. It does not touch the output.</p>
+<p>Concretely, Nishikasai: the Indian International School in Japan sits in Nishikasai with roughly a
+thousand families, almost all within walking distance, and its parents are precisely the README's
+user — foreign resident, fixed registered address, elderly relative on a dependent visa, poor
+Japanese. One PTA-hall session is not "community partnership," it is a folding table, a laptop, a
+Hindi-speaking high schooler, and a queue. Add the Edogawa Diwali / Namaste India crowd at Kasai
+Rinkai and the Nishikasai grocers as QR-sticker surfaces.</p>
+<p>And the expert gap is a web form, not a wall. 葛西消防署 runs free public 普通救命講習 on open
+enrollment — three hours in a room with a serving firefighter instructor. C8 says no paramedic has
+ever seen this. Booking that course changes C8 this month, without asking permission from anyone.</p>
+<p>Undervalued most: the ontology itself. No public dataset maps panicked bystander speech to
+dispatcher-register Japanese. Publish it CC-BY — it outlives the app.</p>
+</div></details>
+
+<details><summary><span class="who">Outsider</span> "Nobody stands next to the laptop when the emergency starts"</summary>
+<div class="dbody">
+<p>What I picture, and where it breaks. Someone collapses. A person dials 119, puts the phone on the
+floor on speakerphone, and then — walks to another room, to a laptop, and starts tapping through
+screens while a dispatcher is talking. That is the break. The README never says where the laptop is.
+Emergencies happen in bathrooms, bedrooms, kitchens, stairwells; a laptop that "stays in the
+building" is in exactly one of those.</p>
+<p>What a real person does at 3am. They dial 119 and shout in English. Then they call the one
+Japanese-speaking person they know — a neighbour, a colleague, a spouse's friend — and hand the
+phone over. That's the actual incumbent, and the README never mentions it. It compares itself to
+government services, not to the thing people really do.</p>
+<p>What I don't believe. The room-number claim is the load-bearing justification for the whole
+thing, and it's a three-digit number. A terrified person who can't pronounce 呂律が回らない can
+absolutely say "four zero five."</p>
+<p>The document contradicts itself. It says the ambulance is dispatched at 15 seconds and everything
+after happens while it's en route — then says "inference latency is a polish problem, not a safety
+one." Fine. But then the 6.97× Intel speedup is a polish story, and it gets four times more page
+space than what the user actually touches. As a stranger, the ratio of Intel prose to human prose
+tells me what this was built for.</p>
+<p>English interface. The pitch is "for people who don't speak Japanese," but the screens are
+English. So the user is an English speaker. Say that plainly.</p>
+<p>The problem I'd name. Not the first 60 seconds. The nine minutes after, when a dispatcher is
+trying to talk you through CPR in Japanese and you understand none of it. The README lists that as
+out of scope in one line. That's the frightening part, and it's the part left alone.</p>
+</div></details>
+
+<details><summary><span class="who">Executor</span> "Run the echo test tonight. It gates everything."</summary>
+<div class="dbody">
+<p>Protocol, exactly: Phone A calls Phone B. B goes in another room with someone holding it. A on
+speakerphone, media volume max. Play a fixed line out of A's own loudspeaker while the call is live.
+Listener on B reports: clear / faint-and-warbling / silent. Repeat three times — A flat on a table,
+A held up, and with someone talking near A. Then repeat the whole thing on the other OS. AEC is
+implemented differently by Apple and by each Android OEM; one phone proves nothing.</p>
+<p>Reading the result: clear → single device works, the laptop dies, the form factor is a PWA.
+Faint/chopped/pumping → AEC is gating it; retest with wired earbuds in A (the AEC reference moves
+off the loudspeaker) — if that recovers it, the product ships with "plug in earbuds," a far smaller
+ask than "own a warm laptop." Silent → the single-device acoustic loop is dead, and you stop
+designing around it today.</p>
+<p>Re-platforming, priced against the actual code: a full port is impossible this week and you
+should stop considering it. app.py is 1,161 lines of Streamlit session_state spaghetti. Android
+means no OpenVINO — prefix caching is x64-only, so the 10.94× vanishes — and Whisper + Qwen2.5-3B on
+a phone is a llama.cpp/ONNX port measured in weeks, not days.</p>
+<p>But you don't need the models to ship the phone version. 救急です + your address + 28
+symptom/event terms are already rendered. A static PWA with tap-buttons and &lt;audio&gt; playback is
+two evenings of HTML/JS and delivers the dispatch-critical payload with zero AI on the phone already
+in the caller's hand.</p>
+<p>Validation you can get by Friday: book a 救命講習 at Koto or Edogawa fire station — public, free,
+walk-in-bookable, and a serving firefighter is in the room for three hours. Show it in the break.
+That is your paramedic. Also: any Nishikasai clinic doctor, and the Indian school's office — ask for
+ten households, not one.</p>
+</div></details>
+
+<details><summary><span class="who">Peer review</span> All five reviews (technical · human factors · strategy · liability · dissent)</summary>
+<div class="dbody">
+<p><strong>Reviewer 1 — technical, fact-checked against the repo.</strong> Strongest: the
+Expansionist — verification proves its thesis is already built, since
+<code>data/audio/profile/</code> holds five per-household WAVs rendered at build time. Biggest blind
+spot: the Outsider, which never touches a mechanism and delivers none of the six mandated outputs.
+Missed by all five: the decisive test is codec-confounded — phone-to-phone VoLTE is AMR-WB, a 119
+call is AMR-NB with a VAD that can classify loudspeaker-relayed TTS as noise. Corrections: 49 WAVs
+not 46; src/ is 2,089 lines not ~2,400.</p>
+<p><strong>Reviewer 2 — human factors.</strong> Strongest: the Executor, the only response treating
+the unknown as an experiment and the only one proposing to measure humans. Biggest blind spot: the
+First Principles Thinker — "two taps" is asserted, never tested, and there is no undo; a wrong tap
+speaks confidently wrong Japanese that neither caller nor dispatcher can catch. Missed by all five:
+the duplex problem — no stop button, no barge-in, and playback occupies the caller's only audio
+channel.</p>
+<p><strong>Reviewer 3 — strategy and truth.</strong> Strongest: the Executor, the only response
+satisfying both mandates without rationalising. Biggest blind spot: the Contrarian — brave-sounding
+but terminal; it mistakes "the AI is unnecessary" for "the product is unnecessary." Missed by all
+five: the Expansionist's "AI runs at registration" rescue is a rationalisation, because registration
+is TTS not Qwen. And nobody named the strongest honest framing: <em>we ablated our own model and
+measured that five bits didn't need it.</em></p>
+<p><strong>Reviewer 4 — deployment and liability.</strong> Strongest: the Contrarian, the only
+response reasoning about failure modes rather than success paths. Biggest blind spot: the
+Expansionist — "200 households in a weekend" is a minor collecting 要配慮個人情報 with no consent,
+no APPI controller, no data agreement. Missed by all five: what happens the first time it runs
+badly. No incident record, no recall path when a household moves, no "if this fails, hang up and
+speak," no adult sponsor.</p>
+<p><strong>Reviewer 5 — convergence and dissent.</strong> Strongest: the Executor, for converting the
+unknown into a falsifiable test with a decision rule per outcome. The consensus is suspect: four
+instances ran the same cheap move and that move always terminates somewhere. Steelman nobody wrote:
+a panicking layperson does not know which of 28 categories their observation belongs to — that
+mapping is the classifier's job. Most consequential disagreement: card versus soundboard, and the
+soundboard wins, because a non-speaker cannot pronounce 江東区南砂. Missed by all five: the
+downlink.</p>
+</div></details>
+
+<footer>
+LLM Council · 5 advisors, 5 peer reviews, chairman synthesis · 2026-09-14<br>
+Full transcript: <code>council/council-transcript-2026-09-14.md</code> ·
+Verdict source: <code>council/VERDICT.md</code>
+</footer>
+
+</div>
+</body>
+</html>
