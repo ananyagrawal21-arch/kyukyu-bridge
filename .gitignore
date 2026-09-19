@@ -26,3 +26,7 @@ __pycache__/
 
 # macOS
 .DS_Store
+
+# local test artefacts
+ANDROID_TEST.wav
+benchmark/.stage_*_cache.json
