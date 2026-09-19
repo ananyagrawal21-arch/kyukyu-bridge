@@ -1,0 +1,61 @@
+{
+  "purpose": "Diagnostic probe, NOT a scored eval. Separate from slm_testset.json so the published 52-case figures stay reproducible. Each case carries a category so results answer a specific question rather than producing one blended number.",
+  "categories": {
+    "A_recognition": "CLEAR symptom, unusual lay wording. A miss here is a real recognition gap.",
+    "B_abstention": "Genuinely ambiguous. [] is the CORRECT answer. Anything returned is a fabrication.",
+    "C_negation": "The caller denies something. Tests whether 'not' is honoured.",
+    "D_temporal": "Past, resolved, retracted or hypothetical. [] is correct.",
+    "E_coverage": "CLEAR and clinically real, but outside the 31. [] is correct classification but the information is LOST - this is the channel-2 evidence.",
+    "F_panic": "Disfluency and multi-symptom, as a panicking caller speaks."
+  },
+  "cases": [
+    {"cat": "A_recognition", "t": "he's clutching at his chest and he won't let go", "e": ["chest_pain"]},
+    {"cat": "A_recognition", "t": "his heart is going like a drum, really fast", "e": ["palpitations"]},
+    {"cat": "A_recognition", "t": "the room is spinning for her, she can't stand up straight", "e": ["dizziness"]},
+    {"cat": "A_recognition", "t": "his head is pounding like someone is hitting it", "e": ["headache"]},
+    {"cat": "A_recognition", "t": "she brought up everything she ate", "e": ["vomiting"]},
+    {"cat": "A_recognition", "t": "his fingers have gone all pins and needles", "e": ["numbness"]},
+    {"cat": "A_recognition", "t": "she's burning up, really hot to touch", "e": ["high_fever"]},
+    {"cat": "A_recognition", "t": "his lower back has gone, he can't straighten up", "e": ["lower_back_pain"]},
+    {"cat": "A_recognition", "t": "he went under in the water and we pulled him out", "e": ["drowning"]},
+    {"cat": "A_recognition", "t": "one side of his mouth has gone slack", "e": ["face_drooping"]},
+    {"cat": "A_recognition", "t": "his skin is freezing cold to touch", "e": ["body_cold"]},
+    {"cat": "A_recognition", "t": "he's soaked in sweat but says he feels cold", "e": ["cold_sweat"]},
+    {"cat": "A_recognition", "t": "his words are coming out all mushy, I can't understand him", "e": ["slurred_speech"]},
+    {"cat": "A_recognition", "t": "her right arm and leg have gone dead, she can't lift them", "e": ["one_sided_weakness"]},
+
+    {"cat": "B_abstention", "t": "the part below his face and above his stomach is paining", "e": [], "note": "founder's case - genuinely spans chest/upper abdomen"},
+    {"cat": "B_abstention", "t": "he doesn't look right at all", "e": []},
+    {"cat": "B_abstention", "t": "something is really wrong with him", "e": []},
+    {"cat": "B_abstention", "t": "he's just not himself today", "e": []},
+    {"cat": "B_abstention", "t": "it hurts, it really hurts", "e": [], "note": "pain with no location"},
+    {"cat": "B_abstention", "t": "please come quickly, please", "e": []},
+
+    {"cat": "C_negation", "t": "he is not bleeding at all", "e": []},
+    {"cat": "C_negation", "t": "there is no chest pain, nothing like that", "e": []},
+    {"cat": "C_negation", "t": "she is breathing completely normally", "e": []},
+    {"cat": "C_negation", "t": "no fever, no vomiting, it's just his chest that hurts", "e": ["chest_pain"]},
+    {"cat": "C_negation", "t": "he's bleeding a lot but he did not hit his head", "e": ["heavy_bleeding"]},
+    {"cat": "C_negation", "t": "she fell over but there is no bleeding anywhere", "e": ["fall"]},
+    {"cat": "C_negation", "t": "he has not had a seizure, he's just dizzy", "e": ["dizziness"]},
+
+    {"cat": "D_temporal", "t": "he had a seizure last month but nothing today", "e": []},
+    {"cat": "D_temporal", "t": "I thought she was choking but she wasn't", "e": []},
+    {"cat": "D_temporal", "t": "if he stops breathing what should I do", "e": [], "note": "hypothetical"},
+    {"cat": "D_temporal", "t": "his chest was hurting earlier but it stopped", "e": []},
+    {"cat": "D_temporal", "t": "my neighbour had a heart attack last year", "e": [], "note": "not the patient, not now"},
+
+    {"cat": "E_coverage", "t": "his leg is bent the wrong way and the bone is showing", "e": [], "note": "fracture - not in the 31"},
+    {"cat": "E_coverage", "t": "his lips are turning blue", "e": [], "note": "cyanosis - not in the 31"},
+    {"cat": "E_coverage", "t": "he drank something from under the kitchen sink", "e": [], "note": "poisoning - not in the 31"},
+    {"cat": "E_coverage", "t": "she was stung by something and her face is swelling up", "e": [], "note": "anaphylaxis - not in the 31"},
+    {"cat": "E_coverage", "t": "he's been badly burned on his arm", "e": [], "note": "burns - not in the 31"},
+    {"cat": "E_coverage", "t": "she's in labour and the baby is coming now", "e": [], "note": "childbirth - not in the 31"},
+
+    {"cat": "F_panic", "t": "oh god oh god he just, he fell, he fell down the stairs and he's bleeding", "e": ["fall_down", "heavy_bleeding"]},
+    {"cat": "F_panic", "t": "she can't breathe properly and she's gone really pale", "e": ["difficulty_breathing", "pale_complexion"]},
+    {"cat": "F_panic", "t": "he's confused, keeps saying weird things, and his speech is slurred", "e": ["confused", "slurred_speech"]},
+    {"cat": "F_panic", "t": "my husband just collapsed and he's not responding at all", "e": ["collapsed"], "note": "unconscious is in SLM_DISCARD"},
+    {"cat": "F_panic", "t": "um, she, she hit her head on the counter and now she's throwing up", "e": ["head_injury", "vomiting"]}
+  ]
+}
