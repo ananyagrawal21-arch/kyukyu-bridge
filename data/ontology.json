@@ -13,8 +13,12 @@
     "FRAME - who the information comes from, clinically meaningful:",
     "  observed         - only the caller can know it (not breathing). Stated directly.",
     "  reported         - only the patient can know it (pain). Wrapped in 〜と言っています.",
-    "  source_dependent - could be either; the Week-2 SLM resolves per utterance. For now the",
-    "                     crude matcher states them directly. Do not hard-code a frame guess.",
+    "  SOURCE_DEPENDENT WAS RETIRED (founder, 2026-09-12). difficulty_breathing and choking",
+    "  carried it because either the patient or the caller could be the source. In practice the",
+    "  code had no third branch - they already fell through to the observed wording - so the tag",
+    "  described an intention nothing implemented. Both are now plainly `observed`: 息が苦しいです",
+    "  and のどに何か詰まっています are safe either way, and an unhandled category is worse than a",
+    "  settled one. Do not reintroduce a frame the renderer does not handle.",
     "",
     "verified: TRUE for all 31 - founder (fluent, resident in Japan) read every term and",
     "confirmed each is natural, clear, non-diagnostic, and dispatcher-appropriate. The 13",
@@ -98,7 +102,7 @@
         "can't catch her breath"
       ],
       "japanese_term": "息が苦しいです",
-      "frame": "source_dependent",
+      "frame": "observed",
       "verified": true,
       "critical": true,
       "note": "Source-dependent: 'he says he can't breathe' (conscious) vs 'his breathing looks laboured' (observed). SLM resolves from phrasing."
@@ -470,7 +474,7 @@
       "forms": {
         "finished": "のどに何か詰まっていました"
       },
-      "frame": "source_dependent",
+      "frame": "observed",
       "verified": true,
       "critical": true,
       "note": "Usually observed, but a conscious patient may grab their throat and say it. Shortened from のどに物を詰まらせた for pronounceability."

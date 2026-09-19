@@ -6,7 +6,6 @@ import re
 # Each matched symptom is phrased according to its FRAME (see ontology.json):
 #   reported  -> "<term>と言っています"  (the patient said it: implies conscious, talking)
 #   observed  -> "<term>"               (the caller saw it directly)
-#   source_dependent -> stated plainly for now; the Week-2 SLM will choose the frame.
 #
 # Patient details (age/sex/conditions) are omitted unless the caller confirmed the
 # emergency is about the person in profile.json - a wrong age is worse than none.
@@ -306,9 +305,12 @@ def render_location_pieces(address: dict = None) -> list[dict]:
 
 
 def _format_statement(term: str, frame: str) -> str:
+    # TWO frames only. `source_dependent` was retired 2026-09-12: it never had a branch here,
+    # so the two entries carrying it already rendered as observed. The tag recorded an intention
+    # the code did not implement, which is the worst kind of comment - it reads as a handled
+    # case. Anything that is not `reported` is stated directly.
     if frame == "reported":
         return f"{term}と言っています"
-    # observed and source_dependent are stated as-is for now.
     return term
 
 
