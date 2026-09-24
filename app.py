@@ -713,8 +713,7 @@ if phase == "setup":
                 # Record the new details NOW, not during an emergency. Also deletes recordings
                 # of details you just changed, so an old address does not linger on disk.
                 with st.spinner("Recording your details in Japanese…"):
-                    sys.path.insert(0, os.path.join(os.path.dirname(__file__), "tools"))
-                    import build_audio
+                    from tools import build_audio
                     result = build_audio.build(log=lambda *_: None)
                 get_data.clear()
                 if result["failed"]:

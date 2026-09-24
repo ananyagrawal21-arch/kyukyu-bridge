@@ -74,3 +74,18 @@ still happens in parallel so the dispatcher can hear the room and deliver 口頭
 
 Next: build the two-way demo — caller's phone ↔ server ↔ dispatcher console. See the end of
 `POSITIONING.md`.
+
+## Corrections — do not repeat these mistakes
+
+**Model size is not a barrier to phone deployment.** What ships is ~3.1 GB (Qwen2.5-3B INT8
+2.9 GB + Whisper small INT8 242 MB). Phones have 128 GB+ storage and 8–16 GB RAM; mobile games
+ship larger. `OPEN_DECISIONS.md:790` already records INT4 3B at ~1.9 GB as "fine on any modern
+phone", with 22–50 tok/s measured on phone silicon by others.
+
+The real barrier to running this on a phone is that **OpenVINO is an Intel runtime and does not
+run on phone chips.** Porting means a different runtime (llama.cpp / whisper.cpp / MLC), which
+means re-benchmarking everything and losing the Intel claim on the caller's device. That is a
+runtime-compatibility problem. Do not describe it as a size or footprint problem.
+
+**The 4.6 GB figure in `models/` includes `qwen2.5-1.5b-ov-int8`**, which was tested and rejected
+(it doubled fabrications). It does not ship. Quote 3.1 GB, not 4.6 GB, and not 3.9 GB.

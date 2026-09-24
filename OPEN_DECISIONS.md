@@ -2004,3 +2004,25 @@ Positioning below is still the live argument for WHY it exists; the build is don
   format is ever involved. `afconvert` covers file-based testing.
 - Resampling is done in our own code (`prepare_audio`), not left to transformers' automatic
   path, which garbled 48 kHz input into repeated nonsense.
+
+---
+
+## NEXT UP — open, not yet discussed (queued 2026-09-22)
+
+### 1. Where user data lives, and who is the data controller
+
+Deferred deliberately so the model-location decision could be settled on its own. **Take this
+up first, before anything else.**
+
+The question is NOT "server or no server" — the relay server is mandatory either way. It is:
+
+- Audio is uploaded to the server for inference. What is written to disk, what is held only in
+  memory, and what is logged?
+- The ontology IDs themselves (`chest_pain` + a named person + a registered address) are
+  医療情報 — 要配慮個人情報 under APPI Art. 2(3). Classifying on the phone first would reduce
+  the volume and remove incidental capture, but does NOT change the legal category.
+- `POSITIONING.md:102` already records that the founder cannot be an APPI data controller at 17.
+  That constraint applies to every version of the architecture, so it is not an argument for or
+  against on-device inference.
+- Unresolved: what a competition demo needs here versus what a real deployment needs. These may
+  have different answers and should not be conflated.
