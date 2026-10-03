@@ -110,3 +110,69 @@ untouched. TTS returns pointed the other way: spoken to the CALLER, in their lan
 person doing chest compressions cannot read a screen.
 
 The system went from one-way to two-way. That is more work, not less.
+
+## 6. Where Kyūkyū-Bridge sits — reference services (logged 2026-09-26)
+
+Kept on purpose, to be re-evaluated from time to time. These services are **references, not role
+models** — they validate pieces of the mechanism, they do not decide our design.
+
+**Smart911 (USA) is the main reference.** It is the closest existing service to what we are
+building: a citizen pre-registers a profile (address, household, medical conditions, disabilities,
+primary language); when that phone number calls 911, the profile appears on the call-taker's
+screen automatically; the voice call carries on as normal. It shows the dispatcher the caller's
+language — and stops there. Nothing bridges the conversation.
+
+| | Smart911 | Apple Medical ID + RapidSOS | Prepared / Carbyne | **Kyūkyū-Bridge** |
+|---|---|---|---|---|
+| Pre-registered profile | ✅ | ✅ | ❌ | ✅ |
+| Voice call continues | ✅ | ✅ | ✅ | ✅ |
+| Data on dispatcher's screen | ✅ | ✅ | ✅ | ✅ |
+| Shows the caller's language | ✅ | ❌ | ✅ | ✅ |
+| **Actually bridges the language** | ❌ | ❌ | ✅ | ✅ |
+| **Closed, verified output (no open machine translation)** | — | — | ❌ | ✅ |
+| **Guides the caller in their own language** | ❌ | ❌ | partly | ✅ |
+
+**The one-sentence version:** Smart911 is validated in 3,500+ US municipalities. It already shows
+the dispatcher the caller's language — and then stops. Kyūkyū-Bridge is the part that comes after:
+actually bridging that language, with output a human verified in advance.
+
+Every row except the last three is proven at scale elsewhere. The last three are what we add.
+Prepared and Carbyne bridge language with **open** machine translation — exactly what FDMA said it
+doubted in 2017 (「その精度に疑問が残る」). The closed ontology is the answer to that objection.
+
+**The warning that comes with the reference:** Smart911 in Arkansas — statewide since 2013,
+$825,000 a year — had ~22,000 household profiles about three years in, under 2% of households
+(Fox16 investigation). Citizen registration is the known weak point of this whole family.
+
+What each reference validates:
+
+| Service | Country | Validates |
+|---|---|---|
+| Smart911 (Motorola Solutions) | USA | pre-registered profile → screen, by phone number, alongside the call |
+| Apple Medical ID via RapidSOS | USA, Canada | pre-registered data sent automatically on call; no separate sign-up |
+| nora | Germany | pre-registered medical data stored on the phone, sent only in an emergency |
+| PEMEA (ETSI TS 103 478) | Europe | "caller language" as a standard field sent to emergency centres |
+| AML | EU, UK, 30+ countries | data travelling alongside a voice call, at national scale |
+| Live119 | Japan | data on the console while the call continues; used for 口頭指導 |
+| Prepared, Carbyne | USA | emergency agencies pay for AI translation |
+
+Sources: smart911.com FAQ pages (Cortland County, Prince William County); Fox16 "Is Smart911
+Helpline in Need of Lifeline?"; rapidsos.com; support.apple.com/en-us/105072; nora-notruf.de FAQ;
+eena.org PEMEA and AML pages; dawn-corp.co.jp/service/live119; prepared911.com; Axon investor
+release 2025-09-23; carbyne.com.
+
+### 2026-09-26 update to section 2's open question — read from the primary source
+
+FDMA's 「消防機関が緊急通報サービスに求める条件」(第1版, 令和6年3月) settles most of it:
+
+- The voice exclusion reads 「データ通信による音声通話は標準インターフェイスでは行わない」 — the
+  interface does not **carry** voice over data. It does not forbid a service being used while an
+  ordinary 119 phone call continues. Live119 already runs that way at 80+ departments.
+- Eligibility is 「事前登録制のサービスであるなど、利用者が限定されていること」 — registration
+  with the **service**. Nothing requires each user to register with a fire department.
+- The 専用端末 must have its own display and work **on its own** if the link to the 指令システム
+  fails. So a terminal with no 指令台 integration is the spec's own fallback mode.
+- The service must meet: APPI and local-government security guidelines; encryption in transit and
+  at rest (CRYPTREC list); fixed server IPs; logs kept ≥1 year; intrusion detection; malware
+  protection; incident notification. Conformance is presented by the service to each department;
+  no certification body.

@@ -2026,3 +2026,116 @@ The question is NOT "server or no server" — the relay server is mandatory eith
   against on-device inference.
 - Unresolved: what a competition demo needs here versus what a real deployment needs. These may
   have different answers and should not be conflated.
+
+### 2. First installation, Dawn Corp, and the demonstration-trial path (queued 2026-09-26)
+
+Parked by the founder on purpose — to come back to after the mechanism survey and the
+B2C/B2A discussion. Not a priority yet, but not dropped.
+
+Research already done (sources in the 2026-09-26 session):
+- Live119 (Dawn Corp): Kobe 実証実験 Aug 2019 → Kobe trial Nov 2019 → Tokyo FD Sep 2020 →
+  80+ departments by Aug 2023. ~¥1.5M setup, from ~¥80k running. 指令台 connection "several
+  days"; ~6 months to go live, mostly training. Runs alongside the voice call. Tokyo FD uses it
+  for 口頭指導 and sends instruction videos back to the caller.
+- Dawn Corp also runs NET119 (677/719 departments). It is the natural partner AND the natural
+  competitor.
+- The founder is 17 and cannot sign a trial agreement. Someone must sign: a company partner,
+  a university lab, or the school.
+
+Proposed and NOT adopted: switching to a dispatcher-sends-a-link model (Live119's pattern,
+caller installs nothing). The founder is skeptical: it drops pre-registration, which is part of
+the value proposition. The current architecture remains pre-registration based. Live119 was
+researched to VALIDATE the mechanism (data on the console alongside a live call), not to copy it.
+
+### 3. The microphone during the 119 call (found 2026-09-26) — design-breaking, must resolve
+
+The current app says "Call 119 first. Then tap this." and THEN asks the caller to speak
+(`app.py` idle → dispatch_now → recording). That worked when the app ran on a laptop beside the
+phone. On ONE phone it cannot work:
+- Android (developer docs, "Sharing audio input"): during a voice call, "The call always receives
+  audio." An ordinary app cannot capture; only accessibility services and privileged pre-installed
+  apps can.
+- iOS: the phone call takes the microphone and interrupts any app that is recording.
+So the caller's description must be captured BEFORE the app dials, or replaced by taps during the
+call. Also untested: whether the app can PLAY audio (CPR guide, spoken questions) during a call.
+Test both on an ordinary call to a friend. Never 119.
+
+**DECIDED 2026-09-26 (founder): speak-then-dial is the primary flow.** The microphone stays in the
+final product. Icons/taps during the call are a later discussion. Consequence: the idle screen's
+"Call 119 first. Then tap this." must be reversed — that is a UI text change and needs the
+founder's explicit "make UI changes". Note: on Android an app cannot place a call to an emergency
+number itself (ACTION_CALL is blocked for emergency numbers; ACTION_DIAL opens the dialer with 119
+filled in), and on iOS a tel: link asks for confirmation — so the caller always presses Call once.
+
+### 4. Deep-research items — founder's instruction: NO surface-level answers (queued 2026-09-28)
+
+To be taken up after the building has momentum. The founder explicitly rejected "negotiated"
+answers here: these must be solved with thorough research and real techniques (hybrid models,
+fine-tuning, retrieval, embeddings, composable templates, etc.), not by lowering the bar.
+
+**4a. Reliability vs coverage — the core tradeoff.** A closed ontology is reliable but limited
+(FDMA's 2016–17 "fixed-phrase limits" objection). Open generation covers everything but is what
+FDMA doubted in 2017 (「その精度に疑問が残る」). Research what others do (Prepared, Carbyne,
+Corti, medical-interpreting systems, clinical NLP) and find a technique that gets both. Candidate
+starting points already raised: protocol-anchored ontology (緊急度判定プロトコル Ver.3),
+composable verified pieces + fixed templates, multilingual embeddings for out-of-coverage
+detection, fine-tuning, a human-interpreter fallback (三者間同時通訳).
+
+**4b. Department trust in AI-derived content.** Same research, from the dispatcher's side: what
+makes a dispatcher act on it. Credentialed verification (救急救命士) is one known lever.
+
+**4c. Does compressing speech into ontology ids lose information the dispatcher needs?**
+Method: take real or near-real 119 conversations (FDMA publishes 口頭指導 case transcripts; the
+緊急度判定プロトコル defines what a dispatcher asks), list every fact the dispatcher actually
+used, and check whether profile + situation items + answers could have carried it. Every miss is
+a measured coverage gap. This is the test of the architecture, not of the classifier.
+
+**Standing notes:**
+- The six speak-then-dial rules (hard cap, always-visible "Call now", process while ringing,
+  profile out on dial, taps during call, measure it) are a starting point and WILL be revised.
+- Contracts/legal: a bottleneck, never a wall. Japan's age of majority is 18 (since April 2022);
+  until then a university lab or company partner signs. Not to be treated as a blocker again.
+
+**4d. Does the classifier understand what the caller MEANT, not just the words? (logged 2026-09-30,
+founder's question — PRIORITY once the end-to-end prototype exists)**
+Self-corrections, false starts, and "hundreds of such miscellaneous situations". First spot-check,
+OpenVINO INT8 (optimum-intel, Apple Silicon), classify() with Stage B on:
+    "My father has a headache"                                  -> headache              ✓
+    "My father has a stomach ache"                              -> severe_abdominal_pain ✓
+    "My father is having a stomach.. oh sorry headache"         -> []                    ✗ lost
+    "She hit her leg, no wait, her head, she hit her head"      -> head_injury           ✓
+    "He is not breathing... no sorry he is breathing but very fast" -> difficulty_breathing ✓
+    (not_breathing is in SLM_DISCARD, so its absence proves nothing about understanding)
+Five sentences = an anecdote, not a measurement. The failure was SAFE (abstained, did not say the
+wrong symptom) but information was lost. Next: a new probe group for repairs/self-corrections,
+written BEFORE any fix is attempted and never used for tuning. Feeds into 4a.
+
+### 5. Pilot target and quantifiable impact — PARKED 2026-10-03
+
+Founder lives in 江東区 (東京消防庁 territory); 川口市 (one city owning both its fire department
+and resident registration, 48,161 foreign residents) is impractical to approach from there.
+Founder also: do not assume any institution will agree. Unresolved: a realistic pilot target.
+Realistic impact that needs NO institution: drills with real non-Japanese speakers, measuring
+seconds to a correct address + symptoms on the console, against the same scenario handled without
+the app. These are the ENGINEERING.md §B numbers.
+
+**4e. Beyond prompt engineering — method options for the classifier (researched 2026-10-04).**
+Root cause above (BUILD_PLAN B1): Stage B is a relative judge; prompting only moves its threshold.
+Every option below turns the yes/no into a SCORE, so the trade-off becomes a measured dial with a
+separate, stricter setting for cardiac-arrest ids, instead of an accident of prompt wording.
+  1. Logprob scoring with the same Qwen: P("yes") per candidate, judged alone. No training.
+     OpenVINO GenAI exposes only the top-1 logprob of the generated token; optimum-intel exposes
+     full logits but loses prefix caching. Verify which is usable before relying on it.
+  2. NLI verifier: a multilingual entailment model (e.g. mDeBERTa-v3-base-xnli, 279M params,
+     100 languages) scores "statement -> 'the person is having a seizure'". Built for exactly
+     "does A imply B"; small, fast, OpenVINO-convertible; may also judge non-English directly.
+  3. Fine-tuning: (a) SetFit — a multilingual sentence-transformer + classifier head trained from
+     ~8–16 examples per symptom; (b) LoRA on Qwen — OpenVINO GenAI loads LoRA adapters at
+     runtime. Both need a TRAINING set: generated paraphrases per symptom, including negation,
+     time and self-correction, human-checked. Never the 52 or the probe.
+  4. Hybrid: Qwen proposes (Stage A recall is already high — only 2 never-proposed), a scored
+     verifier decides, the deterministic negation/time gate runs after, forced buttons keep the
+     vital signs.
+First experiment: score every cached candidate with options 1 and 2, measure how well correct
+and wrong separate, and check whether ANY threshold keeps 100% of correct, cuts most wrong, and
+lets through ZERO cardiac-arrest false alarms. Only then consider training.

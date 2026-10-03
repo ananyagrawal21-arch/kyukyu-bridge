@@ -16,6 +16,10 @@ data/profile.json
 # for every user, and shipping it is what frees the app from needing a Japanese voice installed.
 data/audio/profile/
 
+# PRIVACY: one log per emergency session (PROTOCOL.md section 6). The profile is hashed in the
+# log, but situation items are still medical data about a real person during drills.
+data/sessions/
+
 # LICENSING: L2-ARCTIC accent samples are gated access under CC BY-NC 4.0.
 # Redistributing them here would breach that license. Downloaded separately per-machine.
 data/accent_test/

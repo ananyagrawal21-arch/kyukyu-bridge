@@ -5,7 +5,13 @@ for callers who don't speak Japanese.**
 
 Press one button, say what's happening in your own language, confirm what the app understood,
 and it produces — and speaks aloud — a structured Japanese briefing a dispatcher can act on.
-Everything runs locally. No network, no cloud, no call data leaving the device.
+In this prototype everything runs locally. No network, no cloud, no call data leaving the device.
+
+> **Status, September 2026.** This repository is the prototype submitted to the Intel AI Global
+> Impact Festival: one laptop running both models offline, with the caller's phone beside it on
+> speakerphone. Since submission the design has changed, and two things said in the demo video
+> no longer hold. Both are corrected openly in
+> [Where this is going](#where-this-is-going-september-2026) rather than edited out.
 
 ---
 
@@ -57,9 +63,11 @@ report Japanese "sufficient for daily life". That is true, and it is the wrong m
 The system's advantage is **preparation**, not out-comprehending panicked speech:
 
 - Address, age, sex, known conditions, and names are stored in advance and delivered instantly.
-- Symptoms map onto a **fixed ontology of 31 Japanese terms** (29 human-verified, 2 pending final sign-off).
-- **The model never generates Japanese.** It *selects* from pre-verified terms. Every Japanese
-  string that reaches a dispatcher was checked by a fluent human beforehand.
+- Symptoms map onto a **fixed ontology of 31 Japanese terms**, all 31 human-verified.
+- **The model never generates Japanese.** It *selects* from pre-verified terms. Every symptom
+  term that reaches a dispatcher was checked by a fluent human beforehand. **Not yet true for the
+  27 medical-condition terms** (心臓病, 高血圧 and so on) stored in a profile: those are still
+  awaiting the same check.
 
 It's caller-side and pre-dispatch, which is a different problem from 救急ボイストラ — the
 Fire Agency's own crew-side phrasebook, deployed to 96% of fire departments. That tool
@@ -162,21 +170,28 @@ Three rules the design refuses to break:
    the interpretation (did we *understand* you right?). Failures get caught, not delivered.
 
 Supporting decisions: unknown values are omitted rather than guessed — an unconfirmed patient
-identity drops age/sex/conditions entirely, and an unconfirmed location says 「今、別の場所にいます。」
-rather than asserting a possibly-wrong address. A wrong address is worse than no address.
+identity drops age/sex/conditions entirely. The address is delivered as separate pieces the caller
+chooses to play, so a caller who is somewhere else simply does not play them, rather than the app
+asserting a possibly-wrong address. A wrong address is worse than no address.
 
 ## Measured results
 
 **Classification** — 52-case labelled test set (`benchmark/eval_slm.py`), and the same cases
 perturbed to simulate panicked speech (`benchmark/eval_disfluent.py`):
 
-| | Clean | Panicked |
+| | Clean | Panicked (simulated) |
 |---|---|---|
 | Exact-match | 92% | — |
 | Precision | 0.98 | 0.96 |
 | Recall | 0.94 | 1.00 |
 | F1 | 0.96 | 0.98 |
 | Fabrications | 1 | 2 |
+
+**Backend matters, and these numbers are not from the backend the app runs.** The table above was
+measured on **plain PyTorch**. The app runs **OpenVINO INT8**, which on the same 52 cases
+(scored with `benchmark/harness.py`) measured: exact-match **46/52**, precision **0.961**, recall
+**0.925**, F1 **0.942**. Quantisation costs about two points of F1. The INT8 figure is the one that
+describes what a caller would actually get.
 
 (Clean-speech numbers as of the 31-entry ontology, 2026-08-20. Growing the ontology from 29 to
 31 entries — splitting `collapsed` into three cause-specific terms — cost a few points across
@@ -201,7 +216,7 @@ clean English speech, so the honest claim is "very low," not "none."
 | OpenVINO INT8 | 13.79s | 1.06× |
 
 All three produced matching transcripts. INT8 barely beating FP is unexpected and not yet
-explained — recorded honestly rather than omitted. SLM numbers on Intel hardware are pending.
+explained — recorded honestly rather than omitted. Classifier numbers on Intel hardware are below.
 
 **Speech-to-text robustness** was tested on real non-native English from the L2-ARCTIC corpus
 (Vietnamese and Hindi speakers), not synthetic accents.
@@ -236,8 +251,8 @@ helpful: without it, the product does not work on the hardware it is built for.
 
 ### Why INT8 quantisation, and why not INT4
 
-INT8 compresses the models — Qwen to 2.9 GB, Whisper from 926 MB to **242 MB** — which matters
-because everything runs on-device with no cloud fallback.
+INT8 compresses the models — Qwen to 2.9 GB, Whisper from 926 MB to **242 MB** — which mattered
+for this prototype, where both models run on one device with no cloud fallback.
 
 We tested INT4 as well. **It was slower**: 13.25s versus INT8's 9.65s on identical hardware and
 input. The smaller weights did not pay for the dequantisation overhead on this CPU. We also
@@ -279,10 +294,11 @@ Intel.
 
 ### What we evaluated and chose not to use
 
-- **Intel Gaudi** — datacentre accelerator. This app runs on a laptop that stays in someone's
-  home; there is no server.
-- **Intel AI Cloud** — would contradict the product's core guarantee that no data leaves the
-  device during an emergency. Rejected on privacy grounds, not technical ones.
+- **Intel Gaudi** — datacentre accelerator. The prototype runs on a laptop with no server. The
+  redesign introduces a server, so this is open again rather than ruled out.
+- **Intel AI Cloud** — rejected for the prototype on privacy grounds: nothing was to leave the
+  device. The redesign sends data to a server, so that reason no longer holds as stated. Where the
+  server runs is now part of the privacy design, which is still open.
 - **IPEX (Intel Extension for PyTorch)** — would optimise the PyTorch path we are replacing
   with OpenVINO, not complement it.
 
@@ -318,6 +334,8 @@ transformers rather than failing. This runs seconds before someone describes an 
 
 ## Cost and scale
 
+*This section describes the prototype. The redesign changes it — see below.*
+
 Because inference is on-device, the marginal cost of an emergency call is **zero** — no API call,
 no cloud inference, no per-seat licence, no subscription. That is not a pricing decision; it
 falls out of the architecture.
@@ -345,8 +363,46 @@ any of the 720 fire departments.
 **Compare this to what it replaces.** Japan's existing three-way interpretation service
 (三者間同時通訳) is excellent and we do not compete with it — but it carries a real per-call cost
 for a live human interpreter, and reaching 93.5% of fire departments took years of
-department-by-department procurement. This app requires no procurement, no integration and no
-adoption by any fire department, because it speaks Japanese down an ordinary phone line.
+department-by-department procurement.
+
+An earlier version of this README claimed this app needs no procurement, integration or adoption
+by any fire department, because it speaks Japanese down an ordinary phone line. **That claim was
+never verified, and it is withdrawn** — see the next section.
+
+## Where this is going (September 2026)
+
+**Why the prototype's design could not ship.** The prototype plays Japanese audio for the
+dispatcher to hear, which is why it needs two devices. Making one phone do it means injecting
+audio into a live call:
+
+- **Android: impossible.** The permission (`CALL_AUDIO_INTERCEPTION`) is
+  `signature|privileged|role`, and the only role that grants it is system-only. Emergency calls
+  always use the preloaded dialer.
+- **iOS:** `AVSpeechSynthesizer.mixToTelephonyUplink` exists and works on normal calls. It is
+  untested on emergency calls, because 119 must not be test-dialled.
+- **Speaker into the phone's microphone:** fails silently on some handsets — the caller hears the
+  audio, the dispatcher gets nothing. Not acceptable for a life-safety tool.
+
+**The redesign.** The information goes to the dispatcher as **data, on a screen**, instead of as
+sound. The caller's phone sends the pre-registered profile and the confirmed symptoms to a server
+running both models on Intel hardware, and from there to a console at the fire department. The
+ordinary 119 voice call carries on alongside, so the dispatcher still hears the room and can give
+口頭指導. The console can also send closed, pre-verified questions and a CPR guide back to the
+caller in their language — which addresses the "outbound only" limitation below. The route to a
+real fire department is FDMA's 「消防機関への緊急通報に係る標準インターフェイス」, whose published
+conditions (令和6年3月) cover pre-registration services like this one.
+
+**Corrections to the demo video.**
+
+| Said in the video | Status |
+|---|---|
+| "Offline, on-device, 24/7" | **True of this prototype.** The redesign needs a network connection at the moment of the emergency — as do NET119 and 救急ボイストラ. |
+| "No fire department has to install this today" | **Withdrawn.** It depended on the audio path above, which was never verified. The redesign needs a terminal (専用端末) at the fire department. |
+
+**What is built so far.** The session log and the phone-to-console message format (with a check
+that refuses any Japanese not copied from the ontology). The phone flow, the console and the
+two-way questions are being built now. Nothing in this section should be read as a working feature
+until it says otherwise here.
 
 ## Honest limitations
 
@@ -368,9 +424,14 @@ adoption by any fire department, because it speaks Japanese down an ordinary pho
 - **The interface is in English**, including both confirmation screens. A caller who reads
   neither Japanese nor English can still be guided by the flow, but cannot fully verify what the
   app understood — which weakens the safety loop for exactly the people who need it most.
-- **Panicked, disfluent speech is untested.** Accent is tested; panic is not.
+- **Real panicked speech is untested.** Accent is tested on real recordings; panic is only
+  simulated, by perturbing the text of the test cases.
 - **Outbound only.** After dispatching, Japanese dispatchers give 口頭指導 — talking the caller
-  through CPR and positioning, in Japanese. That is genuinely life-saving and we don't handle it.
+  through CPR and positioning, in Japanese. That is genuinely life-saving and the prototype doesn't
+  handle it. The redesign above is built to.
+- **Self-corrections are not reliably understood.** "My father is having a stomach.. oh sorry
+  headache" returned nothing at all in a spot-check (safe — no wrong symptom — but the headache was
+  lost). A proper test set for this is planned.
 - One stored patient profile, English-first in practice, and no GPS.
 
 On GPS specifically: it's absent by choice, not omission. A laptop has no GPS chip and locates by
@@ -446,4 +507,4 @@ fluent speaker. Accent testing used L2-ARCTIC (CC BY-NC 4.0, gated access), whic
 redistributed here. `data/profile.json` is gitignored — it holds a real home address and
 medical details.
 
-No license yet; all rights reserved for now.
+MIT License — see `LICENSE.md`.

@@ -26,8 +26,9 @@ in Tokyo.
   compressed prose. If I say I do not understand, re-explain from the start rather than adding
   detail to the same explanation.
 - **Do not spawn subagents or run councils unless I ask for one.**
-- **Existing solutions (NET119, 救急ボイストラ, 三者間同時通訳) are references, not role models.**
-  Do not assume their design decisions are correct for us.
+- **Existing solutions (NET119, 救急ボイストラ, 三者間同時通訳, Smart911) are references, not role
+  models.** Do not assume their design decisions are correct for us. Smart911 is the closest
+  reference — see `POSITIONING.md` §6 for the comparison table.
 - When I push back on a claim, check it against the repo or a primary source before defending it.
   I have been right more than once and I would rather be corrected than agreed with.
 
@@ -77,8 +78,10 @@ Next: build the two-way demo — caller's phone ↔ server ↔ dispatcher consol
 
 ## Corrections — do not repeat these mistakes
 
-**Model size is not a barrier to phone deployment.** What ships is ~3.1 GB (Qwen2.5-3B INT8
-2.9 GB + Whisper small INT8 242 MB). Phones have 128 GB+ storage and 8–16 GB RAM; mobile games
+**Model size is not a barrier to phone deployment.** What ships TODAY is ~3.9 GB: Qwen2.5-3B
+INT8 2.9 GB + Whisper small 926 MB, because the OpenVINO Whisper (242 MB) is OFF by default
+(`KYUKYU_OV_STT` in `src/stt.py`). With it enabled it would be ~3.1 GB. Check which before
+quoting either. Phones have 128 GB+ storage and 8–16 GB RAM; mobile games
 ship larger. `OPEN_DECISIONS.md:790` already records INT4 3B at ~1.9 GB as "fine on any modern
 phone", with 22–50 tok/s measured on phone silicon by others.
 
@@ -88,4 +91,4 @@ means re-benchmarking everything and losing the Intel claim on the caller's devi
 runtime-compatibility problem. Do not describe it as a size or footprint problem.
 
 **The 4.6 GB figure in `models/` includes `qwen2.5-1.5b-ov-int8`**, which was tested and rejected
-(it doubled fabrications). It does not ship. Quote 3.1 GB, not 4.6 GB, and not 3.9 GB.
+(it doubled fabrications). It does not ship. Never quote 4.6 GB.
