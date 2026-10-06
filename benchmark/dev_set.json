@@ -1,0 +1,308 @@
+{
+ "_note": "DEV SET for the NLI checker experiment (EXPERIMENT_GUIDE.md step 4). Used ONLY to choose the cut-off. Never used to report results - that is the 52 and the probe, once. Drafted 2026-10-05; none of these copy or reword a case from slm_testset.json or diagnostic_probe.json. Labels follow the same conventions as the probe: something clearly in the past or already stopped is NOT labelled; conscious/unconscious/not_breathing are never labelled (they come from buttons). Cases with \"unsure\": true need the founder's decision before scoring. All labels reviewed by the founder 2026-10-06; decisions recorded per case in founder_decision. DEV v2 (2026-10-06): 5 cases that failed the founder's realism rule were replaced with realistic ones in the same groups. NLI-6 and NLI-7 were measured on dev v1.",
+ "cases": [
+  {
+   "group": "plain",
+   "transcript": "my mum has a really bad headache that came on suddenly",
+   "expected": [
+    "headache"
+   ]
+  },
+  {
+   "group": "plain",
+   "transcript": "he's throwing up again and again",
+   "expected": [
+    "vomiting"
+   ]
+  },
+  {
+   "group": "plain",
+   "transcript": "she says her chest hurts a lot",
+   "expected": [
+    "chest_pain"
+   ]
+  },
+  {
+   "group": "plain",
+   "transcript": "he's having a seizure right now",
+   "expected": [
+    "seizure"
+   ]
+  },
+  {
+   "group": "plain",
+   "transcript": "my grandfather fell down the stairs",
+   "expected": [
+    "fall_down"
+   ]
+  },
+  {
+   "group": "plain",
+   "transcript": "she cut her hand and it's bleeding a lot",
+   "expected": [
+    "heavy_bleeding"
+   ]
+  },
+  {
+   "group": "plain",
+   "transcript": "he's very dizzy and has to hold on to the wall",
+   "expected": [
+    "dizziness"
+   ]
+  },
+  {
+   "group": "plain",
+   "transcript": "my daughter has a fever of 40 degrees",
+   "expected": [
+    "high_fever"
+   ]
+  },
+  {
+   "group": "plain",
+   "transcript": "he can't feel his left hand, it's gone numb",
+   "expected": [
+    "numbness"
+   ],
+   "founder_decision": "Numbness only - numb is not weak."
+  },
+  {
+   "group": "plain",
+   "transcript": "she's sweating but her skin is cold and clammy",
+   "expected": [
+    "cold_sweat"
+   ]
+  },
+  {
+   "group": "figurative",
+   "transcript": "his heart is thumping like it's going to burst out",
+   "expected": [
+    "palpitations"
+   ]
+  },
+  {
+   "group": "figurative",
+   "transcript": "my dad has gone white as a sheet",
+   "expected": [
+    "pale_complexion"
+   ]
+  },
+  {
+   "group": "figurative",
+   "transcript": "she's talking gibberish and doesn't know where she is",
+   "expected": [
+    "confused"
+   ]
+  },
+  {
+   "group": "figurative",
+   "transcript": "he's huffing like he ran a marathon and can't get any air in",
+   "expected": [
+    "difficulty_breathing"
+   ]
+  },
+  {
+   "group": "figurative",
+   "transcript": "something went down the wrong way and it's stuck, he can't cough it out",
+   "expected": [
+    "choking"
+   ]
+  },
+  {
+   "group": "figurative",
+   "transcript": "her tummy is in absolute agony",
+   "expected": [
+    "severe_abdominal_pain"
+   ]
+  },
+  {
+   "group": "figurative",
+   "transcript": "his back has completely seized up",
+   "expected": [
+    "back_pain"
+   ],
+   "founder_decision": "back_pain - the sentence does not mention the lower back."
+  },
+  {
+   "group": "figurative",
+   "transcript": "she feels queasy, like she might be sick",
+   "expected": [
+    "nausea"
+   ]
+  },
+  {
+   "group": "negation",
+   "transcript": "he's not dizzy, but he has a pounding headache",
+   "expected": [
+    "headache"
+   ]
+  },
+  {
+   "group": "negation",
+   "transcript": "there's no blood, but she hit her head really hard",
+   "expected": [
+    "head_injury"
+   ]
+  },
+  {
+   "group": "negation",
+   "transcript": "she didn't trip or anything, she just went down out of nowhere",
+   "expected": [
+    "collapsed"
+   ]
+  },
+  {
+   "group": "negation",
+   "transcript": "she's not bleeding, but she's really struggling to breathe",
+   "expected": [
+    "difficulty_breathing"
+   ],
+   "founder_decision": "Replaces 'he isn't confused, he just feels very sick', which the founder judged unrealistic (2026-10-06)."
+  },
+  {
+   "group": "negation",
+   "transcript": "no chest pain at all, it's just that he can't breathe properly",
+   "expected": [
+    "difficulty_breathing"
+   ]
+  },
+  {
+   "group": "negation",
+   "transcript": "she isn't choking, but her throat is swelling up and she's struggling to breathe",
+   "expected": [
+    "difficulty_breathing"
+   ],
+   "founder_decision": "Dev v2 (2026-10-06): replaces 'she's not choking, she's just coughing a little', which failed the founder's realism rule."
+  },
+  {
+   "group": "time",
+   "transcript": "he had a bad headache yesterday, and today he's slurring his words",
+   "expected": [
+    "slurred_speech"
+   ],
+   "founder_decision": "Dev v2 (2026-10-06): replaces 'he had a bad headache yesterday but he's fine now', which failed the founder's realism rule."
+  },
+  {
+   "group": "time",
+   "transcript": "she fainted once last year, but today it's her stomach, it hurts terribly",
+   "expected": [
+    "severe_abdominal_pain"
+   ]
+  },
+  {
+   "group": "time",
+   "transcript": "my wife had a stroke years ago, and now she's collapsed on the floor",
+   "expected": [
+    "collapsed"
+   ],
+   "founder_decision": "Dev v2 (2026-10-06): replaces 'my wife had a stroke years ago', which failed the founder's realism rule."
+  },
+  {
+   "group": "time",
+   "transcript": "he hurt his back last month, but today he just feels dizzy",
+   "expected": [
+    "dizziness"
+   ]
+  },
+  {
+   "group": "time",
+   "transcript": "the bleeding stopped about an hour ago",
+   "expected": [
+    "heavy_bleeding"
+   ],
+   "founder_decision": "Bleeding that has stopped is still reported (heavy_bleeding has a 'has stopped' form). The caller picks 'has stopped' on the confirm screen. Caveat: the sentence does not say the bleeding was HEAVY."
+  },
+  {
+   "group": "multi",
+   "transcript": "he's dizzy and throwing up",
+   "expected": [
+    "dizziness",
+    "vomiting"
+   ]
+  },
+  {
+   "group": "multi",
+   "transcript": "she has a terrible headache and her words are coming out slurred",
+   "expected": [
+    "headache",
+    "slurred_speech"
+   ]
+  },
+  {
+   "group": "multi",
+   "transcript": "he's gone pale and his heart is racing",
+   "expected": [
+    "pale_complexion",
+    "palpitations"
+   ]
+  },
+  {
+   "group": "multi",
+   "transcript": "her face is drooping on one side and her arm is numb",
+   "expected": [
+    "face_drooping",
+    "numbness"
+   ]
+  },
+  {
+   "group": "multi",
+   "transcript": "she says her chest feels heavy and she's dripping with cold sweat",
+   "expected": [
+    "chest_pain",
+    "cold_sweat"
+   ]
+  },
+  {
+   "group": "multi",
+   "transcript": "she sank in the pool before we got her out and her skin feels icy",
+   "expected": [
+    "drowning",
+    "body_cold"
+   ]
+  },
+  {
+   "group": "cpa_trap",
+   "transcript": "he's gone very pale and floppy but he's still breathing",
+   "expected": [
+    "pale_complexion"
+   ],
+   "founder_decision": "Floppy does not imply collapsed."
+  },
+  {
+   "group": "cpa_trap",
+   "transcript": "she's coughing hard after eating but she can still talk to me",
+   "expected": [],
+   "founder_decision": "Talking means the airway is open - not choking. See the paired case without 'can still talk'."
+  },
+  {
+   "group": "cpa_trap",
+   "transcript": "his hands are freezing but he's burning up with a fever",
+   "expected": [
+    "high_fever"
+   ],
+   "founder_decision": "Dev v2 (2026-10-06): replaces 'his hands are cold but the rest of him feels warm', which failed the founder's realism rule."
+  },
+  {
+   "group": "cpa_trap",
+   "transcript": "he's breathing but he's gone grey and won't wake up properly",
+   "expected": [
+    "pale_complexion"
+   ],
+   "founder_decision": "Dev v2 (2026-10-06): replaces 'I can feel a strong pulse, he's just very sleepy', which failed the founder's realism rule."
+  },
+  {
+   "group": "cpa_trap",
+   "transcript": "he collapsed at dinner, but he's breathing and his heart is beating",
+   "expected": [
+    "collapsed"
+   ]
+  },
+  {
+   "group": "minimal_pair",
+   "transcript": "she's coughing hard after eating",
+   "expected": [
+    "choking"
+   ],
+   "founder_decision": "Pair of 'she's coughing hard after eating but she can still talk to me' -> []. Tests whether the checker reads the one phrase that changes the answer."
+  }
+ ]
+}

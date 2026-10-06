@@ -1,0 +1,45 @@
+{
+ "_note": "LOCKED 2026-10-06 by the founder - do not edit. TEST2 - a fresh, LOCKED test set for NLI-8 (fine-tuning). Written 2026-10-06 BEFORE any training example existed, so training cannot have been shaped to fit it. Never used to choose anything (thresholds, data, settings) - only to report the final comparison, once. No overlap with the 52, the probe or the dev set (checked automatically). REALISM RULE (founder, 2026-10-06): every case is something a real caller would plausibly say at the start of a 119 call - no 'he's fine now' cases; traps sit inside real emergencies. Label rules: a symptom that STOPPED during this emergency is still reported if it has a 'has stopped' form (vomiting, seizure, heavy_bleeding, choking - founder's decision 2026-10-06); resolved symptoms without one, and old history, are not; events are reported in the past tense; conscious/unconscious/not_breathing are never labelled.",
+ "cases": [
+  {"group": "plain", "transcript": "my husband says he has a splitting headache", "expected": ["headache"]},
+  {"group": "plain", "transcript": "he keeps being sick into a bucket", "expected": ["vomiting"]},
+  {"group": "plain", "transcript": "my son is hot all over, his temperature is really high", "expected": ["high_fever"]},
+  {"group": "plain", "transcript": "her nose is bleeding heavily and it won't stop", "expected": ["heavy_bleeding"]},
+  {"group": "plain", "transcript": "he slipped on the wet bathroom floor and can't get up", "expected": ["fall"]},
+  {"group": "plain", "transcript": "my father tumbled down the steps outside", "expected": ["fall_down"]},
+  {"group": "plain", "transcript": "the left side of her face has gone droopy", "expected": ["face_drooping"]},
+  {"group": "plain", "transcript": "he's having a fit and foaming at the mouth", "expected": ["seizure"]},
+
+  {"group": "choking", "transcript": "the baby swallowed a coin and it's stuck in his throat", "expected": ["choking"]},
+  {"group": "choking", "transcript": "she's clutching her throat and can't make a sound after eating", "expected": ["choking"]},
+  {"group": "choking", "transcript": "he was choking on a sweet, I hit his back and it came out, but he's still struggling to breathe", "expected": ["choking", "difficulty_breathing"]},
+  {"group": "choking", "transcript": "she's been coughing for days and now she has a high fever", "expected": ["high_fever"]},
+  {"group": "choking", "transcript": "my son is wheezing and can't catch his breath, he has asthma", "expected": ["difficulty_breathing"]},
+
+  {"group": "time", "transcript": "he had chest pain last week, and today he collapsed in the kitchen", "expected": ["collapsed"]},
+  {"group": "time", "transcript": "the dizziness from this morning went away, but now her chest really hurts", "expected": ["chest_pain"]},
+  {"group": "time", "transcript": "his seizure stopped a couple of minutes ago", "expected": ["seizure"]},
+  {"group": "time", "transcript": "my mother had a fever two days ago, now her stomach hurts badly", "expected": ["severe_abdominal_pain"]},
+  {"group": "time", "transcript": "he threw up earlier, and now he says his head is killing him", "expected": ["vomiting", "headache"]},
+
+  {"group": "lookalike", "transcript": "she has a throbbing headache, like her head is going to explode", "expected": ["headache"]},
+  {"group": "lookalike", "transcript": "his arm is all tingly, he can still move it though", "expected": ["numbness"]},
+  {"group": "lookalike", "transcript": "he's sweating a lot from the heat and he's very dizzy", "expected": ["dizziness"]},
+  {"group": "lookalike", "transcript": "she's shaking and shivering, her temperature is over 39", "expected": ["high_fever"]},
+  {"group": "lookalike", "transcript": "his back is killing him, it started when he lifted a heavy box", "expected": ["back_pain"]},
+  {"group": "lookalike", "transcript": "she suddenly feels like the whole room is turning and she's going to be sick", "expected": ["dizziness", "nausea"]},
+
+  {"group": "negation", "transcript": "he's not throwing up or anything, but his stomach is in terrible pain", "expected": ["severe_abdominal_pain"]},
+  {"group": "negation", "transcript": "no fever, but she's very confused and doesn't recognise us", "expected": ["confused"]},
+  {"group": "negation", "transcript": "she didn't faint, she slipped on the ice and her wrist looks broken", "expected": ["fall"]},
+  {"group": "negation", "transcript": "there's no pain anywhere, he just can't move his right side", "expected": ["one_sided_weakness"]},
+
+  {"group": "multi", "transcript": "he's mumbling like he's drunk and his right side has gone weak", "expected": ["slurred_speech", "one_sided_weakness"]},
+  {"group": "multi", "transcript": "he's in a cold sweat and says his chest feels tight", "expected": ["cold_sweat", "chest_pain"]},
+  {"group": "multi", "transcript": "she feels lightheaded and queasy, and her pulse is going really fast", "expected": ["dizziness", "nausea", "palpitations"]},
+
+  {"group": "cpa_trap", "transcript": "I can't tell if he's breathing, he's just lying there", "expected": []},
+  {"group": "cpa_trap", "transcript": "she's struggling for air and her lips have gone purple", "expected": ["difficulty_breathing"]},
+  {"group": "cpa_trap", "transcript": "she fainted in the kitchen and she's gone really pale", "expected": ["collapsed", "pale_complexion"]}
+ ]
+}

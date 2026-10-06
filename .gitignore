@@ -34,3 +34,4 @@ __pycache__/
 # local test artefacts
 ANDROID_TEST.wav
 benchmark/.stage_*_cache.json
+benchmark/.nli*_cache.json

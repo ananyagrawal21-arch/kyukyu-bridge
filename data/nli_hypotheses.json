@@ -1,0 +1,33 @@
+{
+  "_note": "One plain sentence per symptom id, for the NLI checker experiment (EXPERIMENT_GUIDE.md step 3). Drafted 2026-10-05 from the same definitions Stage B uses (DESCRIPTIONS in src/slm_classify.py), reviewed by the founder. FROZEN once scoring starts - changing any sentence after seeing scores is a separate, logged run. conscious / unconscious / not_breathing are absent on purpose: they come from the yes/no buttons, never the model. Events are in the past tense because that is how an event is described.",
+
+  "confused":              "The person is confused and not making sense.",
+  "difficulty_breathing":  "The person is having difficulty breathing.",
+  "chest_pain":            "The person has chest pain.",
+  "face_drooping":         "One side of the person's face is drooping.",
+  "slurred_speech":        "The person's speech is slurred.",
+  "one_sided_weakness":    "The person cannot move one side of their body.",
+  "severe_abdominal_pain": "The person has severe stomach pain.",
+  "high_fever":            "The person has a high fever.",
+  "cold_sweat":            "The person is in a cold sweat.",
+  "pale_complexion":       "The person looks pale.",
+  "headache":              "The person has a headache.",
+  "palpitations":          "The person's heart is racing.",
+  "back_pain":             "The person has back pain.",
+  "lower_back_pain":       "The person has lower back pain.",
+  "dizziness":             "The person feels dizzy.",
+  "vomiting":              "The person is vomiting.",
+  "nausea":                "The person feels nauseous.",
+  "numbness":              "Part of the person's body is numb.",
+  "no_pulse":              "The person has no pulse.",
+  "body_cold":             "The person's body is cold to the touch.",
+
+  "collapsed":             "The person suddenly collapsed.",
+  "fall":                  "The person fell over on flat ground.",
+  "fall_down":             "The person fell down stairs or a slope.",
+  "choking":               "The person is choking.",
+  "seizure":               "The person is having a seizure.",
+  "head_injury":           "The person has a head injury.",
+  "heavy_bleeding":        "The person is bleeding heavily.",
+  "drowning":              "The person was drowning."
+}

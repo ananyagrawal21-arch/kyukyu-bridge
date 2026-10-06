@@ -2139,3 +2139,13 @@ separate, stricter setting for cardiac-arrest ids, instead of an accident of pro
 First experiment: score every cached candidate with options 1 and 2, measure how well correct
 and wrong separate, and check whether ANY threshold keeps 100% of correct, cuts most wrong, and
 lets through ZERO cardiac-arrest false alarms. Only then consider training.
+
+**4c addendum (founder, 2026-10-06): timing is information the ids cannot carry.** Example from the
+dev set: "the bleeding stopped about an hour ago" becomes heavy_bleeding + "has stopped" — "one hour"
+is lost. Onset time, duration and sequence matter to a dispatcher and there may be many more such
+facts. One option consistent with "ask the human": a closed set of time buttons on the confirm
+screen (just now / minutes ago / about an hour ago / earlier today). To be designed with 4c.
+
+**Feature idea (founder, 2026-10-06): pre-select the "has stopped" option** when the caller's words
+say the symptom stopped, instead of making them choose. Today the caller always picks; the model
+never sets the aspect. Not part of the Stage B experiment.

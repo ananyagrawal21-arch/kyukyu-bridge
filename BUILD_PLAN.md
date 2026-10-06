@@ -50,6 +50,12 @@ from the flow (keep the code); show the caller's raw words on the console, small
 - [ ] B4. Latency fixes: get OpenVINO Whisper working (blocked by a `TypeError` with the
       anti-hallucination settings — try OpenVINO GenAI's own Whisper pipeline); overlap processing
       with the ringing phone; check whether the two Whisper passes can become one.
+- [ ] B6. **Coverage: add the missing emergencies** — fracture, turning blue (cyanosis), poisoning,
+      allergic reaction, burns, childbirth (the probe's out-of-coverage group, which today gives the
+      dispatcher NOTHING), plus any the 緊急度判定プロトコル shows are common. Founder raised
+      2026-10-05. **Only AFTER the Stage B experiment** — adding symptoms changes Stage A's menu,
+      makes the saved results stale, and shifts every score (29→31 cost points across the board).
+      Needs: verified Japanese per term, a new test set (the probe stays frozen), one measured run.
 - [ ] B5. STT accuracy: word error rate per language on the L2-ARCTIC clips, then a bigger Whisper.
 
 **B1 result (cached INT8 outputs, 52-set + probe, English text):** 7 misses, 8 fabrications.
