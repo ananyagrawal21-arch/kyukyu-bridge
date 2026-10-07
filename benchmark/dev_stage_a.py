@@ -5,6 +5,7 @@ Stage A on them ONCE and saves the result into the same cache file the harness u
 step reads it instead of running Qwen again.
 Backend: Qwen2.5-3B, OpenVINO INT8 (models/qwen2.5-3b-ov-int8). Slow on Apple Silicon: ~10-25 min.
 """
+import argparse
 import json
 import sys
 from pathlib import Path
@@ -17,7 +18,11 @@ from harness import stage_a          # noqa: E402  (importing harness also selec
 from ontology import load_ontology   # noqa: E402
 from slm_classify import SLM_DISCARD  # noqa: E402
 
-cases = json.loads((BENCH / "dev_set.json").read_text(encoding="utf-8"))["cases"]
+parser = argparse.ArgumentParser()
+parser.add_argument("--set", choices=["dev", "test2"], default="dev")
+args = parser.parse_args()
+filename = "dev_set.json" if args.set == "dev" else "test2_set.json"
+cases = json.loads((BENCH / filename).read_text(encoding="utf-8"))["cases"]
 texts = [c["transcript"] for c in cases]
 
 proposals = stage_a(texts, load_ontology())

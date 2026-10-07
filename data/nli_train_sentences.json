@@ -1,0 +1,2784 @@
+{
+ "_note": "Training sentences for NLI-8 (fine-tuning the checker). Drafted by Claude 2026-10-07, to be reviewed by the founder. Every sentence must be something a real caller would plausibly say at the start of a 119 call. 'expected' = happening now (teaches entailment); 'denied' = explicitly ruled out or in the past (teaches contradiction); the training script adds lookalike symptoms as neutral. Same label rules as the test sets: a symptom that STOPPED during this emergency still counts if it has a 'has stopped' form (vomiting, seizure, heavy_bleeding, choking). Checked by benchmark/check_overlap.py against the 52, the probe, the dev set and test2. NEVER used for testing.",
+ "sentences": [
+  {
+   "n": 1,
+   "group": "plain",
+   "transcript": "my grandad doesn't know what year it is and keeps asking where he is",
+   "expected": [
+    "confused"
+   ],
+   "denied": []
+  },
+  {
+   "n": 2,
+   "group": "plain",
+   "transcript": "she's not making any sense, she's saying random things",
+   "expected": [
+    "confused"
+   ],
+   "denied": []
+  },
+  {
+   "n": 3,
+   "group": "plain",
+   "transcript": "he's disoriented and doesn't recognise his own house",
+   "expected": [
+    "confused"
+   ],
+   "denied": []
+  },
+  {
+   "n": 4,
+   "group": "plain",
+   "transcript": "my mum is talking nonsense and seems completely muddled",
+   "expected": [
+    "confused"
+   ],
+   "denied": []
+  },
+  {
+   "n": 5,
+   "group": "plain",
+   "transcript": "my daughter is breathing really fast and her chest is heaving",
+   "expected": [
+    "difficulty_breathing"
+   ],
+   "denied": []
+  },
+  {
+   "n": 6,
+   "group": "plain",
+   "transcript": "he keeps stopping to gasp, he can't get enough air",
+   "expected": [
+    "difficulty_breathing"
+   ],
+   "denied": []
+  },
+  {
+   "n": 7,
+   "group": "plain",
+   "transcript": "she's wheezing loudly and her inhaler isn't helping",
+   "expected": [
+    "difficulty_breathing"
+   ],
+   "denied": []
+  },
+  {
+   "n": 8,
+   "group": "plain",
+   "transcript": "my husband is short of breath even sitting down",
+   "expected": [
+    "difficulty_breathing"
+   ],
+   "denied": []
+  },
+  {
+   "n": 9,
+   "group": "plain",
+   "transcript": "my dad has a crushing pain in the middle of his chest",
+   "expected": [
+    "chest_pain"
+   ],
+   "denied": []
+  },
+  {
+   "n": 10,
+   "group": "plain",
+   "transcript": "she says it feels like an elephant is sitting on her chest",
+   "expected": [
+    "chest_pain"
+   ],
+   "denied": []
+  },
+  {
+   "n": 11,
+   "group": "plain",
+   "transcript": "he's got a sharp pain in his chest that goes down his left arm",
+   "expected": [
+    "chest_pain"
+   ],
+   "denied": []
+  },
+  {
+   "n": 12,
+   "group": "plain",
+   "transcript": "my wife has had pressure in her chest for twenty minutes",
+   "expected": [
+    "chest_pain"
+   ],
+   "denied": []
+  },
+  {
+   "n": 13,
+   "group": "plain",
+   "transcript": "his mouth is pulled down on one side",
+   "expected": [
+    "face_drooping"
+   ],
+   "denied": []
+  },
+  {
+   "n": 14,
+   "group": "plain",
+   "transcript": "her smile is lopsided all of a sudden",
+   "expected": [
+    "face_drooping"
+   ],
+   "denied": []
+  },
+  {
+   "n": 15,
+   "group": "plain",
+   "transcript": "one side of my dad's face isn't moving properly",
+   "expected": [
+    "face_drooping"
+   ],
+   "denied": []
+  },
+  {
+   "n": 16,
+   "group": "plain",
+   "transcript": "her face has suddenly gone crooked",
+   "expected": [
+    "face_drooping"
+   ],
+   "denied": []
+  },
+  {
+   "n": 17,
+   "group": "plain",
+   "transcript": "his words are all jumbled and slurred",
+   "expected": [
+    "slurred_speech"
+   ],
+   "denied": []
+  },
+  {
+   "n": 18,
+   "group": "plain",
+   "transcript": "she sounds like she's drunk but she hasn't had anything",
+   "expected": [
+    "slurred_speech"
+   ],
+   "denied": []
+  },
+  {
+   "n": 19,
+   "group": "plain",
+   "transcript": "my grandmother's speech has suddenly gone thick and slow",
+   "expected": [
+    "slurred_speech"
+   ],
+   "denied": []
+  },
+  {
+   "n": 20,
+   "group": "plain",
+   "transcript": "his speech suddenly sounds strange and blurry",
+   "expected": [
+    "slurred_speech"
+   ],
+   "denied": []
+  },
+  {
+   "n": 21,
+   "group": "plain",
+   "transcript": "her right arm just dropped and she can't lift it",
+   "expected": [
+    "one_sided_weakness"
+   ],
+   "denied": []
+  },
+  {
+   "n": 22,
+   "group": "plain",
+   "transcript": "his left leg has gone weak and won't hold him up",
+   "expected": [
+    "one_sided_weakness"
+   ],
+   "denied": []
+  },
+  {
+   "n": 23,
+   "group": "plain",
+   "transcript": "she can't grip anything with her left hand anymore",
+   "expected": [
+    "one_sided_weakness"
+   ],
+   "denied": []
+  },
+  {
+   "n": 24,
+   "group": "plain",
+   "transcript": "the whole left side of his body has gone heavy and weak",
+   "expected": [
+    "one_sided_weakness"
+   ],
+   "denied": []
+  },
+  {
+   "n": 25,
+   "group": "plain",
+   "transcript": "my son is curled up holding his stomach and screaming in pain",
+   "expected": [
+    "severe_abdominal_pain"
+   ],
+   "denied": []
+  },
+  {
+   "n": 26,
+   "group": "plain",
+   "transcript": "she has a terrible pain in her belly and can't stand up",
+   "expected": [
+    "severe_abdominal_pain"
+   ],
+   "denied": []
+  },
+  {
+   "n": 27,
+   "group": "plain",
+   "transcript": "his tummy is rock hard and really painful",
+   "expected": [
+    "severe_abdominal_pain"
+   ],
+   "denied": []
+  },
+  {
+   "n": 28,
+   "group": "plain",
+   "transcript": "she's got the worst stomach cramps of her life",
+   "expected": [
+    "severe_abdominal_pain"
+   ],
+   "denied": []
+  },
+  {
+   "n": 29,
+   "group": "plain",
+   "transcript": "my baby is burning hot and has a temperature of 39.5",
+   "expected": [
+    "high_fever"
+   ],
+   "denied": []
+  },
+  {
+   "n": 30,
+   "group": "plain",
+   "transcript": "he's had a fever of 40 since this morning and he's very weak",
+   "expected": [
+    "high_fever"
+   ],
+   "denied": []
+  },
+  {
+   "n": 31,
+   "group": "plain",
+   "transcript": "her forehead is on fire, the thermometer says 41",
+   "expected": [
+    "high_fever"
+   ],
+   "denied": []
+  },
+  {
+   "n": 32,
+   "group": "plain",
+   "transcript": "my daughter is boiling with fever and won't stop crying",
+   "expected": [
+    "high_fever"
+   ],
+   "denied": []
+  },
+  {
+   "n": 33,
+   "group": "plain",
+   "transcript": "his skin is clammy and there's cold sweat all over him",
+   "expected": [
+    "cold_sweat"
+   ],
+   "denied": []
+  },
+  {
+   "n": 34,
+   "group": "plain",
+   "transcript": "she's drenched in sweat yet feels chilly to touch",
+   "expected": [
+    "cold_sweat"
+   ],
+   "denied": []
+  },
+  {
+   "n": 35,
+   "group": "plain",
+   "transcript": "my dad's shirt is soaked with sweat and he feels clammy and cold",
+   "expected": [
+    "cold_sweat"
+   ],
+   "denied": []
+  },
+  {
+   "n": 36,
+   "group": "plain",
+   "transcript": "beads of cold sweat are running down his face",
+   "expected": [
+    "cold_sweat"
+   ],
+   "denied": []
+  },
+  {
+   "n": 37,
+   "group": "plain",
+   "transcript": "her lips and face have gone really pale",
+   "expected": [
+    "pale_complexion"
+   ],
+   "denied": []
+  },
+  {
+   "n": 38,
+   "group": "plain",
+   "transcript": "he's lost all his colour, he looks grey",
+   "expected": [
+    "pale_complexion"
+   ],
+   "denied": []
+  },
+  {
+   "n": 39,
+   "group": "plain",
+   "transcript": "my mum looks ghostly white",
+   "expected": [
+    "pale_complexion"
+   ],
+   "denied": []
+  },
+  {
+   "n": 40,
+   "group": "plain",
+   "transcript": "the colour has drained from his face",
+   "expected": [
+    "pale_complexion"
+   ],
+   "denied": []
+  },
+  {
+   "n": 41,
+   "group": "plain",
+   "transcript": "she has the worst headache she's ever had",
+   "expected": [
+    "headache"
+   ],
+   "denied": []
+  },
+  {
+   "n": 42,
+   "group": "plain",
+   "transcript": "his head hurts so much he can't open his eyes in the light",
+   "expected": [
+    "headache"
+   ],
+   "denied": []
+  },
+  {
+   "n": 43,
+   "group": "plain",
+   "transcript": "my wife says there's a terrible pain in her head",
+   "expected": [
+    "headache"
+   ],
+   "denied": []
+  },
+  {
+   "n": 44,
+   "group": "plain",
+   "transcript": "he's holding his head and says it hurts so much",
+   "expected": [
+    "headache"
+   ],
+   "denied": []
+  },
+  {
+   "n": 45,
+   "group": "plain",
+   "transcript": "her heart is going crazy, it's beating so fast",
+   "expected": [
+    "palpitations"
+   ],
+   "denied": []
+  },
+  {
+   "n": 46,
+   "group": "plain",
+   "transcript": "he says his heart is fluttering and skipping beats",
+   "expected": [
+    "palpitations"
+   ],
+   "denied": []
+  },
+  {
+   "n": 47,
+   "group": "plain",
+   "transcript": "my son's heart won't slow down even though he's lying still",
+   "expected": [
+    "palpitations"
+   ],
+   "denied": []
+  },
+  {
+   "n": 48,
+   "group": "plain",
+   "transcript": "she can feel her heart hammering away",
+   "expected": [
+    "palpitations"
+   ],
+   "denied": []
+  },
+  {
+   "n": 49,
+   "group": "plain",
+   "transcript": "he's got a sharp pain in his back and can't move",
+   "expected": [
+    "back_pain"
+   ],
+   "denied": []
+  },
+  {
+   "n": 50,
+   "group": "plain",
+   "transcript": "my dad's back went out and he's stuck on the floor",
+   "expected": [
+    "back_pain"
+   ],
+   "denied": []
+  },
+  {
+   "n": 51,
+   "group": "plain",
+   "transcript": "she has terrible pain between her shoulder blades",
+   "expected": [
+    "back_pain"
+   ],
+   "denied": []
+  },
+  {
+   "n": 52,
+   "group": "plain",
+   "transcript": "his back is in agony after he bent over",
+   "expected": [
+    "back_pain"
+   ],
+   "denied": []
+  },
+  {
+   "n": 53,
+   "group": "plain",
+   "transcript": "she has a stabbing pain in her lower back",
+   "expected": [
+    "lower_back_pain"
+   ],
+   "denied": []
+  },
+  {
+   "n": 54,
+   "group": "plain",
+   "transcript": "the bottom of his back is in agony",
+   "expected": [
+    "lower_back_pain"
+   ],
+   "denied": []
+  },
+  {
+   "n": 55,
+   "group": "plain",
+   "transcript": "my husband's lower back pain is so bad he can't walk",
+   "expected": [
+    "lower_back_pain"
+   ],
+   "denied": []
+  },
+  {
+   "n": 56,
+   "group": "plain",
+   "transcript": "she says the pain is right at the base of her spine",
+   "expected": [
+    "lower_back_pain"
+   ],
+   "denied": []
+  },
+  {
+   "n": 57,
+   "group": "plain",
+   "transcript": "he's so dizzy he can't stand up",
+   "expected": [
+    "dizziness"
+   ],
+   "denied": []
+  },
+  {
+   "n": 58,
+   "group": "plain",
+   "transcript": "she says everything around her is going round and round",
+   "expected": [
+    "dizziness"
+   ],
+   "denied": []
+  },
+  {
+   "n": 59,
+   "group": "plain",
+   "transcript": "my mum feels faint and wobbly",
+   "expected": [
+    "dizziness"
+   ],
+   "denied": []
+  },
+  {
+   "n": 60,
+   "group": "plain",
+   "transcript": "he keeps losing his balance because he's so lightheaded",
+   "expected": [
+    "dizziness"
+   ],
+   "denied": []
+  },
+  {
+   "n": 61,
+   "group": "plain",
+   "transcript": "she's throwing up over and over",
+   "expected": [
+    "vomiting"
+   ],
+   "denied": []
+  },
+  {
+   "n": 62,
+   "group": "plain",
+   "transcript": "my son has been vomiting non-stop for an hour",
+   "expected": [
+    "vomiting"
+   ],
+   "denied": []
+  },
+  {
+   "n": 63,
+   "group": "plain",
+   "transcript": "he's bringing up everything, even water",
+   "expected": [
+    "vomiting"
+   ],
+   "denied": []
+  },
+  {
+   "n": 64,
+   "group": "plain",
+   "transcript": "she's been sick three times in the last ten minutes",
+   "expected": [
+    "vomiting"
+   ],
+   "denied": []
+  },
+  {
+   "n": 65,
+   "group": "plain",
+   "transcript": "she feels like she's going to throw up",
+   "expected": [
+    "nausea"
+   ],
+   "denied": []
+  },
+  {
+   "n": 66,
+   "group": "plain",
+   "transcript": "he's nauseous and keeps gagging",
+   "expected": [
+    "nausea"
+   ],
+   "denied": []
+  },
+  {
+   "n": 67,
+   "group": "plain",
+   "transcript": "my mum feels queasy and can't eat anything",
+   "expected": [
+    "nausea"
+   ],
+   "denied": []
+  },
+  {
+   "n": 68,
+   "group": "plain",
+   "transcript": "she says her stomach is turning and she feels sick",
+   "expected": [
+    "nausea"
+   ],
+   "denied": []
+  },
+  {
+   "n": 69,
+   "group": "plain",
+   "transcript": "his fingers have gone numb",
+   "expected": [
+    "numbness"
+   ],
+   "denied": []
+  },
+  {
+   "n": 70,
+   "group": "plain",
+   "transcript": "she can't feel one side of her face, it's numb",
+   "expected": [
+    "numbness"
+   ],
+   "denied": []
+  },
+  {
+   "n": 71,
+   "group": "plain",
+   "transcript": "my dad says his foot has no feeling in it",
+   "expected": [
+    "numbness"
+   ],
+   "denied": []
+  },
+  {
+   "n": 72,
+   "group": "plain",
+   "transcript": "her lips and hands are tingling and numb",
+   "expected": [
+    "numbness"
+   ],
+   "denied": []
+  },
+  {
+   "n": 73,
+   "group": "plain",
+   "transcript": "I can't feel a heartbeat at all",
+   "expected": [
+    "no_pulse"
+   ],
+   "denied": [],
+   "founder_review": "Reviewed 2026-10-07 - kept as written."
+  },
+  {
+   "n": 74,
+   "group": "plain",
+   "transcript": "there's no pulse in his wrist or his neck",
+   "expected": [
+    "no_pulse"
+   ],
+   "denied": []
+  },
+  {
+   "n": 75,
+   "group": "plain",
+   "transcript": "I've checked and she has no pulse",
+   "expected": [
+    "no_pulse"
+   ],
+   "denied": []
+  },
+  {
+   "n": 76,
+   "group": "plain",
+   "transcript": "his heart isn't beating, I can't find anything",
+   "expected": [
+    "no_pulse"
+   ],
+   "denied": [],
+   "founder_review": "Reviewed 2026-10-07 - kept as written."
+  },
+  {
+   "n": 77,
+   "group": "plain",
+   "transcript": "he's ice cold all over",
+   "expected": [
+    "body_cold"
+   ],
+   "denied": []
+  },
+  {
+   "n": 78,
+   "group": "plain",
+   "transcript": "her whole body feels cold and stiff",
+   "expected": [
+    "body_cold"
+   ],
+   "denied": []
+  },
+  {
+   "n": 79,
+   "group": "plain",
+   "transcript": "my grandad's whole body is as cold as ice",
+   "expected": [
+    "body_cold"
+   ],
+   "denied": []
+  },
+  {
+   "n": 80,
+   "group": "plain",
+   "transcript": "she's been on the floor all night and her body has gone cold",
+   "expected": [
+    "body_cold"
+   ],
+   "denied": []
+  },
+  {
+   "n": 81,
+   "group": "plain",
+   "transcript": "my husband just dropped to the floor",
+   "expected": [
+    "collapsed"
+   ],
+   "denied": []
+  },
+  {
+   "n": 82,
+   "group": "plain",
+   "transcript": "she passed out in the middle of the shop",
+   "expected": [
+    "collapsed"
+   ],
+   "denied": []
+  },
+  {
+   "n": 83,
+   "group": "plain",
+   "transcript": "he suddenly fainted while standing in the kitchen",
+   "expected": [
+    "collapsed"
+   ],
+   "denied": []
+  },
+  {
+   "n": 84,
+   "group": "plain",
+   "transcript": "my mum keeled over without any warning",
+   "expected": [
+    "collapsed"
+   ],
+   "denied": []
+  },
+  {
+   "n": 85,
+   "group": "plain",
+   "transcript": "she tripped over the cat and fell on the floor",
+   "expected": [
+    "fall"
+   ],
+   "denied": []
+  },
+  {
+   "n": 86,
+   "group": "plain",
+   "transcript": "he lost his balance and fell in the living room",
+   "expected": [
+    "fall"
+   ],
+   "denied": []
+  },
+  {
+   "n": 87,
+   "group": "plain",
+   "transcript": "my grandmother slipped in the shower",
+   "expected": [
+    "fall"
+   ],
+   "denied": []
+  },
+  {
+   "n": 88,
+   "group": "plain",
+   "transcript": "he fell over on the pavement outside our house",
+   "expected": [
+    "fall"
+   ],
+   "denied": []
+  },
+  {
+   "n": 89,
+   "group": "plain",
+   "transcript": "she fell all the way down the stairs",
+   "expected": [
+    "fall_down"
+   ],
+   "denied": []
+  },
+  {
+   "n": 90,
+   "group": "plain",
+   "transcript": "he fell from the top of the staircase",
+   "expected": [
+    "fall_down"
+   ],
+   "denied": []
+  },
+  {
+   "n": 91,
+   "group": "plain",
+   "transcript": "my son tumbled down a steep hill on his bike",
+   "expected": [
+    "fall_down"
+   ],
+   "denied": []
+  },
+  {
+   "n": 92,
+   "group": "plain",
+   "transcript": "she missed a step and fell down the stairs",
+   "expected": [
+    "fall_down"
+   ],
+   "denied": []
+  },
+  {
+   "n": 93,
+   "group": "plain",
+   "transcript": "my son is jerking all over and his eyes have rolled back",
+   "expected": [
+    "seizure"
+   ],
+   "denied": []
+  },
+  {
+   "n": 94,
+   "group": "plain",
+   "transcript": "she's having a seizure and her whole body is shaking",
+   "expected": [
+    "seizure"
+   ],
+   "denied": []
+  },
+  {
+   "n": 95,
+   "group": "plain",
+   "transcript": "he's fitting on the floor",
+   "expected": [
+    "seizure"
+   ],
+   "denied": []
+  },
+  {
+   "n": 96,
+   "group": "plain",
+   "transcript": "my daughter is convulsing and won't respond",
+   "expected": [
+    "seizure"
+   ],
+   "denied": []
+  },
+  {
+   "n": 97,
+   "group": "plain",
+   "transcript": "he banged his head really hard on the cupboard",
+   "expected": [
+    "head_injury"
+   ],
+   "denied": []
+  },
+  {
+   "n": 98,
+   "group": "plain",
+   "transcript": "she hit her head on the corner of the table",
+   "expected": [
+    "head_injury"
+   ],
+   "denied": []
+  },
+  {
+   "n": 99,
+   "group": "plain",
+   "transcript": "a heavy box fell on his head",
+   "expected": [
+    "head_injury"
+   ],
+   "denied": []
+  },
+  {
+   "n": 100,
+   "group": "plain",
+   "transcript": "my son cracked his head on the floor",
+   "expected": [
+    "head_injury"
+   ],
+   "denied": []
+  },
+  {
+   "n": 101,
+   "group": "plain",
+   "transcript": "there's blood everywhere from his arm",
+   "expected": [
+    "heavy_bleeding"
+   ],
+   "denied": []
+  },
+  {
+   "n": 102,
+   "group": "plain",
+   "transcript": "she cut herself with a knife and it won't stop bleeding",
+   "expected": [
+    "heavy_bleeding"
+   ],
+   "denied": []
+  },
+  {
+   "n": 103,
+   "group": "plain",
+   "transcript": "he's lost a lot of blood from a cut on his leg",
+   "expected": [
+    "heavy_bleeding"
+   ],
+   "denied": []
+  },
+  {
+   "n": 104,
+   "group": "plain",
+   "transcript": "the wound is gushing blood",
+   "expected": [
+    "heavy_bleeding"
+   ],
+   "denied": []
+  },
+  {
+   "n": 105,
+   "group": "plain",
+   "transcript": "my son was face down in the pool when we found him",
+   "expected": [
+    "drowning"
+   ],
+   "denied": []
+  },
+  {
+   "n": 106,
+   "group": "plain",
+   "transcript": "she went under in the river and swallowed a lot of water",
+   "expected": [
+    "drowning"
+   ],
+   "denied": []
+  },
+  {
+   "n": 107,
+   "group": "plain",
+   "transcript": "we pulled my daughter out of the bath, she'd been underwater",
+   "expected": [
+    "drowning"
+   ],
+   "denied": []
+  },
+  {
+   "n": 108,
+   "group": "plain",
+   "transcript": "he nearly drowned in the sea",
+   "expected": [
+    "drowning"
+   ],
+   "denied": []
+  },
+  {
+   "n": 109,
+   "group": "choking",
+   "transcript": "my daughter had a grape in her mouth and now she can't breathe or talk",
+   "expected": [
+    "choking"
+   ],
+   "denied": []
+  },
+  {
+   "n": 110,
+   "group": "choking",
+   "transcript": "my father is choking on a lump of steak",
+   "expected": [
+    "choking"
+   ],
+   "denied": []
+  },
+  {
+   "n": 111,
+   "group": "choking",
+   "transcript": "the baby put a small toy in his mouth and now he can't breathe",
+   "expected": [
+    "choking"
+   ],
+   "denied": []
+  },
+  {
+   "n": 112,
+   "group": "choking",
+   "transcript": "she's choking, she can't cough or speak",
+   "expected": [
+    "choking"
+   ],
+   "denied": []
+  },
+  {
+   "n": 113,
+   "group": "choking",
+   "transcript": "something is stuck in my dad's throat, he's turning red",
+   "expected": [
+    "choking"
+   ],
+   "denied": []
+  },
+  {
+   "n": 114,
+   "group": "choking",
+   "transcript": "my son swallowed a marble and it's stuck",
+   "expected": [
+    "choking"
+   ],
+   "denied": []
+  },
+  {
+   "n": 115,
+   "group": "choking",
+   "transcript": "she was eating rice cake and now she's choking",
+   "expected": [
+    "choking"
+   ],
+   "denied": []
+  },
+  {
+   "n": 116,
+   "group": "choking",
+   "transcript": "he's grabbing his neck, I think food went down the wrong way and it's stuck",
+   "expected": [
+    "choking"
+   ],
+   "denied": []
+  },
+  {
+   "n": 117,
+   "group": "choking",
+   "transcript": "my grandmother is choking on her dentures",
+   "expected": [
+    "choking"
+   ],
+   "denied": []
+  },
+  {
+   "n": 118,
+   "group": "choking",
+   "transcript": "he can't breathe, a sweet is stuck in his throat",
+   "expected": [
+    "choking"
+   ],
+   "denied": []
+  },
+  {
+   "n": 119,
+   "group": "choking",
+   "transcript": "she started choking while eating and nothing is coming out",
+   "expected": [
+    "choking"
+   ],
+   "denied": []
+  },
+  {
+   "n": 120,
+   "group": "choking",
+   "transcript": "he's making a high-pitched noise and can't get air, he was eating a boiled sweet",
+   "expected": [
+    "choking"
+   ],
+   "denied": [],
+   "founder_review": "Changed 2026-10-07 after founder review. Was: \"he's making a high-pitched noise and can't get air, he was eating peanuts\""
+  },
+  {
+   "n": 121,
+   "group": "choking",
+   "transcript": "a fish bone is stuck in her throat and she's panicking",
+   "expected": [
+    "choking"
+   ],
+   "denied": []
+  },
+  {
+   "n": 122,
+   "group": "choking",
+   "transcript": "my son stuffed bread in his mouth and now it's stuck and he can't breathe",
+   "expected": [
+    "choking"
+   ],
+   "denied": [],
+   "founder_review": "Changed 2026-10-07 after founder review. Was: \"my son's mouth is full of bread and he can't breathe\""
+  },
+  {
+   "n": 123,
+   "group": "choking",
+   "transcript": "she choked on a sweet, it came out but she's still coughing hard",
+   "expected": [
+    "choking"
+   ],
+   "denied": []
+  },
+  {
+   "n": 124,
+   "group": "choking",
+   "transcript": "he was choking, I did back blows and the food came out a minute ago, but he's still gasping",
+   "expected": [
+    "choking",
+    "difficulty_breathing"
+   ],
+   "denied": [],
+   "founder_review": "Changed 2026-10-07 after founder review. Was: 'he was choking, I did back blows and the food came out a minute ago'"
+  },
+  {
+   "n": 125,
+   "group": "choking",
+   "transcript": "the baby is gagging and can't breathe after swallowing a coin",
+   "expected": [
+    "choking"
+   ],
+   "denied": []
+  },
+  {
+   "n": 126,
+   "group": "choking",
+   "transcript": "my mother can't swallow, something's lodged in her throat",
+   "expected": [
+    "choking"
+   ],
+   "denied": []
+  },
+  {
+   "n": 127,
+   "group": "choking",
+   "transcript": "he's choking and his lips are going blue",
+   "expected": [
+    "choking"
+   ],
+   "denied": []
+  },
+  {
+   "n": 128,
+   "group": "choking",
+   "transcript": "my toddler has a peanut stuck and is making no sound",
+   "expected": [
+    "choking"
+   ],
+   "denied": []
+  },
+  {
+   "n": 129,
+   "group": "choking_lookalike",
+   "transcript": "she's been coughing all night with a chest infection and now she's struggling to breathe",
+   "expected": [
+    "difficulty_breathing"
+   ],
+   "denied": []
+  },
+  {
+   "n": 130,
+   "group": "choking_lookalike",
+   "transcript": "he has asthma and he's wheezing badly",
+   "expected": [
+    "difficulty_breathing"
+   ],
+   "denied": []
+  },
+  {
+   "n": 131,
+   "group": "choking_lookalike",
+   "transcript": "she's not choking, she's having an asthma attack",
+   "expected": [
+    "difficulty_breathing"
+   ],
+   "denied": [
+    "choking"
+   ]
+  },
+  {
+   "n": 132,
+   "group": "choking_lookalike",
+   "transcript": "my son keeps coughing because of his cold and now he has a fever of 39",
+   "expected": [
+    "high_fever"
+   ],
+   "denied": []
+  },
+  {
+   "n": 133,
+   "group": "choking_lookalike",
+   "transcript": "he's vomiting and keeps gagging",
+   "expected": [
+    "vomiting"
+   ],
+   "denied": []
+  },
+  {
+   "n": 134,
+   "group": "choking_lookalike",
+   "transcript": "she ate something bad and now she feels sick and is throwing up",
+   "expected": [
+    "nausea",
+    "vomiting"
+   ],
+   "denied": []
+  },
+  {
+   "n": 135,
+   "group": "choking_lookalike",
+   "transcript": "nothing is stuck, but his throat is swelling and he can't breathe properly",
+   "expected": [
+    "difficulty_breathing"
+   ],
+   "denied": [
+    "choking"
+   ]
+  },
+  {
+   "n": 136,
+   "group": "choking_lookalike",
+   "transcript": "she's coughing up phlegm and can't catch her breath",
+   "expected": [
+    "difficulty_breathing"
+   ],
+   "denied": [],
+   "founder_review": "Reviewed 2026-10-07 - kept as written."
+  },
+  {
+   "n": 137,
+   "group": "choking_lookalike",
+   "transcript": "he keeps heaving but nothing comes up, and he's gone very weak",
+   "expected": [
+    "nausea"
+   ],
+   "denied": [],
+   "founder_review": "Changed 2026-10-07 after founder review. Was: \"he's retching over the sink\""
+  },
+  {
+   "n": 138,
+   "group": "choking_lookalike",
+   "transcript": "my daughter's lips have gone blue and she's struggling to breathe, she has a lung condition",
+   "expected": [
+    "difficulty_breathing"
+   ],
+   "denied": []
+  },
+  {
+   "n": 139,
+   "group": "choking_lookalike",
+   "transcript": "he's coughing and wheezing after breathing in smoke",
+   "expected": [
+    "difficulty_breathing"
+   ],
+   "denied": []
+  },
+  {
+   "n": 140,
+   "group": "choking_lookalike",
+   "transcript": "she's not choking on anything, she just can't stop coughing and now she's dizzy",
+   "expected": [
+    "dizziness"
+   ],
+   "denied": [
+    "choking"
+   ]
+  },
+  {
+   "n": 141,
+   "group": "choking_lookalike",
+   "transcript": "he swallowed his food fine but now his chest really hurts",
+   "expected": [
+    "chest_pain"
+   ],
+   "denied": [
+    "choking"
+   ]
+  },
+  {
+   "n": 142,
+   "group": "choking_lookalike",
+   "transcript": "my grandmother keeps clearing her throat, feels sick and has gone very pale",
+   "expected": [
+    "nausea",
+    "pale_complexion"
+   ],
+   "denied": [],
+   "founder_review": "Changed 2026-10-07 after founder review. Was: 'my grandmother keeps clearing her throat and feels sick'"
+  },
+  {
+   "n": 143,
+   "group": "choking_lookalike",
+   "transcript": "the baby has a cough and is breathing very fast",
+   "expected": [
+    "difficulty_breathing"
+   ],
+   "denied": []
+  },
+  {
+   "n": 144,
+   "group": "choking_lookalike",
+   "transcript": "he's throwing up and can't keep anything down",
+   "expected": [
+    "vomiting"
+   ],
+   "denied": []
+  },
+  {
+   "n": 145,
+   "group": "choking_lookalike",
+   "transcript": "she had a coughing fit and now her face is pale and she's very dizzy",
+   "expected": [
+    "pale_complexion",
+    "dizziness"
+   ],
+   "denied": [],
+   "founder_review": "Changed 2026-10-07 after founder review. Was: 'she had a coughing fit and now her face is pale'"
+  },
+  {
+   "n": 146,
+   "group": "choking_lookalike",
+   "transcript": "my son is drooling and has a high fever and a sore throat",
+   "expected": [
+    "high_fever"
+   ],
+   "denied": []
+  },
+  {
+   "n": 147,
+   "group": "choking_lookalike",
+   "transcript": "he's having trouble breathing because of an allergy, nothing is stuck in his throat",
+   "expected": [
+    "difficulty_breathing"
+   ],
+   "denied": [
+    "choking"
+   ]
+  },
+  {
+   "n": 148,
+   "group": "choking_lookalike",
+   "transcript": "she feels like there's a lump in her throat and her heart is racing",
+   "expected": [
+    "palpitations"
+   ],
+   "denied": []
+  },
+  {
+   "n": 149,
+   "group": "lookalike",
+   "transcript": "there's a pounding in his head that won't stop",
+   "expected": [
+    "headache"
+   ],
+   "denied": []
+  },
+  {
+   "n": 150,
+   "group": "lookalike",
+   "transcript": "my mum has a throbbing pain behind her eyes",
+   "expected": [
+    "headache"
+   ],
+   "denied": []
+  },
+  {
+   "n": 151,
+   "group": "lookalike",
+   "transcript": "her heart is pounding and she can hear it in her ears",
+   "expected": [
+    "palpitations"
+   ],
+   "denied": []
+  },
+  {
+   "n": 152,
+   "group": "lookalike",
+   "transcript": "his pulse is throbbing really fast in his neck",
+   "expected": [
+    "palpitations"
+   ],
+   "denied": []
+  },
+  {
+   "n": 153,
+   "group": "lookalike",
+   "transcript": "she has a banging headache and feels sick",
+   "expected": [
+    "headache",
+    "nausea"
+   ],
+   "denied": []
+  },
+  {
+   "n": 154,
+   "group": "lookalike",
+   "transcript": "his heart is thumping so hard he's scared, but he says his head doesn't hurt",
+   "expected": [
+    "palpitations"
+   ],
+   "denied": [
+    "headache"
+   ],
+   "founder_review": "Changed 2026-10-07 after founder review. Was: 'his heart is thumping but his head is fine'"
+  },
+  {
+   "n": 155,
+   "group": "lookalike",
+   "transcript": "her hand feels numb but she can move it normally",
+   "expected": [
+    "numbness"
+   ],
+   "denied": []
+  },
+  {
+   "n": 156,
+   "group": "lookalike",
+   "transcript": "he can't move his right arm at all, but he can still feel it",
+   "expected": [
+    "one_sided_weakness"
+   ],
+   "denied": [
+    "numbness"
+   ]
+  },
+  {
+   "n": 157,
+   "group": "lookalike",
+   "transcript": "her left leg is tingling like pins and needles",
+   "expected": [
+    "numbness"
+   ],
+   "denied": []
+  },
+  {
+   "n": 158,
+   "group": "lookalike",
+   "transcript": "his left arm and leg are weak and he's dragging his foot",
+   "expected": [
+    "one_sided_weakness"
+   ],
+   "denied": []
+  },
+  {
+   "n": 159,
+   "group": "lookalike",
+   "transcript": "she says her cheek feels numb",
+   "expected": [
+    "numbness"
+   ],
+   "denied": []
+  },
+  {
+   "n": 160,
+   "group": "lookalike",
+   "transcript": "he can't lift his left arm and the left side of his face has dropped",
+   "expected": [
+    "one_sided_weakness",
+    "face_drooping"
+   ],
+   "denied": []
+  },
+  {
+   "n": 161,
+   "group": "lookalike",
+   "transcript": "he's sweating because it's so hot today and now he's collapsed",
+   "expected": [
+    "collapsed"
+   ],
+   "denied": []
+  },
+  {
+   "n": 162,
+   "group": "lookalike",
+   "transcript": "her body is cold all over and she's not moving",
+   "expected": [
+    "body_cold"
+   ],
+   "denied": []
+  },
+  {
+   "n": 163,
+   "group": "lookalike",
+   "transcript": "his hands are cold from being outside but his chest really hurts",
+   "expected": [
+    "chest_pain"
+   ],
+   "denied": []
+  },
+  {
+   "n": 164,
+   "group": "lookalike",
+   "transcript": "she fainted at the table and she's very pale, but she isn't sweating",
+   "expected": [
+    "collapsed",
+    "pale_complexion"
+   ],
+   "denied": [
+    "cold_sweat"
+   ],
+   "founder_review": "Changed 2026-10-07 after founder review. Was: \"she's pale but she isn't sweating at all\""
+  },
+  {
+   "n": 165,
+   "group": "lookalike",
+   "transcript": "she's soaked in cold sweat and her face is white",
+   "expected": [
+    "cold_sweat",
+    "pale_complexion"
+   ],
+   "denied": []
+  },
+  {
+   "n": 166,
+   "group": "lookalike",
+   "transcript": "his feet are cold because the heating is off, but he can't breathe properly",
+   "expected": [
+    "difficulty_breathing"
+   ],
+   "denied": []
+  },
+  {
+   "n": 167,
+   "group": "lookalike",
+   "transcript": "she's shivering under the blankets with a high temperature",
+   "expected": [
+    "high_fever"
+   ],
+   "denied": []
+  },
+  {
+   "n": 168,
+   "group": "lookalike",
+   "transcript": "his back has locked up and he can't move",
+   "expected": [
+    "back_pain"
+   ],
+   "denied": []
+  },
+  {
+   "n": 169,
+   "group": "lookalike",
+   "transcript": "he's shaking with chills and his temperature is 40",
+   "expected": [
+    "high_fever"
+   ],
+   "denied": []
+  },
+  {
+   "n": 170,
+   "group": "lookalike",
+   "transcript": "my son is shaking all over and not responding to me",
+   "expected": [
+    "seizure"
+   ],
+   "denied": []
+  },
+  {
+   "n": 171,
+   "group": "lookalike",
+   "transcript": "her neck seized up and now she has a terrible headache",
+   "expected": [
+    "headache"
+   ],
+   "denied": []
+  },
+  {
+   "n": 172,
+   "group": "lookalike",
+   "transcript": "she tripped on a cable and fell on the kitchen floor",
+   "expected": [
+    "fall"
+   ],
+   "denied": []
+  },
+  {
+   "n": 173,
+   "group": "lookalike",
+   "transcript": "he just went down suddenly, nobody pushed him and he didn't trip",
+   "expected": [
+    "collapsed"
+   ],
+   "denied": [
+    "fall"
+   ]
+  },
+  {
+   "n": 174,
+   "group": "lookalike",
+   "transcript": "she fell down the escalator",
+   "expected": [
+    "fall_down"
+   ],
+   "denied": []
+  },
+  {
+   "n": 175,
+   "group": "lookalike",
+   "transcript": "my dad slipped on ice in the car park",
+   "expected": [
+    "fall"
+   ],
+   "denied": []
+  },
+  {
+   "n": 176,
+   "group": "lookalike",
+   "transcript": "he fainted and fell down the stairs",
+   "expected": [
+    "collapsed",
+    "fall_down"
+   ],
+   "denied": []
+  },
+  {
+   "n": 177,
+   "group": "lookalike",
+   "transcript": "the pain is in the upper part of his stomach, not his chest",
+   "expected": [
+    "severe_abdominal_pain"
+   ],
+   "denied": [
+    "chest_pain"
+   ]
+  },
+  {
+   "n": 178,
+   "group": "lookalike",
+   "transcript": "she has a burning pain in her chest after eating",
+   "expected": [
+    "chest_pain"
+   ],
+   "denied": []
+  },
+  {
+   "n": 179,
+   "group": "lookalike",
+   "transcript": "his lower back is killing him",
+   "expected": [
+    "lower_back_pain"
+   ],
+   "denied": []
+  },
+  {
+   "n": 180,
+   "group": "lookalike",
+   "transcript": "she has pain between her shoulder blades, not in her lower back",
+   "expected": [
+    "back_pain"
+   ],
+   "denied": [
+    "lower_back_pain"
+   ]
+  },
+  {
+   "n": 181,
+   "group": "lookalike",
+   "transcript": "she's so dizzy she had to sit on the floor, but she doesn't feel sick",
+   "expected": [
+    "dizziness"
+   ],
+   "denied": [
+    "nausea"
+   ],
+   "founder_review": "Changed 2026-10-07 after founder review. Was: 'she feels dizzy but not sick'"
+  },
+  {
+   "n": 182,
+   "group": "lookalike",
+   "transcript": "he feels like he's going to throw up, but he says he isn't dizzy",
+   "expected": [
+    "nausea"
+   ],
+   "denied": [
+    "dizziness"
+   ],
+   "founder_review": "Changed 2026-10-07 after founder review. Was: \"he feels sick to his stomach but the room isn't spinning\""
+  },
+  {
+   "n": 183,
+   "group": "lookalike",
+   "transcript": "she was in the cold sea for a long time and her whole body is freezing",
+   "expected": [
+    "body_cold"
+   ],
+   "denied": []
+  },
+  {
+   "n": 184,
+   "group": "lookalike",
+   "transcript": "my son fell in the pond and went under for a few seconds",
+   "expected": [
+    "drowning"
+   ],
+   "denied": []
+  },
+  {
+   "n": 185,
+   "group": "lookalike",
+   "transcript": "she's being sick into the toilet",
+   "expected": [
+    "vomiting"
+   ],
+   "denied": []
+  },
+  {
+   "n": 186,
+   "group": "lookalike",
+   "transcript": "he's talking slowly and slurring but he knows where he is",
+   "expected": [
+    "slurred_speech"
+   ],
+   "denied": [
+    "confused"
+   ]
+  },
+  {
+   "n": 187,
+   "group": "lookalike",
+   "transcript": "she's confused about where she is, but she's speaking clearly",
+   "expected": [
+    "confused"
+   ],
+   "denied": [
+    "slurred_speech"
+   ]
+  },
+  {
+   "n": 188,
+   "group": "lookalike",
+   "transcript": "he's turned a horrible grey colour",
+   "expected": [
+    "pale_complexion"
+   ],
+   "denied": []
+  },
+  {
+   "n": 189,
+   "group": "lookalike",
+   "transcript": "she has a small cut on her finger but she's fainted",
+   "expected": [
+    "collapsed"
+   ],
+   "denied": [
+    "heavy_bleeding"
+   ]
+  },
+  {
+   "n": 190,
+   "group": "lookalike",
+   "transcript": "his nose is bleeding a little, but he says he's very dizzy",
+   "expected": [
+    "dizziness"
+   ],
+   "denied": [
+    "heavy_bleeding"
+   ]
+  },
+  {
+   "n": 191,
+   "group": "lookalike",
+   "transcript": "he collapsed, his pulse is weak but I can feel it",
+   "expected": [
+    "collapsed"
+   ],
+   "denied": [
+    "no_pulse"
+   ],
+   "founder_review": "Changed 2026-10-07 after founder review. Was: 'his pulse is weak but I can feel it'"
+  },
+  {
+   "n": 192,
+   "group": "lookalike",
+   "transcript": "she has a pulse and she's awake, but she's breathing very fast",
+   "expected": [
+    "difficulty_breathing"
+   ],
+   "denied": [
+    "no_pulse"
+   ],
+   "founder_review": "Changed 2026-10-07 after founder review. Was: \"she has a pulse but she's breathing very strangely\""
+  },
+  {
+   "n": 193,
+   "group": "lookalike",
+   "transcript": "I can feel his heart beating, he's just very pale",
+   "expected": [
+    "pale_complexion"
+   ],
+   "denied": [
+    "no_pulse"
+   ]
+  },
+  {
+   "n": 194,
+   "group": "lookalike",
+   "transcript": "her heartbeat is very slow and she feels faint",
+   "expected": [
+    "dizziness"
+   ],
+   "denied": []
+  },
+  {
+   "n": 195,
+   "group": "lookalike",
+   "transcript": "her fingers are cold but she's having chest pain",
+   "expected": [
+    "chest_pain"
+   ],
+   "denied": []
+  },
+  {
+   "n": 196,
+   "group": "lookalike",
+   "transcript": "he feels cold and he's shivering, his temperature is high",
+   "expected": [
+    "high_fever"
+   ],
+   "denied": []
+  },
+  {
+   "n": 197,
+   "group": "lookalike",
+   "transcript": "my dad's skin is cold and wet with sweat",
+   "expected": [
+    "cold_sweat"
+   ],
+   "denied": []
+  },
+  {
+   "n": 198,
+   "group": "time",
+   "transcript": "he had a heart attack five years ago and now he has chest pain again",
+   "expected": [
+    "chest_pain"
+   ],
+   "denied": []
+  },
+  {
+   "n": 199,
+   "group": "time",
+   "transcript": "she had a seizure last year, today she has a bad headache",
+   "expected": [
+    "headache"
+   ],
+   "denied": [
+    "seizure"
+   ]
+  },
+  {
+   "n": 200,
+   "group": "time",
+   "transcript": "he broke his leg last month and now he's having trouble breathing",
+   "expected": [
+    "difficulty_breathing"
+   ],
+   "denied": []
+  },
+  {
+   "n": 201,
+   "group": "time",
+   "transcript": "my mum had a fever last week, today she's very confused",
+   "expected": [
+    "confused"
+   ],
+   "denied": [
+    "high_fever"
+   ]
+  },
+  {
+   "n": 202,
+   "group": "time",
+   "transcript": "he hit his head two weeks ago and now he's vomiting",
+   "expected": [
+    "vomiting"
+   ],
+   "denied": [
+    "head_injury"
+   ]
+  },
+  {
+   "n": 203,
+   "group": "time",
+   "transcript": "she had back pain yesterday, now her chest really hurts",
+   "expected": [
+    "chest_pain"
+   ],
+   "denied": [
+    "back_pain"
+   ]
+  },
+  {
+   "n": 204,
+   "group": "time",
+   "transcript": "he was dizzy last week but that's gone, today he collapsed",
+   "expected": [
+    "collapsed"
+   ],
+   "denied": [
+    "dizziness"
+   ]
+  },
+  {
+   "n": 205,
+   "group": "time",
+   "transcript": "she fell down the stairs last year, but today her face is drooping",
+   "expected": [
+    "face_drooping"
+   ],
+   "denied": [
+    "fall_down"
+   ]
+  },
+  {
+   "n": 206,
+   "group": "time",
+   "transcript": "my husband has had palpitations before, but today his chest is in pain",
+   "expected": [
+    "chest_pain"
+   ],
+   "denied": [
+    "palpitations"
+   ]
+  },
+  {
+   "n": 207,
+   "group": "time",
+   "transcript": "she had a stroke in the past and now she's slurring her words",
+   "expected": [
+    "slurred_speech"
+   ],
+   "denied": []
+  },
+  {
+   "n": 208,
+   "group": "time",
+   "transcript": "his chest pain went away, but now he can't breathe",
+   "expected": [
+    "difficulty_breathing"
+   ],
+   "denied": [
+    "chest_pain"
+   ]
+  },
+  {
+   "n": 209,
+   "group": "time",
+   "transcript": "the headache stopped, but now she's very confused",
+   "expected": [
+    "confused"
+   ],
+   "denied": [
+    "headache"
+   ]
+  },
+  {
+   "n": 210,
+   "group": "time",
+   "transcript": "the dizziness has passed, but he's still very pale",
+   "expected": [
+    "pale_complexion"
+   ],
+   "denied": [
+    "dizziness"
+   ]
+  },
+  {
+   "n": 211,
+   "group": "time",
+   "transcript": "her fever came down this morning, but now she has terrible stomach pain",
+   "expected": [
+    "severe_abdominal_pain"
+   ],
+   "denied": [
+    "high_fever"
+   ]
+  },
+  {
+   "n": 212,
+   "group": "time",
+   "transcript": "his palpitations stopped a few minutes ago, but he still feels faint",
+   "expected": [
+    "dizziness"
+   ],
+   "denied": [
+    "palpitations"
+   ]
+  },
+  {
+   "n": 213,
+   "group": "time",
+   "transcript": "the numbness in her hand went away, but now she has a headache",
+   "expected": [
+    "headache"
+   ],
+   "denied": [
+    "numbness"
+   ]
+  },
+  {
+   "n": 214,
+   "group": "time",
+   "transcript": "she was having a seizure but it stopped a minute ago",
+   "expected": [
+    "seizure"
+   ],
+   "denied": []
+  },
+  {
+   "n": 215,
+   "group": "time",
+   "transcript": "he threw up a few minutes ago and now he's very pale",
+   "expected": [
+    "vomiting",
+    "pale_complexion"
+   ],
+   "denied": []
+  },
+  {
+   "n": 216,
+   "group": "time",
+   "transcript": "the bleeding has just stopped, but he lost a lot of blood",
+   "expected": [
+    "heavy_bleeding"
+   ],
+   "denied": []
+  },
+  {
+   "n": 217,
+   "group": "time",
+   "transcript": "her fit has finished but she's still very confused",
+   "expected": [
+    "seizure",
+    "confused"
+   ],
+   "denied": []
+  },
+  {
+   "n": 218,
+   "group": "time",
+   "transcript": "he vomited twice and his belly is in agony",
+   "expected": [
+    "vomiting",
+    "severe_abdominal_pain"
+   ],
+   "denied": []
+  },
+  {
+   "n": 219,
+   "group": "time",
+   "transcript": "she was choking, the food came out, but she's still wheezing and frightened",
+   "expected": [
+    "choking",
+    "difficulty_breathing"
+   ],
+   "denied": [],
+   "founder_review": "Changed 2026-10-07 after founder review. Was: \"she was choking but the food came out, now she's breathing\""
+  },
+  {
+   "n": 220,
+   "group": "time",
+   "transcript": "his nose was bleeding heavily for twenty minutes and it has just stopped",
+   "expected": [
+    "heavy_bleeding"
+   ],
+   "denied": []
+  },
+  {
+   "n": 221,
+   "group": "time",
+   "transcript": "she had a seizure ten minutes ago and still isn't herself",
+   "expected": [
+    "seizure"
+   ],
+   "denied": []
+  },
+  {
+   "n": 222,
+   "group": "time",
+   "transcript": "since this morning she's had a terrible headache",
+   "expected": [
+    "headache"
+   ],
+   "denied": []
+  },
+  {
+   "n": 223,
+   "group": "time",
+   "transcript": "he's had chest pain for the last hour",
+   "expected": [
+    "chest_pain"
+   ],
+   "denied": []
+  },
+  {
+   "n": 224,
+   "group": "time",
+   "transcript": "she's been vomiting since last night",
+   "expected": [
+    "vomiting"
+   ],
+   "denied": []
+  },
+  {
+   "n": 225,
+   "group": "time",
+   "transcript": "for two days he's had a high fever and now he's confused",
+   "expected": [
+    "high_fever",
+    "confused"
+   ],
+   "denied": []
+  },
+  {
+   "n": 226,
+   "group": "time",
+   "transcript": "his back has hurt for a week but today it's much worse",
+   "expected": [
+    "back_pain"
+   ],
+   "denied": []
+  },
+  {
+   "n": 227,
+   "group": "time",
+   "transcript": "she's been dizzy on and off all day and it's getting worse",
+   "expected": [
+    "dizziness"
+   ],
+   "denied": []
+  },
+  {
+   "n": 228,
+   "group": "time",
+   "transcript": "years ago she had heart problems, now she's fainted",
+   "expected": [
+    "collapsed"
+   ],
+   "denied": []
+  },
+  {
+   "n": 229,
+   "group": "time",
+   "transcript": "he fainted last week, and today he has a racing heart",
+   "expected": [
+    "palpitations"
+   ],
+   "denied": [
+    "collapsed"
+   ]
+  },
+  {
+   "n": 230,
+   "group": "time",
+   "transcript": "my son had a high fever two weeks ago, now he's having a fit",
+   "expected": [
+    "seizure"
+   ],
+   "denied": [
+    "high_fever"
+   ]
+  },
+  {
+   "n": 231,
+   "group": "time",
+   "transcript": "she hurt her lower back last winter, today she can't feel her legs",
+   "expected": [
+    "numbness"
+   ],
+   "denied": [
+    "lower_back_pain"
+   ]
+  },
+  {
+   "n": 232,
+   "group": "time",
+   "transcript": "he cut his hand yesterday, but today he has a fever of 39",
+   "expected": [
+    "high_fever"
+   ],
+   "denied": []
+  },
+  {
+   "n": 233,
+   "group": "time",
+   "transcript": "she choked on something last month, today she can't breathe properly",
+   "expected": [
+    "difficulty_breathing"
+   ],
+   "denied": [
+    "choking"
+   ]
+  },
+  {
+   "n": 234,
+   "group": "time",
+   "transcript": "he had a seizure as a child, today he collapsed",
+   "expected": [
+    "collapsed"
+   ],
+   "denied": [
+    "seizure"
+   ]
+  },
+  {
+   "n": 235,
+   "group": "time",
+   "transcript": "she vomited yesterday, today she's dizzy and weak",
+   "expected": [
+    "dizziness"
+   ],
+   "denied": [
+    "vomiting"
+   ]
+  },
+  {
+   "n": 236,
+   "group": "time",
+   "transcript": "the chest pain started an hour ago and hasn't stopped",
+   "expected": [
+    "chest_pain"
+   ],
+   "denied": []
+  },
+  {
+   "n": 237,
+   "group": "time",
+   "transcript": "her stomach pain from yesterday is back and it's much worse",
+   "expected": [
+    "severe_abdominal_pain"
+   ],
+   "denied": []
+  },
+  {
+   "n": 238,
+   "group": "negation",
+   "transcript": "no blood anywhere, but he whacked his head against the wall",
+   "expected": [
+    "head_injury"
+   ],
+   "denied": [
+    "heavy_bleeding"
+   ]
+  },
+  {
+   "n": 239,
+   "group": "negation",
+   "transcript": "she doesn't have a fever, but she's very dizzy",
+   "expected": [
+    "dizziness"
+   ],
+   "denied": [
+    "high_fever"
+   ]
+  },
+  {
+   "n": 240,
+   "group": "negation",
+   "transcript": "no vomiting, just terrible stomach pain",
+   "expected": [
+    "severe_abdominal_pain"
+   ],
+   "denied": [
+    "vomiting"
+   ]
+  },
+  {
+   "n": 241,
+   "group": "negation",
+   "transcript": "he isn't confused, but his speech is slurred",
+   "expected": [
+    "slurred_speech"
+   ],
+   "denied": [
+    "confused"
+   ]
+  },
+  {
+   "n": 242,
+   "group": "negation",
+   "transcript": "she didn't hit her head when she fell over",
+   "expected": [
+    "fall"
+   ],
+   "denied": [
+    "head_injury"
+   ]
+  },
+  {
+   "n": 243,
+   "group": "negation",
+   "transcript": "there's no chest pain, but his heart is racing",
+   "expected": [
+    "palpitations"
+   ],
+   "denied": [
+    "chest_pain"
+   ]
+  },
+  {
+   "n": 244,
+   "group": "negation",
+   "transcript": "he's not having a seizure, he's shivering with a fever",
+   "expected": [
+    "high_fever"
+   ],
+   "denied": [
+    "seizure"
+   ]
+  },
+  {
+   "n": 245,
+   "group": "negation",
+   "transcript": "she isn't dizzy, she has a headache",
+   "expected": [
+    "headache"
+   ],
+   "denied": [
+    "dizziness"
+   ]
+  },
+  {
+   "n": 246,
+   "group": "negation",
+   "transcript": "he didn't faint, he tripped over the rug",
+   "expected": [
+    "fall"
+   ],
+   "denied": [
+    "collapsed"
+   ]
+  },
+  {
+   "n": 247,
+   "group": "negation",
+   "transcript": "her face looks normal, but one arm has gone weak",
+   "expected": [
+    "one_sided_weakness"
+   ],
+   "denied": [
+    "face_drooping"
+   ]
+  },
+  {
+   "n": 248,
+   "group": "negation",
+   "transcript": "no numbness anywhere, but she has a bad back pain",
+   "expected": [
+    "back_pain"
+   ],
+   "denied": [
+    "numbness"
+   ]
+  },
+  {
+   "n": 249,
+   "group": "negation",
+   "transcript": "he's not short of breath, but he's in a cold sweat and pale",
+   "expected": [
+    "cold_sweat",
+    "pale_complexion"
+   ],
+   "denied": [
+    "difficulty_breathing"
+   ]
+  },
+  {
+   "n": 250,
+   "group": "negation",
+   "transcript": "she doesn't feel sick, but she can't stop shaking and she's burning hot",
+   "expected": [
+    "high_fever"
+   ],
+   "denied": [
+    "nausea"
+   ]
+  },
+  {
+   "n": 251,
+   "group": "negation",
+   "transcript": "nothing is stuck in his throat, he's just wheezing",
+   "expected": [
+    "difficulty_breathing"
+   ],
+   "denied": [
+    "choking"
+   ]
+  },
+  {
+   "n": 252,
+   "group": "negation",
+   "transcript": "he has a pulse, but he's breathing very fast",
+   "expected": [
+    "difficulty_breathing"
+   ],
+   "denied": [
+    "no_pulse"
+   ]
+  },
+  {
+   "n": 253,
+   "group": "negation",
+   "transcript": "she isn't bleeding much, but she fell down the stairs",
+   "expected": [
+    "fall_down"
+   ],
+   "denied": [
+    "heavy_bleeding"
+   ]
+  },
+  {
+   "n": 254,
+   "group": "negation",
+   "transcript": "he isn't vomiting, he just feels sick",
+   "expected": [
+    "nausea"
+   ],
+   "denied": [
+    "vomiting"
+   ]
+  },
+  {
+   "n": 255,
+   "group": "negation",
+   "transcript": "no headache, but her face has gone droopy on the right",
+   "expected": [
+    "face_drooping"
+   ],
+   "denied": [
+    "headache"
+   ]
+  },
+  {
+   "n": 256,
+   "group": "negation",
+   "transcript": "he doesn't have a temperature, but he's very confused",
+   "expected": [
+    "confused"
+   ],
+   "denied": [
+    "high_fever"
+   ]
+  },
+  {
+   "n": 257,
+   "group": "negation",
+   "transcript": "there's no blood, but her arm looks broken after she slipped",
+   "expected": [
+    "fall"
+   ],
+   "denied": [
+    "heavy_bleeding"
+   ]
+  },
+  {
+   "n": 258,
+   "group": "negation",
+   "transcript": "she's not breathing hard, but her lips feel numb",
+   "expected": [
+    "numbness"
+   ],
+   "denied": [
+    "difficulty_breathing"
+   ]
+  },
+  {
+   "n": 259,
+   "group": "negation",
+   "transcript": "he didn't fall, he just collapsed in his chair",
+   "expected": [
+    "collapsed"
+   ],
+   "denied": [
+    "fall"
+   ]
+  },
+  {
+   "n": 260,
+   "group": "negation",
+   "transcript": "no back pain, it's his stomach that hurts badly",
+   "expected": [
+    "severe_abdominal_pain"
+   ],
+   "denied": [
+    "back_pain"
+   ]
+  },
+  {
+   "n": 261,
+   "group": "negation",
+   "transcript": "she isn't pale, but her heart is pounding",
+   "expected": [
+    "palpitations"
+   ],
+   "denied": [
+    "pale_complexion"
+   ]
+  },
+  {
+   "n": 262,
+   "group": "negation",
+   "transcript": "he isn't choking, he's vomiting",
+   "expected": [
+    "vomiting"
+   ],
+   "denied": [
+    "choking"
+   ]
+  },
+  {
+   "n": 263,
+   "group": "negation",
+   "transcript": "there's no fever, but my baby is having a fit",
+   "expected": [
+    "seizure"
+   ],
+   "denied": [
+    "high_fever"
+   ]
+  },
+  {
+   "n": 264,
+   "group": "negation",
+   "transcript": "she's not dizzy and not sick, she just has severe chest pain",
+   "expected": [
+    "chest_pain"
+   ],
+   "denied": [
+    "dizziness",
+    "nausea"
+   ]
+  },
+  {
+   "n": 265,
+   "group": "negation",
+   "transcript": "he hasn't hit his head, but he can't move his left side",
+   "expected": [
+    "one_sided_weakness"
+   ],
+   "denied": [
+    "head_injury"
+   ]
+  },
+  {
+   "n": 266,
+   "group": "negation",
+   "transcript": "she didn't go under the water, she slipped by the pool and hit her head",
+   "expected": [
+    "fall",
+    "head_injury"
+   ],
+   "denied": [
+    "drowning"
+   ]
+  },
+  {
+   "n": 267,
+   "group": "negation",
+   "transcript": "he isn't in pain, but he's very pale and sweating cold",
+   "expected": [
+    "pale_complexion",
+    "cold_sweat"
+   ],
+   "denied": []
+  },
+  {
+   "n": 268,
+   "group": "multi",
+   "transcript": "he has chest pain and he's sweating cold",
+   "expected": [
+    "chest_pain",
+    "cold_sweat"
+   ],
+   "denied": []
+  },
+  {
+   "n": 269,
+   "group": "multi",
+   "transcript": "she's dizzy and pale and says her pulse is going wild",
+   "expected": [
+    "dizziness",
+    "pale_complexion",
+    "palpitations"
+   ],
+   "denied": []
+  },
+  {
+   "n": 270,
+   "group": "multi",
+   "transcript": "one side of his face has dropped, he's slurring, and his arm won't move",
+   "expected": [
+    "face_drooping",
+    "slurred_speech",
+    "one_sided_weakness"
+   ],
+   "denied": []
+  },
+  {
+   "n": 271,
+   "group": "multi",
+   "transcript": "she fell down the stairs and she's bleeding heavily from her head",
+   "expected": [
+    "fall_down",
+    "heavy_bleeding",
+    "head_injury"
+   ],
+   "denied": []
+  },
+  {
+   "n": 272,
+   "group": "multi",
+   "transcript": "he's vomiting and has a terrible headache",
+   "expected": [
+    "vomiting",
+    "headache"
+   ],
+   "denied": []
+  },
+  {
+   "n": 273,
+   "group": "multi",
+   "transcript": "my son has a high fever and he's having a seizure",
+   "expected": [
+    "high_fever",
+    "seizure"
+   ],
+   "denied": []
+  },
+  {
+   "n": 274,
+   "group": "multi",
+   "transcript": "she collapsed and now she's very pale",
+   "expected": [
+    "collapsed",
+    "pale_complexion"
+   ],
+   "denied": []
+  },
+  {
+   "n": 275,
+   "group": "multi",
+   "transcript": "he's confused and his temperature is really high",
+   "expected": [
+    "confused",
+    "high_fever"
+   ],
+   "denied": []
+  },
+  {
+   "n": 276,
+   "group": "multi",
+   "transcript": "she has severe stomach pain and keeps throwing up",
+   "expected": [
+    "severe_abdominal_pain",
+    "vomiting"
+   ],
+   "denied": []
+  },
+  {
+   "n": 277,
+   "group": "multi",
+   "transcript": "he slipped in the bath, hit his head and now he's confused",
+   "expected": [
+    "fall",
+    "head_injury",
+    "confused"
+   ],
+   "denied": []
+  },
+  {
+   "n": 278,
+   "group": "multi",
+   "transcript": "she's short of breath and her chest feels tight",
+   "expected": [
+    "difficulty_breathing",
+    "chest_pain"
+   ],
+   "denied": []
+  },
+  {
+   "n": 279,
+   "group": "multi",
+   "transcript": "his lower back really hurts and his legs are numb",
+   "expected": [
+    "lower_back_pain",
+    "numbness"
+   ],
+   "denied": []
+  },
+  {
+   "n": 280,
+   "group": "multi",
+   "transcript": "she's dizzy and keeps vomiting",
+   "expected": [
+    "dizziness",
+    "vomiting"
+   ],
+   "denied": []
+  },
+  {
+   "n": 281,
+   "group": "multi",
+   "transcript": "my dad has a racing heart and feels sick",
+   "expected": [
+    "palpitations",
+    "nausea"
+   ],
+   "denied": []
+  },
+  {
+   "n": 282,
+   "group": "multi",
+   "transcript": "he's choking and turning pale",
+   "expected": [
+    "choking",
+    "pale_complexion"
+   ],
+   "denied": []
+  },
+  {
+   "n": 283,
+   "group": "multi",
+   "transcript": "my son went through the ice on the pond, we got him out and his whole body is freezing",
+   "expected": [
+    "drowning",
+    "body_cold"
+   ],
+   "denied": [],
+   "founder_review": "Changed 2026-10-07 after founder review. Was: \"she was pulled from the pool and she's ice cold\""
+  },
+  {
+   "n": 284,
+   "group": "multi",
+   "transcript": "he has no pulse and his body is cold",
+   "expected": [
+    "no_pulse",
+    "body_cold"
+   ],
+   "denied": []
+  },
+  {
+   "n": 285,
+   "group": "multi",
+   "transcript": "his speech is slurred and he has a sudden headache",
+   "expected": [
+    "slurred_speech",
+    "headache"
+   ],
+   "denied": []
+  },
+  {
+   "n": 286,
+   "group": "multi",
+   "transcript": "she gashed her leg, there's a lot of blood, and she feels faint",
+   "expected": [
+    "heavy_bleeding",
+    "dizziness"
+   ],
+   "denied": []
+  },
+  {
+   "n": 287,
+   "group": "multi",
+   "transcript": "he fainted, banged his head on the way down, and now he's bleeding heavily",
+   "expected": [
+    "collapsed",
+    "head_injury",
+    "heavy_bleeding"
+   ],
+   "denied": []
+  }
+ ]
+}

@@ -6,6 +6,7 @@ the probe. This runs Stage B once per dev case, in EXACTLY the way harness.py do
 order, same cache key), and saves into the same cache file.
 Backend: Qwen2.5-3B, OpenVINO INT8. A few minutes on Apple Silicon.
 """
+import argparse
 import json
 import sys
 from pathlib import Path
@@ -17,7 +18,11 @@ sys.path.insert(0, str(BENCH))
 from harness import A_CACHE, B_CACHE  # noqa: E402  (importing harness also selects the INT8 model)
 import slm_classify as SC             # noqa: E402
 
-cases = json.loads((BENCH / "dev_set.json").read_text(encoding="utf-8"))["cases"]
+parser = argparse.ArgumentParser()
+parser.add_argument("--set", choices=["dev", "test2"], default="dev")
+args = parser.parse_args()
+filename = "dev_set.json" if args.set == "dev" else "test2_set.json"
+cases = json.loads((BENCH / filename).read_text(encoding="utf-8"))["cases"]
 stage_a = json.loads(A_CACHE.read_text(encoding="utf-8"))
 stage_b = json.loads(B_CACHE.read_text(encoding="utf-8"))
 

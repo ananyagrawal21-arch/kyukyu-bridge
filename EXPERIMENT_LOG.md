@@ -326,3 +326,56 @@ three-way comparison on test2 → decision). The founder carries it out in Curso
 success: beats Stage B on test2 and the 52 on F1, with zero cardiac-arrest false alarms. The X rule
 for this run is fixed in advance: zero CPA false alarms → best F1. Base model weights confirmed
 cached locally (552 MB). `.gitignore` now covers every `benchmark/.nli*_cache.json`.
+
+## 2026-10-07 — NLI-8 step A: Stage A and Stage B on test2 and dev v2
+
+**Run by the founder in Cursor.** `dev_stage_a.py` / `dev_stage_b.py` gained a `--set dev|test2`
+option (written by Cursor's AI, reviewed by the founder). Backend: Qwen2.5-3B OpenVINO INT8, Apple Silicon.
+
+| | Precision | Recall | F1 | Exact | CPA |
+|---|---|---|---|---|---|
+| dev v2 — Stage A only | 0.707 | 0.891 | 0.788 | 28/41 | 2 |
+| dev v2 — Stage A + B | 0.848 | 0.848 | 0.848 | 31/41 | 0 |
+| **test2 — Stage A only** | 0.735 | 0.878 | 0.800 | 22/34 | 0 |
+| **test2 — Stage A + B (today's app)** | **0.895** | **0.829** | **0.861** | **25/34** | **0** |
+
+**The bar for the fine-tuned checker: F1 0.861 on test2, with 0 false alarms.**
+**Ceiling:** Stage A never proposed 5 expected symptoms on test2 ("tumbled down the steps" → no
+fall_down; "sweating from the heat and very dizzy" → nothing; "going to be sick" → no nausea; "mumbling
+like he's drunk" → no slurred_speech; "fainted" → no collapsed). No checker can exceed recall 0.878.
+**Stage B threw away 2 correct symptoms on test2:** seizure for "having a fit and foaming at the
+mouth"; nausea for "lightheaded and queasy, pulse going really fast". On dev v2: heavy_bleeding (the
+stopped case) and pale_complexion ("gone grey").
+**Cosmetic, not fixed:** the scripts print "dev cases" even with `--set test2`, and some lines print
+3 times (a library starts helper processes that re-read the script's top level).
+
+## 2026-10-07 — NLI-8 step B: training sentences drafted (`data/nli_train_sentences.json`)
+
+**287 sentences**, drafted by Claude: plain 108 (≈4 per symptom), choking 20, choking lookalikes 20,
+lookalikes 49, time 40, negation 30, multi-symptom 20. Each has `expected` (happening now →
+teaches entailment) and `denied` (ruled out or in the past → teaches contradiction). Every symptom
+is expected at least 5 times (fewest: no_pulse 5, drowning 6, lower_back_pain 6).
+**Leak check** — `benchmark/check_overlap.py` against all 170 test sentences (52, probe, dev v2,
+test2): first draft had 8 near-copies (>50% shared words, e.g. "choking on a piece of meat" vs the
+52's "choking on a piece of mochi"); all 8 reworded. Now: 0 exact copies, 0 near-copies, 0 bad
+labels, 0 duplicates.
+**Status:** awaiting the founder's review — all 61 choking / no_pulse / body_cold sentences in full,
+and at least 1 in 5 of the rest. From here, `data/nli_train_sentences.json` itself is the source of
+truth; every edit is made to that file and re-checked.
+
+## 2026-10-07 — NLI-8 step B: founder review — training sentences APPROVED
+
+The founder flagged 13 sentences; a re-scan for the same two patterns (fragments, and cases already
+resolved) found 4 more (one misnumbered at first and corrected). **14 changed, 3 kept** (#73, #76,
+#136). Old wording is kept in each sentence's `founder_review` field. The two most important:
+- **#192** "she has a pulse but she's breathing very strangely" → difficulty_breathing, no_pulse
+  denied. **Removed as dangerous to teach:** "breathing strangely" in a collapsed person is a classic
+  sign of cardiac arrest (agonal gasping). Now "has a pulse and is awake, but breathing very fast".
+- **#120** "can't get air … eating peanuts" → choking. **Ambiguous:** peanuts suggest an allergic
+  reaction, not choking. Now a boiled sweet.
+Also: two choking cases that ended resolved (#124, #219) now say what is still wrong; fragments
+(#191, #164, #154, #181, #182) are now embedded in real emergencies; #283 changed to a different
+scenario because it was conceptually a paraphrase of a dev-set failure case, even though it passed
+the word check.
+**Leak check after changes:** 0 exact copies, 0 near-copies, 0 bad labels, 0 duplicates. CLEAN.
+**Founder: approved for training.**
