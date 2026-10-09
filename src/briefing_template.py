@@ -185,9 +185,9 @@ def spoken_address(address: dict) -> str:
     """An address written the way it is SPOKEN, with 読点 between the administrative levels.
 
     THIS IS A PROSODY FIX, not decoration. Built as one string -
-        場所は東京都江東区南砂四丁目24の5です
+        場所は東京都〇〇区〇〇四丁目12の3です
     - it is a single unbroken 20-character noun phrase with NO boundary cues, so the speech
-    engine has to guess where 東京都 / 江東区 / 南砂 / 四丁目 divide and where each accent
+    engine has to guess where 東京都 / 〇〇区 / 〇〇 / 四丁目 divide and where each accent
     falls. It guesses inconsistently, and the result is heard as the pitch and emphasis
     landing at random inside the sentence. Founder reported exactly this, 2026-08-22.
     Switching to a better voice does NOT fix it, because the ambiguity is in the text.
@@ -203,7 +203,7 @@ def spoken_address(address: dict) -> str:
     # entirely - katakana has one pronunciation, so no engine can get it wrong.
     #
     # This is not a refinement, it is a correctness fix. Japanese proper nouns carry irregular
-    # readings that no G2P can infer: Open JTalk renders 第三砂町 as ダイミサゴマチ rather than
+    # readings that no G2P can infer: Open JTalk renders 第三〇〇 as （誤読） rather than
     # ダイサンスナマチ, and Kyoko mangles it differently again. A misread address sends the
     # ambulance somewhere else, which is the worst failure this app has.
     kana = address.get("kana", "")
@@ -262,7 +262,7 @@ def render_location_pieces(address: dict = None) -> list[dict]:
 
     area = spoken_address(address)
     # THE BUILDING NAME IS NO LONGER SPOKEN UNLESS WE HAVE ITS READING.
-    # Founder, 2026-08-22: the app rendered 江東区立第三砂町小学校 as garbage. Building and
+    # Founder, 2026-08-22: the app rendered 〇〇区立第三〇〇小学校 as garbage. Building and
     # facility names are exactly where irregular readings live, and NO lookup gives us their
     # reading - Japan Post publishes readings for postal codes, not for buildings.
     # So this follows the project's own standing rule: OMIT RATHER THAN GUESS. The building
@@ -274,7 +274,7 @@ def render_location_pieces(address: dict = None) -> list[dict]:
     # room_to_kana, not the raw digits: 405 read as a number is ヨンヒャクゴ ("four hundred and
     # five"); a room number is said digit by digit, ヨンマルゴ.
     room = TEMPLATE_ROOM.format(room=room_to_kana(address["room"])) if address.get("room") else ""
-    # 、 between them - "〇〇マンション405号室" is the same run-on problem in miniature, and the
+    # 、 between them - "〇〇マンション101号室" is the same run-on problem in miniature, and the
     # room is the one part a dispatcher most needs to catch.
     #
     # BOTH PARTS ARE OPTIONAL. An empty room used to still emit 号室, producing 「…、号室です」-

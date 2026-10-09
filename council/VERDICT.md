@@ -30,7 +30,7 @@ Not a laptop, not a tablet, not a second anything. An offline PWA holding that h
 bundle.
 
 **5. C8 is not a wall, it is a booking form.**
-Koto and Edogawa fire stations run free, publicly-enrollable 普通救命講習 — three hours in a room
+our ward and Edogawa fire stations run free, publicly-enrollable 普通救命講習 — three hours in a room
 with a serving firefighter. You rated expert access 99.9% infeasible. You were wrong, and this is
 the cheapest correction available to you this week.
 
@@ -48,7 +48,7 @@ need to. The WAVs are already rendered; a tap-driven PWA over a closed audio set
 The Contrarian's sharpest attack: the only gap you claim over 三者間同時通訳 is the room number and
 the medical history, and a laminated fridge card with your address in Japanese plus romaji delivers
 that at 0% of the technology. The First Principles Thinker refuted it in one line and the dissent
-reviewer confirmed it: **a caller who cannot read Japanese cannot pronounce 江東区南砂.** Romaji
+reviewer confirmed it: **a caller who cannot read Japanese cannot pronounce 〇〇区〇〇.** Romaji
 read aloud by a panicked non-speaker through narrowband cellular is not intelligible. *That single
 fact is the only thing keeping a device in the loop at all — and you should be able to say it in
 one breath, because it is now the load-bearing justification for your entire product.*
@@ -167,7 +167,7 @@ say that in writing before you run the test, so the result cannot be negotiated 
 | **Mon** | The corrected echo test (below). Write the raw result into `OPEN_DECISIONS.md` **before touching any code**, including the retraction of item 13's "PASSED". |
 | **Tue–Wed** | The tap-only PWA: one red button, 3 vital buttons, 6 category tiles → terms, permanent STOP. Static HTML + `<audio>` over the 49 existing WAVs. |
 | **Thu** | Install on a real phone. Five timed drills with your family: stopwatch **time-to-first-button** *and* **icon-find latency**. Both numbers go in the README. |
-| **Fri** | Book and attend 普通救命講習 at Koto or Edogawa. Show it in the break. Write down verbatim what the firefighter says, good or bad. |
+| **Fri** | Book and attend 普通救命講習 at our ward or Edogawa. Show it in the break. Write down verbatim what the firefighter says, good or bad. |
 | **Sat** | Rewrite README and `OPEN_DECISIONS.md` to the truth. Delete the false claims listed below. |
 | **Sun** | Buffer. Do not add features. |
 
@@ -214,7 +214,7 @@ earbuds in A. Repeat the entire set on the other OS — Apple and each Android O
 cancellation differently, so one handset proves nothing.
 
 Then play the recording to a Japanese speaker who has never heard the line and ask them to write
-down the address. **If they cannot write 江東区南砂四丁目24-5 405号室 from the recording, the
+down the address. **If they cannot write 〇〇区〇〇四丁目12-3 101号室 from the recording, the
 single-device uplink is dead** — and you will have learned it for the price of one phone call,
 before building anything on top of it.
 

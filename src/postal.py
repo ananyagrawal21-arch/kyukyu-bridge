@@ -90,11 +90,11 @@ def lookup(code: str):
     # THE KANA IS NOT A CAPTION - IT IS WHAT WE SPEAK. Japan Post publishes the official
     # reading for every postal code, and it is the ONLY authoritative source of the reading we
     # have. Japanese proper nouns have irregular readings that no grapheme-to-phoneme system can
-    # infer: Open JTalk, the reference Japanese G2P, reads 江東区立第三砂町小学校 as
-    # コートークリツダイミサゴマチショーガッコー - 第三砂町 became ダイミサゴマチ instead of
+    # infer: Open JTalk, the reference Japanese G2P, reads 〇〇区立第三〇〇小学校 as
+    # （区名）クリツ（誤読）ショーガッコー - 第三〇〇 became （誤読） instead of
     # ダイサンスナマチ. macOS Kyoko mangles it differently. A misread address sends an ambulance
     # to the wrong place, so we do not let ANY engine guess: we speak the published reading.
-    # JOINED WITH 読点, not spaces. Same reason the kanji form is: 「トウキョウトコウトウクミナミスナ」
+    # JOINED WITH 読点, not spaces. Same reason the kanji form is: 「トウキョウトコウトウク（町名）」
     # or a space-separated run gives the engine no phrase boundary, so it flattens the whole
     # thing into one contour. 、 makes each administrative level its own phrase.
     kana = "、".join(filter(None, (
@@ -361,7 +361,7 @@ def romaji_address_at(lat: float, lon: float) -> str:
 
     WHY THIS EXISTS: GSI returns kanji only, and kana_to_romaji() cannot help - it converts
     KANA, and returns "" the moment it meets a kanji, which every Japanese place name is made
-    of. So the map path had no readback at all: it showed the user 東京都江東区南砂四丁目 and
+    of. So the map path had no readback at all: it showed the user 東京都〇〇区〇〇四丁目 and
     asked them to confirm the single most critical field in the app on faith. The postal-code
     path had a readback; the map path silently did not.
 

@@ -23,7 +23,7 @@ took three attempts to find:
   ATTEMPT 2 (wrong)  Blamed sentence CONCATENATION. Each sentence is synthesised alone with a
                      full contour, then butt-joined with no gap. Real problem, fixed with a
                      0.35s pause - and again not the main cause.
-  ATTEMPT 3 (right)  THE TEXT. 「場所は東京都江東区南砂四丁目24の5です」 is one unbroken
+  ATTEMPT 3 (right)  THE TEXT. 「場所は東京都〇〇区〇〇四丁目12の3です」 is one unbroken
                      20-character noun phrase with ZERO boundary cues. Japanese TTS assigns
                      pitch accent PER ACCENT PHRASE; given no boundaries it segments a long
                      kanji compound by guesswork and places accents inconsistently. Heard
@@ -31,9 +31,9 @@ took three attempts to find:
                      ambiguity is in the text, not the synthesiser.
 
 **SHIPPED FIX (current state):** `spoken_address()` in briefing_template.py inserts 読点
-between administrative levels - 場所は東京都、江東区、南砂四丁目、24の5です。Uses the separately
+between administrative levels - 場所は東京都、〇〇区、〇〇四丁目、12の3です。Uses the separately
 stored `area`/`block_number` so the 丁目 and the lot number are their own phrases. Same for
-〇〇マンション、405号室. Founder assessment: "it is fine but this is not a reliable solution."
+〇〇マンション、101号室. Founder assessment: "it is fine but this is not a reliable solution."
 That assessment is correct - it is hand-placed, and it does not generalise.
 
 ### WHAT WAS TRIED AND REJECTED — do not redo this
@@ -41,11 +41,11 @@ That assessment is correct - it is hand-placed, and it does not generalise.
 **Automatic accent-phrase boundaries via pyopenjtalk. REJECTED, and it is important to know why.**
 Open JTalk's frontend gives everything needed - morphology, readings, accent type, mora count,
 and `chain_flag` (0 = starts a new accent phrase). It is LINGUISTICALLY CORRECT: it reads
-南砂 as ミナミスナ accent 3, 東京都 as トーキョート, 24の5 as ニジューヨンノゴ. All right.
+〇〇 as （町名） accent 3, 東京都 as トーキョート, 12の3 as ジューニノサン. All right.
 
 But inserting 、 at those boundaries produced WORSE output than the manual fix:
     息をしていません。   ->  息をして、いません。       breaks a verb
-    南砂四丁目24の5      ->  四丁目、二十四の、五です   breaks the lot number
+    〇〇四丁目12の3      ->  四丁目、十二の、三です   breaks the lot number
 **ACCENT PHRASES ARE NOT PAUSE LOCATIONS.** Accent reset and breath placement are different
 questions. Punctuation is simply the wrong channel to carry accent information through, and no
 threshold tuning fixes that (tested min_mora 2/3/4/5).
@@ -77,7 +77,7 @@ THIRD Intel lifecycle stage (alongside the SLM and a converted Whisper), feeding
 "extent of use of Intel software" item directly. So this refinement is not only quality work.
 
 **ALSO STILL OPEN, same area:** the profile's building name is stored as romaji
-("city terrace minamisuna") and a Japanese voice mangles it inside a Japanese sentence.
+("city terrace Example-cho") and a Japanese voice mangles it inside a Japanese sentence.
 romaji_fields() flags it; the fix is picking the building from the map so it stores 日本語, or
 leaving the field blank. Cheap, and audible today.
 
@@ -754,7 +754,7 @@ for, and NEITHER covers what it actually does:
 - 三者間同時通訳 - a live human interpreter, 24/7, any phone, no app, no registration,
   673/720 departments = 93.5% (FDMA, Jan 2025).
 
-Neither can supply **the room number** (405号室) or **the medical history** (高血圧). Carrier
+Neither can supply **the room number** (101号室) or **the medical history** (高血圧). Carrier
 location finds the building. An interpreter translates what the caller CAN say - not what they
 cannot recall, spell, or pronounce under panic. That gap exists only where an address is
 registered in advance: INDOORS.
@@ -993,7 +993,7 @@ buttons instead of typing, a progress indicator, and the ambulance dispatched af
 
 ### 番地 CANNOT BE DERIVED FROM A MAP CLICK - structural, not a tooling gap (2026-08-21)
 
-Founder hit this: clicking their building returns only 南砂四丁目, never the 番地 (24-5).
+Founder hit this: clicking their building returns only 〇〇四丁目, never the 番地 (12-3).
 Tested three coordinates - GSI returns town only; OSM returns house_number ONLY where a building
 is individually tagged (Tokyo Skytree -> "2"; both residential points -> None).
 
@@ -1004,9 +1004,9 @@ Japan. A nationwide fix would need GSI's 位置参照情報 街区レベル data
 indexed - real work, uncertain payoff, NOT attempted.
 
 **The correct division of labour, and it is fine:**
-    東京都江戸川区南砂   postal code   kanji the user cannot type
-    南砂四丁目          map click     kanji the user cannot type
-    24-5               USER TYPES    DIGITS - same in every language
+    東京都江戸川区〇〇   postal code   kanji the user cannot type
+    〇〇四丁目          map click     kanji the user cannot type
+    12-3               USER TYPES    DIGITS - same in every language
     405                USER TYPES    DIGITS
 
 The map's job is the genuinely impossible part (kanji). The lot number is on every piece of mail
@@ -1281,7 +1281,7 @@ the outdoor/mobile case BETTER than we could, with two pieces of national infras
    phone, no app, no registration. 673/720 fire departments = 93.5% (FDMA, Jan 2025).
 
 What NEITHER supplies is the ROOM NUMBER and the PATIENT'S MEDICAL HISTORY. Carrier location
-finds the building, not 405号室. An interpreter faithfully translates what the caller CAN say -
+finds the building, not 101号室. An interpreter faithfully translates what the caller CAN say -
 not what they cannot recall, spell or pronounce under panic. That gap exists only where an
 address can be registered in advance, i.e. indoors.
 
@@ -2112,7 +2112,7 @@ written BEFORE any fix is attempted and never used for tuning. Feeds into 4a.
 
 ### 5. Pilot target and quantifiable impact — PARKED 2026-10-03
 
-Founder lives in 江東区 (東京消防庁 territory); 川口市 (one city owning both its fire department
+Founder lives in Tokyo's 23 wards (東京消防庁 territory); 川口市 (one city owning both its fire department
 and resident registration, 48,161 foreign residents) is impractical to approach from there.
 Founder also: do not assume any institution will agree. Unresolved: a realistic pilot target.
 Realistic impact that needs NO institution: drills with real non-Japanese speakers, measuring

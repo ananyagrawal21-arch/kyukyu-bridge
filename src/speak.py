@@ -122,8 +122,8 @@ def synthesize(text: str):
     return None
 
 
-# Japanese addresses are WRITTEN with hyphens and SPOKEN with の: 24-5 is read
-# "にじゅうよん の ご", never with a hyphen sound. A speech engine given "24-5" either swallows
+# Japanese addresses are WRITTEN with hyphens and SPOKEN with の: 12-3 is read
+# "にじゅうよん の ご", never with a hyphen sound. A speech engine given "12-3" either swallows
 # the hyphen or says "minus", so a dispatcher hears the wrong address - the single most
 # critical field. Only a hyphen BETWEEN DIGITS is converted, so the long-vowel ー inside words
 # like マンション is untouched.
@@ -245,14 +245,14 @@ def available_backend() -> str:
 
 if __name__ == "__main__":
     print("backend:", available_backend())
-    audio = speak_japanese("救急です。場所は東京都江東区です。息が苦しいです。")
+    audio = speak_japanese("救急です。場所は東京都新宿区です。息が苦しいです。")
     print("wav bytes:", len(audio) if audio else "FAILED")
 
 
-# Room numbers are read DIGIT BY DIGIT in Japanese: 405号室 is ヨンマルゴ, never ヨンヒャクゴ.
+# Room numbers are read DIGIT BY DIGIT in Japanese: 101号室 is ヨンマルゴ, never ヨンヒャクゴ.
 # Left as "405" the engine reads it as the quantity four hundred and five, which is not how
 # anyone says a room number - and a dispatcher writing it down hears the wrong shape.
-# 番地 numbers are NOT affected: 24-5 really is にじゅうよんのご, a number, not a digit string.
+# 番地 numbers are NOT affected: 12-3 really is にじゅうよんのご, a number, not a digit string.
 _ROOM_DIGITS = {"0": "マル", "1": "イチ", "2": "ニ", "3": "サン", "4": "ヨン",
                 "5": "ゴ", "6": "ロク", "7": "ナナ", "8": "ハチ", "9": "キュウ"}
 

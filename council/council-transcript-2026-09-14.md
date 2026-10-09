@@ -60,7 +60,7 @@ OpenVINO, no 511s→73s. The part of your product that is uniquely valuable requ
 part that requires AI — live symptom classification into 31 terms — is precisely the part a human
 interpreter already does better, live, on 93.5% of departments, for free.
 
-So yes: a laminated card with your address, 405号室, age, 持病, in Japanese with romaji the caller
+So yes: a laminated card with your address, 101号室, age, 持病, in Japanese with romaji the caller
 can read aloud, delivers most of your defensible value at 0% of the technology. Say that out loud
 before a judge says it for you.
 
@@ -103,7 +103,7 @@ fabrications. No warm model — which kills warm_brain(), the two-device assumpt
 footprint in one cut. It fits in the phone already in the caller's hand.
 
 And a laminated fridge card does not substitute, because a caller who cannot read Japanese cannot
-pronounce 江東区南砂. The real product is an offline Japanese soundboard with a stored profile. Say
+pronounce 〇〇区〇〇. The real product is an offline Japanese soundboard with a stored profile. Say
 that out loud. Then decide, honestly, whether the Intel story survives it — not the reverse.
 
 ### The Expansionist
@@ -205,7 +205,7 @@ Sun: buffer.
 Cut: the 7 untested languages, the folium map picker, 口頭指導/CPR, the ontology expansion (D2),
 Japanese UI localisation.
 
-Validation you can get by Friday: book a 救命講習 at Koto or Edogawa fire station — public, free,
+Validation you can get by Friday: book a 救命講習 at our ward or Edogawa fire station — public, free,
 walk-in-bookable, and a serving firefighter is in the room for three hours. Show it in the break.
 That is your paramedic. Also: any Nishikasai clinic doctor, and the Indian school's office — ask for
 ten households, not one.
@@ -264,7 +264,7 @@ ten households, not one.
    grid is a mistap surface. E has no undo: a wrong tap speaks confidently wrong Japanese in an
    authoritative synthetic voice, and neither the caller (who can't hear the error) nor the
    dispatcher (who can't know it's wrong) can catch it. E also dismisses the card because a caller
-   can't pronounce 江東区南砂 — while asking that same caller to drive a grid mid-call.
+   can't pronounce 〇〇区〇〇 — while asking that same caller to drive a grid mid-call.
 3. **All five missed the duplex problem.** Every proposal plays audio *at* a dispatcher who can talk
    back. Nobody specified a stop button, barge-in, or what happens when the dispatcher interrupts a
    WAV mid-sentence — a recording cannot yield, and a dispatcher who cannot interrupt will talk over
@@ -285,7 +285,7 @@ ten households, not one.
 2. **Biggest blind spot: C.** Brave-sounding, terminal. It argues the laminated card carries the
    defensible value, then hands him a pre-call artifact generator — no submission, no demo, no
    measurable install. E refutes it in one line C never anticipates: a caller who cannot read
-   Japanese cannot pronounce 江東区南砂. C mistakes "the AI is unnecessary" for "the product is
+   Japanese cannot pronounce 〇〇区〇〇. C mistakes "the AI is unnecessary" for "the product is
    unnecessary."
 3. **All five missed:** D's rescue — "the AI runs at registration" — is a rationalisation as stated.
    Registration-time work is TTS of an address, not Qwen classification; the 6.97×/10.94× were
@@ -330,7 +330,7 @@ ten households, not one.
    "hand them the structure." Twenty-eight alternatives under stress is search, not structure.
 
    **Most consequential disagreement:** C ("laminated card delivers most of the value") vs E ("a
-   caller who cannot read Japanese cannot pronounce 江東区南砂"). **E is right** — romaji read aloud
+   caller who cannot read Japanese cannot pronounce 〇〇区〇〇"). **E is right** — romaji read aloud
    by a panicked non-speaker through narrowband AMR is not intelligible, and that single fact is what
    keeps a device in the loop at all.
 2. **Biggest blind spot: A.** Its diagnosis is the sharpest in the set — it alone names the real
@@ -381,7 +381,7 @@ Not a laptop, not a tablet, not a second anything. An offline PWA holding that h
 bundle.
 
 **5. C8 is not a wall, it is a booking form.**
-Koto and Edogawa fire stations run free, publicly-enrollable 普通救命講習 — three hours in a room
+our ward and Edogawa fire stations run free, publicly-enrollable 普通救命講習 — three hours in a room
 with a serving firefighter. You rated expert access 99.9% infeasible. You were wrong, and this is
 the cheapest correction available to you this week.
 
@@ -399,7 +399,7 @@ need to. The WAVs are already rendered; a tap-driven PWA over a closed audio set
 The Contrarian's sharpest attack: the only gap you claim over 三者間同時通訳 is the room number and
 the medical history, and a laminated fridge card with your address in Japanese plus romaji delivers
 that at 0% of the technology. The First Principles Thinker refuted it in one line and the dissent
-reviewer confirmed it: **a caller who cannot read Japanese cannot pronounce 江東区南砂.** Romaji
+reviewer confirmed it: **a caller who cannot read Japanese cannot pronounce 〇〇区〇〇.** Romaji
 read aloud by a panicked non-speaker through narrowband cellular is not intelligible. *That single
 fact is the only thing keeping a device in the loop at all — and you should be able to say it in
 one breath, because it is now the load-bearing justification for your entire product.*
@@ -518,7 +518,7 @@ say that in writing before you run the test, so the result cannot be negotiated 
 | **Mon** | The corrected echo test (below). Write the raw result into `OPEN_DECISIONS.md` **before touching any code**, including the retraction of item 13's "PASSED". |
 | **Tue–Wed** | The tap-only PWA: one red button, 3 vital buttons, 6 category tiles → terms, permanent STOP. Static HTML + `<audio>` over the 49 existing WAVs. |
 | **Thu** | Install on a real phone. Five timed drills with your family: stopwatch **time-to-first-button** *and* **icon-find latency**. Both numbers go in the README. |
-| **Fri** | Book and attend 普通救命講習 at Koto or Edogawa. Show it in the break. Write down verbatim what the firefighter says, good or bad. |
+| **Fri** | Book and attend 普通救命講習 at our ward or Edogawa. Show it in the break. Write down verbatim what the firefighter says, good or bad. |
 | **Sat** | Rewrite README and `OPEN_DECISIONS.md` to the truth. Delete the false claims listed below. |
 | **Sun** | Buffer. Do not add features. |
 
@@ -565,7 +565,7 @@ earbuds in A. Repeat the entire set on the other OS — Apple and each Android O
 cancellation differently, so one handset proves nothing.
 
 Then play the recording to a Japanese speaker who has never heard the line and ask them to write
-down the address. **If they cannot write 江東区南砂四丁目24-5 405号室 from the recording, the
+down the address. **If they cannot write 〇〇区〇〇四丁目12-3 101号室 from the recording, the
 single-device uplink is dead** — and you will have learned it for the price of one phone call,
 before building anything on top of it.
 

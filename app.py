@@ -501,8 +501,8 @@ if phase == "setup":
                     # Dropped when the map moves to a DIFFERENT city, because the old reading
                     # would then belong to somewhere else - a wrong reading is worse than none.
                     prev = st.session_state.get("pc_result") or {}
-                    # Postal lookup contains ward + town (e.g. 江東区南砂), while GSI
-                    # returns the ward alone (江東区). The old comparison was backwards,
+                    # Postal lookup contains ward + town (e.g. 〇〇区〇〇), while GSI
+                    # returns the ward alone (〇〇区). The old comparison was backwards,
                     # so the normal postal-code → map flow always discarded the published
                     # kana reading. Preserve it only when the map's municipality is a prefix
                     # of the postal result: same place, not merely a similar-looking town.
@@ -571,8 +571,8 @@ if phase == "setup":
         city_ward = c2.text_input("City / ward",
                                   _pc.get("city_ward") or addr.get("city_ward", ""),
                                   placeholder="江戸川区西葛西")
-        # SPLIT INTO TWO BOXES, deliberately. It used to be ONE field pre-filled with 南砂四丁目
-        # that the user had to APPEND "24-5" to - nobody would guess that. Now the auto-filled
+        # SPLIT INTO TWO BOXES, deliberately. It used to be ONE field pre-filled with 〇〇四丁目
+        # that the user had to APPEND "12-3" to - nobody would guess that. Now the auto-filled
         # part and the part they must type are visibly separate, and the empty box makes the
         # remaining task obvious.
         #
@@ -583,13 +583,13 @@ if phase == "setup":
         area = c3.text_input(
             "Area (filled by map or postal code)",
             # `area` has its OWN stored key. Reading the joined `street_block` here would reload
-            # "南砂四丁目24-5" into this box while the number also sat in the box beside it, and
-            # the next save would produce "南砂四丁目24-524-5".
+            # "〇〇四丁目12-3" into this box while the number also sat in the box beside it, and
+            # the next save would produce "〇〇四丁目12-312-3".
             st.session_state.get("map_town") or addr.get("area") or addr.get("street_block", ""),
-            placeholder="南砂四丁目",
+            placeholder="〇〇四丁目",
         )
         block_no = c3b.text_input(
-            "Block number — type this", addr.get("block_number", ""), placeholder="24-5",
+            "Block number — type this", addr.get("block_number", ""), placeholder="12-3",
         )
         c4, c5 = st.columns([2, 1])
         building = c4.text_input(
