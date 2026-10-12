@@ -140,3 +140,53 @@ The founder wants a deep discussion of upgrades next, after R1–R3.
   Never tune on the 52, the probe or test2. Pre-register success criteria before running.
 - Push back with evidence when a premise is wrong; don't negotiate or offer watered-down options;
   don't switch paths mid-experiment without saying so.
+
+---
+
+## 9. Where the last session ended (2026-10-12, late) — START HERE
+
+**Done and logged (EXPERIMENT_LOG.md has the detail):**
+- R1/R2: llama.cpp Q8_0 and Q4_K_M pass the switch rule for Stage A. T2-L: test2 run ONCE with
+  llama.cpp Q4_K_M + fine-tuned checker → P 0.923, R 0.878, **F1 0.900**, 0 CPA false alarms (OpenVINO
+  setup: 0.883). Claim is "no worse", not "better".
+- **The app now runs Stage A on llama.cpp Q4_K_M and the fine-tuned NLI checker (`src/nli_checker.py`)
+  instead of Stage B.** `classify()` reproduces the tested answers 41/41. `harness.py` stays on
+  OpenVINO so its caches never mix runtimes. `KYUKYU_SECOND_PASS=stage_b` reproduces old benchmarks.
+- R3b: ONNX Runtime weight-only 8-bit checker FAILED (1/273 flips; tool can't compress the embedding
+  table → 921 MB). ONNX fp32 (1.1 GB) is exact. **Checker compression paused** until the architecture
+  is decided (it may be retrained or re-scoped). `.venv311` = Python 3.11 export tools only.
+- Whisper-on-phone: deliberately on hold (founder: finish text classification first).
+- README (private): dated update box at the top + stale headings fixed. Founder edits the PUBLIC copy.
+  A full rewrite waits for the final architecture. RESPONSIBLE_AI.md numbers corrected (old
+  "precision 1.00" was the old Stage B).
+- Founder's rule for now: **only bare necessities; do NOT run experiments that tune or measure the
+  current 28-symptom list** (test3, Stage A recall experiment, seed check, 1.5B test are HELD) until
+  the architecture discussion is done.
+
+**Possibly uncommitted:** the founder types all git commands. Commands were given for: (1) runtime tests
++ notes, (2) app change (src/nli_checker.py, slm_classify.py, app.py, harness.py, requirements.txt,
+RESPONSIBLE_AI.md), (3) R3b (onnx_weightonly_test.py, .gitignore, logs), (4) README.md. Run
+`git status` to see what the founder has not yet committed; do not run git add/commit/push.
+
+**NEXT: the architecture discussion (OPEN_DECISIONS.md #4 classifier limits, #6 delivery).** Claude's
+proposal, awaiting the founder's yes/no: start with the **gap study (4c)** — read the official
+緊急度判定プロトコル Ver.1「119番通報」 (see OPEN_DECISIONS.md) and FDMA's published 口頭指導 case
+transcripts, list every fact a dispatcher actually uses, check what profile + symptom list + answers can
+carry, and produce ranked gaps. No code, no experiments, test2 untouched.
+Claude's stated view, to keep unless the founder disagrees with reasons:
+- The closed, human-verified list is the CORE SAFETY PROPERTY (the AI never writes Japanese that
+  reaches a dispatcher; also the answer to FDMA's 2017 doubt about AI-written text). Do not replace it
+  with free generation. Weight comes from measured safety + an explained design, not vocabulary.
+- The real upgrade = a **structured form** the AI fills, every field limited to verified choices
+  (symptom; status ongoing/stopped; onset just now/minutes/about an hour/earlier today; side), with
+  Japanese built from pre-checked pieces. The checker can verify each field like it verifies symptoms.
+  The fields should come from the official protocol and the gap study, not from guessing.
+- #6 (tiers, acks, crash recovery, FDMA S3-01 adapter) is about delivery and does not conflict; discuss after.
+- Other open classifier items: self-corrections ("stomach… oh sorry, headache" → lost), out-of-coverage
+  → "no reliable result" state, Whisper's translate mode loses negation (a reason the checker might
+  eventually read the caller's own language — which is why dictionary trimming was NOT done).
+
+**Pending side items:** a spawned task card "Fix failing room_to_kana unit test" (tests/test_speak.py;
+pre-existing since commit 89a6cfa; unrelated; the function may be unused now) — the founder may or may
+not start it. Open: verify GENIUS/Davidson rules and eligibility; privacy/APPI question; whether the old
+example address in git history is real (ask before any history rewrite).
