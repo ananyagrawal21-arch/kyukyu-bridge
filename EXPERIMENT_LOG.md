@@ -405,3 +405,338 @@ Stage B. That is decided on test2 (step E).
 **Known imbalance, not yet acted on:** contradiction is 6% of training pairs, though time/negation
 is one of the three target weaknesses. Candidate follow-ups (one at a time, after step E): more
 `denied` sentences, or class-weighted loss.
+
+## 2026-10-12 — NLI-8 step D: conversion plan changed before running (founder's challenge)
+
+The founder asked whether converting the fine-tuned checker to OpenVINO INT8 is the best move. It
+is the right move for a FAIR comparison — the original checker was scored as OpenVINO INT8, so
+scoring the fine-tuned one any other way would change two things at once (training AND
+runtime/compression). It is not needed for speed (0.035 s per check). But INT8's effect on a
+fine-tuned model was never measured, and fine-tuning moves decisions to exactly the borderline
+cases where a small score shift flips an answer.
+**Change, decided before conversion:** export BOTH `models/nli-mdeberta-ft-ov-int8` and
+`models/nli-mdeberta-ft-ov-fp32`, score both, and compare. Same runtime and same weights — the only
+difference is compression, so the gap between them is exactly what INT8 costs. Ship INT8 only if it
+costs nothing measurable on test2; otherwise ship fp32 and record why.
+
+## 2026-10-12 — NLI-8 step D: converted (founder, in Cursor)
+
+`optimum-cli export openvino --task text-classification`, twice:
+- `models/nli-mdeberta-ft-ov-int8` — NNCF int8_asym on 100% of weight layers (75/75); 303 MB
+- `models/nli-mdeberta-ft-ov-fp32` — uncompressed; 1.1 GB
+INT8 is ~3.6× smaller. Whether it costs accuracy is measured in step E (fp32 vs INT8 on the same
+runtime). The "`loss_type=None` … ForCausalLMLoss" message is a leftover training-config note and does
+not affect inference.
+
+## 2026-10-12 — NLI-8 step E1: scoring scripts extended (Claude, Cursor limit reached)
+
+- `benchmark/nli_score.py`: `--model-dir` (default `models/nli-mdeberta-ov-int8`) and `--cache`
+  (default `benchmark/.nli_cache.json`); test2 sentences added to `all_sentences()`. With no options
+  it behaves exactly as before.
+- `benchmark/nli_threshold.py`: `--cache` (default as before); test2 added to PART 2 and PART 3.
+  **X rule changed from "zero CPA → best recall" to "zero CPA → best F1"** — the method fix recorded
+  in NLI-6/7, decided before any fine-tuned result was seen. The original checker is re-run under the
+  same rule, so all three checkers are judged identically.
+- `hybrid_threshold.py` still imports cleanly (it reads the default scores at import time).
+
+## 2026-10-12 — NLI-8 step E2/F: RESULT — the fine-tuned checker meets the pre-registered criterion
+
+**Run by the founder.** All three checkers judged identically: X chosen on dev v2 by "zero CPA → best
+F1"; compared once on the 52, the probe and test2. test2 fingerprint re-checked after the run:
+unchanged (`b421ab3f…fdd33`). Backend: OpenVINO, Apple Silicon.
+
+| | Precision | Recall | F1 | Exact | CPA |
+|---|---|---|---|---|---|
+| **test2 — Stage B (today)** | 0.895 | 0.829 | 0.861 | 25/34 | 0 |
+| test2 — original checker (X=0.20) | 0.846 | 0.805 | 0.825 | 24/34 | 0 |
+| **test2 — fine-tuned, INT8 (X=0.30)** | **0.944** | **0.829** | **0.883** | **27/34** | **0** |
+| 52 — Stage B | 0.961 | 0.925 | 0.942 | 46/52 | 0 |
+| 52 — fine-tuned, INT8 | 0.946 | 1.000 | 0.972 | 49/52 | 0 |
+| probe — Stage B | 0.800 | 0.889 | 0.842 | 37/43 | 0 |
+| probe — original checker | 0.719 | 0.852 | 0.780 | 32/43 | **1** (fails) |
+| probe — fine-tuned, INT8 | 0.957 | 0.815 | 0.880 | 37/43 | 0 |
+
+**Pre-registered criterion — beat Stage B's F1 on test2 and the 52 with zero false cardiac-arrest
+alarms: MET** (test2 0.883 vs 0.861; 52 0.972 vs 0.942; CPA 0 on every set).
+
+**INT8 vs fp32:** identical results on all three sets. Largest score difference 0.045; **0 of 215
+decisions flipped** at X=0.30. Per the rule set before conversion: **ship INT8** (303 MB vs 1.1 GB).
+Speed on Apple Silicon: 0.032 vs 0.033 s per pair.
+
+**What the fine-tuning fixed (the three target weaknesses):**
+- **Choking now separates cleanly.** Real choking: 1.00, 1.00, 0.96–0.97, 1.00, 1.00. False choking:
+  "lips turning blue" 0.78 → **0.00**; "thought she was choking but she wasn't" 0.13 → 0.01.
+  (Before: real 0.12–1.00, false up to 0.78 — no line could separate them.)
+- **Time words:** "seizure last month but nothing today" 0.01, "chest was hurting earlier but it
+  stopped" 0.08, "chest pain last week" 0.00, "dizziness went away" 0.00 — all removed (Stage B kept
+  several of these).
+- **Lookalikes:** "numb hand" → one_sided_weakness 0.93 → 0.19; "pounding headache" → palpitations
+  no longer kept.
+
+**What it still gets wrong:**
+- **Lost recall on everyday paraphrases:** "the room is spinning" → dizziness 0.13; "lightheaded" →
+  dizziness 0.09; "brought up everything she ate" → vomiting 0.06. Probe recall fell 0.889 → 0.815.
+- **"she fell over but there is no bleeding"** → fall 0.05: the hypothesis "fell over ON FLAT
+  GROUND" adds detail the caller never said (first seen in NLI-6; hypotheses are frozen).
+- **Over-keeps:** "he doesn't look right at all" → confused 0.95; "threw up earlier, head killing
+  him" → seizure 0.73; "face drooping and speech slurred" → confused 0.41.
+
+**Honest strength of the evidence:** cases only one checker got exactly right — 52: fine-tuned 4,
+Stage B 1; probe: 4 vs 4; test2: 3 vs 1; all three: **11 vs 6, two-sided sign test p = 0.33.** The
+direction is consistent across three independent sets and the safety-critical behaviour (choking,
+time, 0 false alarms) changed qualitatively, but at this sample size the overall difference is
+**not statistically significant**. Claim it as "meets the pre-registered criterion with consistent
+gains", never as "proven better". The probe was seen before the training data was written, so its
+gain is partly by design; test2 is the clean number.
+
+**Decision:** the fine-tuned INT8 checker becomes the **candidate to replace Stage B** in the app —
+as a separate, logged change. Its own improvement runs come after (one at a time): everyday
+dizziness/vomiting paraphrases, the over-specific "fall" hypothesis, over-eager "confused"; plus the
+known 6% contradiction imbalance.
+
+## 2026-10-12 — Error budget of the new pipeline (Stage A + fine-tuned checker, X=0.30)
+
+Analysis only, from saved results — no new test run.
+
+| set | expected | Stage A never proposed | checker removed correct | wrong extras kept |
+|---|---|---|---|---|
+| 52 | 53 | 0 | 0 | 3 |
+| probe | 27 | 2 | 3 | 1 |
+| dev | 46 | 5 | 0 | 1 |
+| test2 | 41 | 5 | 2 | 2 |
+| **total** | **167** | **12 (50% of errors)** | **5 (21%)** | **7 (29%)** |
+
+On the two sets never used in development of Stage A (dev, test2): Stage A misses 10 of 87 expected
+symptoms — **2/3 of the remaining errors.** The checker can only keep or remove, so **Stage A, not
+the checker, is now the main limit.** The "two filters" are not two independent chances to catch an
+error: recall is capped by the proposer; the checker only controls precision.
+
+## 2026-10-12 — NEXT (planned, not run): Stage A recall — keeping the original mechanism
+
+**Founder's decision:** keep the backbone. Stage A's only job is to miss nothing; the checker's only
+job is to remove what is wrong. Neither trades precision against recall. (The earlier prompt-tuning
+loop happened because the old Stage B was asked to do both.) Claude's "checker scores all 28
+symptoms" idea is dropped. Tuning rule: never on the 52, the probe or test2.
+**Plan:** (1) test3 — written by real people, not AI, locked; the final judge. (2) Baseline Stage A
+recall on a fresh development pool: dev v2 (41) + the 287 training sentences (never seen by Stage A)
+≈ 330 sentences; run on the Intel laptop. (3) One change: a recall-first Stage A prompt ("list every
+symptom that could apply; extra is fine"); measure Stage A recall, proposals per sentence, and the
+full pipeline (precision, F1, CPA). (4) Only if recall is still short: LoRA fine-tune of Stage A on
+the 287 sentences (OpenVINO GenAI loads LoRA adapters). (5) Judge the winner once on test3.
+**Pre-registered success:** Stage A recall ≥ 98% on the development pool; full pipeline CPA 0 and
+precision no worse than today; confirmed on test3.
+
+## 2026-10-12 — R1–R3 runtime tests: STARTED (founder approved; Claude runs them)
+
+Pre-registered (see HANDOFF.md §3): R1 OpenVINO INT8 → llama.cpp Q8_0 (Stage A, runtime only);
+R2 Q8_0 → Q4_K_M (compression only); R3 checker OpenVINO INT8 → ONNX Runtime INT8 (bar: 0 of the
+scored pairs flipped at X=0.30). Sentences: 52 + probe + dev; test2 untouched. Switch rule: Stage A
+recall no lower, pipeline CPA 0, F1 no lower.
+**How to resume if interrupted:**
+- installs: `CMAKE_ARGS="-DGGML_METAL=on" .venv/bin/pip install llama-cpp-python onnxruntime`
+- GGUFs from `Qwen/Qwen2.5-3B-Instruct-GGUF` into `models/gguf/` (gitignored under `models/`)
+- `.venv/bin/python benchmark/runtime_test.py --gguf models/gguf/<q8_0 file> --tag q8` (R1)
+- `.venv/bin/python benchmark/runtime_test.py --gguf models/gguf/<q4_k_m file> --tag q4km` (R2)
+- `.venv/bin/python benchmark/onnx_checker_test.py` (R3)
+Stage A results cache to `benchmark/.stage_a_llamacpp_<tag>.json`; new checker scores are added to
+`benchmark/.nli_ft_cache.json` (both gitignored).
+
+## 2026-10-12 — R3: the checker on ONNX Runtime — partial results
+
+Compared against the shipped OpenVINO INT8 checker on all 215 scored (sentence, symptom) pairs;
+bar set beforehand: 0 decisions flipped at X = 0.30. `benchmark/onnx_checker_test.py`, onnxruntime
+1.19.2 (CPU), Apple Silicon.
+
+| ONNX version | flipped / 215 | largest score diff | size |
+|---|---|---|---|
+| uncompressed (fp32) | **0** | 0.036 | ~1.1 GB |
+| INT8, `quantize_dynamic` defaults | 23 ❌ | 0.887 | 338 MB |
+| INT8, MatMul-only, per-channel | 20 ❌ | 0.749 | 917 MB |
+| half precision (fp16) | not finished — stopped after the time-box (see below) | | |
+
+**Reading:** ONNX Runtime itself reproduces the checker exactly — the runtime is not the problem.
+ONNX Runtime's INT8 tools quantize activations dynamically as well as weights, and this DeBERTa
+model does not tolerate it; OpenVINO's NNCF INT8 was weight-only (int8_asym), which is why it cost
+nothing. **Consequence for the phone:** the checker needs fp16 or a weight-only INT8 method, not ONNX
+Runtime's default INT8. Speed: ~70 ms/pair on the Mac CPU (OpenVINO: ~32 ms).
+**R3 fp16 — stopped (time-boxed).** Two converters tried: `onnxconverter_common` (first attempt gave
+an invalid Cast-node model; the fixed retry was still converting after 10 min) and ONNX Runtime's
+transformers converter (still converting after 20+ min, ~2 GB RAM). Likely the 250k-token embedding
+table (~190M of 279M parameters). Not pursued now: the decisive finding stands (ONNX Runtime
+reproduces the checker exactly; its INT8 tools do not). **Open for the phone phase:** the checker's
+compressed format — candidates: fp16 via a native tool, Core ML weight-only INT8 (iOS), or ONNX
+Runtime's weight-only 8-bit MatMul quantization in a newer release (needs Python ≥3.10).
+
+## 2026-10-12 — R1 and R2: Stage A on llama.cpp — RESULTS
+
+`benchmark/runtime_test.py`, llama-cpp-python 0.3.36 (Metal build), Apple Silicon Mac. Same messages
+and parser as `src/slm_classify.py`; greedy decoding (temperature 0, top_k 1), max 32 tokens.
+Compared against the saved OpenVINO INT8 Stage A results (`benchmark/.stage_a_cache.json`, made through
+`harness.py`, which sets `SLM_OV_DIR` — checked, so those really are OpenVINO results). Checker = the
+fine-tuned OpenVINO INT8 checker at X = 0.30 for every row, so only Stage A changes. 52 + probe + dev
+(136 sentences). **test2 not touched.**
+
+| set | Stage A | Stage A recall | pipeline P | R | F1 | exact | CPA false alarms (pipeline) |
+|---|---|---|---|---|---|---|---|
+| 52 | OpenVINO INT8 (2.9 GB) | 53/53 = 1.000 | 0.946 | 1.000 | 0.972 | 49/52 | 0 |
+| 52 | llama.cpp Q8_0 (3.6 GB) | 53/53 = 1.000 | 0.964 | 1.000 | 0.981 | 50/52 | 0 |
+| 52 | llama.cpp Q4_K_M (2.1 GB) | 53/53 = 1.000 | 0.964 | 1.000 | 0.981 | 50/52 | 0 |
+| probe | OpenVINO INT8 | 25/27 = 0.926 | 0.957 | 0.815 | 0.880 | 37/43 | 0 |
+| probe | llama.cpp Q8_0 | 26/27 = 0.963 | 0.958 | 0.852 | 0.902 | 38/43 | 0 |
+| probe | llama.cpp Q4_K_M | 26/27 = 0.963 | 0.958 | 0.852 | 0.902 | 38/43 | 0 |
+| dev | OpenVINO INT8 | 41/46 = 0.891 | 0.976 | 0.891 | 0.932 | 37/41 | 0 |
+| dev | llama.cpp Q8_0 | 43/46 = 0.935 | 0.977 | 0.935 | 0.956 | 38/41 | 0 |
+| dev | llama.cpp Q4_K_M | 43/46 = 0.935 | 0.956 | 0.935 | 0.945 | 37/41 | 0 |
+
+Cardiac-arrest symptoms PROPOSED by Stage A (before the checker; all were removed by the checker in
+every row): OpenVINO 0 / 5 / 2, Q8_0 0 / 2 / 3, Q4_K_M 0 / 1 / 2 (52 / probe / dev).
+
+**R1 (OpenVINO INT8 → llama.cpp Q8_0, runtime change): PASSES the pre-registered rule.** Stage A recall
+no lower on any set (equal on the 52, +1 symptom on the probe, +2 on dev); pipeline CPA 0; F1 no lower.
+**R2 (Q8_0 → Q4_K_M, compression only): PASSES** — Stage A recall identical to Q8_0 on all three sets;
+pipeline CPA 0. One extra kept symptom on dev ("she's talking gibberish and doesn't know where she
+is": Q4 also kept `slurred_speech`; expected only `confused`), so dev F1 0.945 vs 0.956.
+
+**Honest reading:**
+- The two runtimes do NOT give identical answers: Stage A's proposals differ on 30/136 sentences
+  (Q8_0) and 37/136 (Q4_K_M). They are different 8-bit/4-bit versions of the same Qwen model, so
+  small differences are expected. Most differences are extra or missing wrong guesses that the
+  checker then removes.
+- The gains (1–2 symptoms per set) are too small to call llama.cpp "better". The claim is
+  "**no worse** on the measured sets, at 2.1 GB instead of 2.9 GB".
+- Q4_K_M proposes more extra symptoms than Q8_0 (more work for the checker) — the checker held.
+- Not yet measured with llama.cpp: test2 (locked) and anything with real voices.
+
+**Speed, Stage A per sentence, this Mac (median over 8 dev sentences):**
+
+| runtime | where | prompt state reused (prefix caching) | median |
+|---|---|---|---|
+| OpenVINO INT8 (optimum-intel) | CPU | not available on ARM Macs | 12.48 s |
+| llama.cpp Q8_0 | CPU only | no (reset each call) | 7.05 s |
+| llama.cpp Q8_0 | CPU only | yes | 0.57 s |
+| llama.cpp Q8_0 | Apple GPU (Metal) | no / yes | 1.04 s / 0.34 s |
+| llama.cpp Q4_K_M | Apple GPU (Metal) | no / yes | 0.99 s / 0.22 s |
+
+Fairness notes: OpenVINO is an Intel runtime; on an ARM Mac it has no prefix caching and is not at its
+best (on the Intel laptop, 2026-08-24, OpenVINO GenAI with prefix caching measured 4.16 s). The
+fair same-chip, same-job comparison is CPU vs CPU without prompt reuse: 12.48 s vs 7.05 s. Phone
+speed is NOT measured — these are Mac numbers. The "~30 s/sentence" figure previously in HANDOFF.md
+was not a measurement of this setup; corrected to 12.5 s.
+Measurement mistake caught and corrected: the first OpenVINO timing ran without `SLM_OV_DIR`, so
+`slm_classify` silently loaded plain PyTorch (65 s/sentence). Discarded; rerun with `SLM_OV_DIR` set
+and the backend printed ("OpenVINO INT8 (optimum-intel)").
+Unexplained: the R1 run took ~40 minutes of wall-clock time although its own per-call timings are
+sub-second; R2 (same script, same sentences) took about a minute. Likely the first-ever Metal
+load/compile or other load on the machine; the per-call figures above were reproduced by R2 and the
+separate speed test.
+
+**Combined R1–R3 conclusion:**
+- Stage A on the phone: **llama.cpp, Q4_K_M (2.1 GB)** passes every pre-registered check so far.
+- Checker on the phone: ONNX Runtime reproduces it exactly at fp32 (1.1 GB); ONNX Runtime's INT8 tools
+  break it (20–23 of 215 decisions flipped). Compressed phone format still open (fp16 / Core ML
+  weight-only INT8 / weight-only 8-bit MatMul).
+- Not yet tested: Whisper on whisper.cpp; anything on a real phone.
+
+## 2026-10-12 — T2-L: test2 once with llama.cpp Q4_K_M — PRE-REGISTERED (written before running)
+
+Founder approved: (1) the app switches Stage A to llama.cpp, (2) one run of the locked test2 with it.
+test2 SHA-256 checked just before: `b421ab3f…fdd33` (unchanged).
+Setup: Stage A = llama.cpp Q4_K_M (2.1 GB, the phone candidate); checker = fine-tuned OpenVINO INT8
+at X = 0.30 (unchanged). Compared with the same checker after OpenVINO Stage A (NLI-8: test2 F1 0.883).
+**Rule (the same as R1/R2):** PASS if Stage A recall is no lower than OpenVINO's on test2, pipeline
+cardiac-arrest false alarms = 0, and F1 no lower. **If it fails:** the laptop app stays on OpenVINO
+and the difference is investigated before any switch. Run once; the result is reported whatever it is.
+
+## 2026-10-12 — T2-L: test2 once with llama.cpp Q4_K_M — RESULT: PASS
+
+`.venv/bin/python benchmark/runtime_test.py --gguf models/gguf/qwen2.5-3b-instruct-q4_k_m.gguf --tag q4km --test2`
+(the `--test2` flag was added for this run; without it the script never reads test2).
+
+| test2 (34 sentences, 41 expected symptoms) | Stage A recall | P | R | F1 | exact | CPA |
+|---|---|---|---|---|---|---|
+| OpenVINO INT8 Stage A + fine-tuned checker (NLI-8) | 36/41 = 0.878 | 0.944 | 0.829 | 0.883 | 27/34 | 0 |
+| llama.cpp Q4_K_M Stage A + same checker | 39/41 = 0.951 | 0.923 | 0.878 | 0.900 | 28/34 | 0 |
+
+All three conditions met (recall no lower, CPA 0, F1 no lower) → **PASS; the switch goes ahead.**
+Stage A proposed no cardiac-arrest symptom on test2 with either runtime.
+The four test2 sentences whose final answer changed:
+- "my father tumbled down the steps outside" — OpenVINO: nothing; llama.cpp: `fall_down` ✅ (fixed a miss)
+- "he's sweating a lot from the heat and he's very dizzy" — OpenVINO: nothing; llama.cpp: `dizziness` ✅
+  + `high_fever` ❌ (expected only dizziness)
+- "he threw up earlier, and now he says his head is killing him" — OpenVINO kept a wrong `seizure`;
+  llama.cpp did not ✅
+- "my son is wheezing and can't catch his breath, he has asthma" — llama.cpp also kept a wrong
+  `chest_pain` ❌
+Net: 3 symptoms gained or fixed, 2 new wrong ones → recall up, precision down a little. A one-case
+difference in exact matches (28 vs 27) is not significant; the honest claim stays "no worse".
+Note: llama.cpp's Stage A suggests MORE extra symptoms than OpenVINO (e.g. 6 for the heat sentence),
+so the checker carries more of the load. The checker held (0 CPA), but this is worth watching.
+Speed in this run (Mac GPU): 0.27 s per call with prompt reuse, 0.99 s without.
+
+## 2026-10-12 — APP CHANGE: Stage A on llama.cpp + the fine-tuned checker wired in (replaces Stage B)
+
+Founder approved switching the app's Stage A to llama.cpp after T2-L passed.
+**Finding that forced the second part:** with only the runtime switched, the app still ran Stage A →
+old Stage B (`_review_list`), a combination never tested on llama.cpp. First check: "my husband
+clutched his chest and dropped to the floor, he's still awake" — llama.cpp Stage A proposed
+`chest_pain, collapsed`; Stage B on llama.cpp threw away `chest_pain` (OpenVINO Stage A + B kept it).
+The tested combination is Stage A + the checker, so the checker was wired in at the same time —
+this makes the app equal the tested pipeline rather than adding an untested change.
+Changes:
+- `src/nli_checker.py` (new): loads `models/nli-mdeberta-ft-ov-int8` exactly as
+  `benchmark/nli_score.py` does; keeps a symptom if entailment ≥ 0.30; button-only statuses pass
+  through untouched; a symptom with no hypothesis is kept (recall first) with a printed warning.
+- `src/slm_classify.py`: llama.cpp backend (`SLM_GGUF`), greedy, same settings as runtime_test.py;
+  `classify(verify=True)` now uses the checker. `KYUKYU_SECOND_PASS=stage_b` reproduces the old
+  benchmarks; Stage B is also the fallback (with a loud warning) if the checker files are missing.
+  The model is closed at exit (fixes a harmless llama.cpp Metal GGML_ASSERT printed at shutdown).
+- `app.py`: sets `SLM_GGUF` to the Q4_K_M file when present; OpenVINO remains the fallback.
+- `benchmark/harness.py`: always OpenVINO (unsets `SLM_GGUF`) so its saved caches never mix runtimes.
+- `requirements.txt`: llama-cpp-python==0.3.36 (Metal build instructions in the comment).
+- `RESPONSIBLE_AI.md`: "precision 1.00" was the old Stage B on the 52 — replaced with today's
+  measured numbers (52: 0.964; test2: 0.923; 0 CPA false alarms).
+**Verification:** the app's own `classify()` on the 41 dev sentences = the tested pipeline's answers,
+41/41 identical; median 0.57 s per sentence for Stage A + checker on this Mac (GPU). The chest-pain
+sentence now gives `chest_pain`. Unit tests: 19 pass, 1 fails (`test_speak.py::test_room_to_kana`,
+expects "101号室" → イチマルイチ but `room_to_kana` only converts plain digits) — pre-existing since
+commit 89a6cfa, unrelated to this change.
+Not yet re-measured: anything with real voices (Whisper in the loop) and the probe's panic group.
+
+## 2026-10-12 — R3b: checker, weight-only 8-bit ONNX (option A) — PRE-REGISTERED
+
+Founder approved option A ("bare necessities only"; architecture discussion next). Why A: it is the
+same METHOD as the OpenVINO INT8 that changed 0 decisions — only the stored numbers are 8-bit, the
+calculation stays full precision (ONNX Runtime's default INT8 in R3 also quantized the calculation,
+which is what broke it). One file runs on Android and iOS via ONNX Runtime Mobile.
+Tool: ONNX Runtime 1.31 `MatMulNBitsQuantizer`, bits=8, MatMul + Gather (the embedding table, 70%
+of the parameters), block 128, asymmetric (like OpenVINO's int8_asym), compute precision unchanged.
+Needs Python ≥ 3.10 → separate tool environment `.venv311` (Python 3.11.16; gitignored). The app
+itself stays on `.venv` (3.9).
+Step 1 (environment check): the already-exported fp32 ONNX scored in `.venv311` must again give 0
+flips — proves the newer tokenizer/runtime reproduce the checker. Step 2: the 8-bit file.
+**Pass line:** 0 decisions flipped at X = 0.30 over every scored pair in `.nli_ft_cache.json`
+(the OpenVINO INT8 checker's scores). Any flip = fail, and the result is reported as it is.
+Dictionary trimming (option C) deliberately NOT done: it would lock the checker to English before
+the architecture discussion decides which language the checker reads.
+
+## 2026-10-12 — R3b: RESULT — FAIL (option A, ONNX Runtime weight-only 8-bit)
+
+`.venv311/bin/python benchmark/onnx_weightonly_test.py` (ONNX Runtime 1.31, Python 3.11.16).
+- Step 1, fp32 in the new environment: **0 of 273 flipped** (largest difference 0.043, 47 ms/pair).
+  The newer runtime + tokenizer reproduce the checker. (273 pairs now: R1/R2/T2-L added new ones.)
+- Step 2, weight-only 8-bit: **1 of 273 flipped → FAIL by the pre-registered line.** Size 921 MB.
+  Flipped pair (probe): "he's soaked in sweat but says he feels cold" vs "The person has a high
+  fever." — OpenVINO INT8 0.243, ONNX fp32 0.286, ONNX 8-bit 0.311 → crosses 0.30 → a new wrong
+  `high_fever` would be kept. Not a cardiac-arrest symptom, but the bar was 0 flips.
+- **Second failure: no size win.** This ONNX Runtime quantizer refuses 8-bit for the embedding table
+  ("Gather only supports 4 bits quantization"), so the 193M-parameter dictionary (70% of the model)
+  stayed fp32: 921 MB vs 1,116 MB. The 8-bit GatherBlockQuantized OPERATOR exists in the runtime;
+  the Python TOOL does not produce it yet.
+**Reading:** there is no ready-made ONNX Runtime path that matches OpenVINO's lossless INT8 today.
+What is proven: the checker runs EXACTLY on a phone runtime (ONNX Runtime fp32, 1.1 GB, 0/273).
+Remaining routes, none started: (1) hand-built 8-bit embedding (uint8 table + per-row scale applied
+after the lookup) + per-channel MatMul; (2) Core ML weight-only int8 (iOS only); (3) dictionary
+trimming (lossless for kept tokens, but language-dependent → after the architecture decision).
+**Decision proposed to the founder:** stop checker compression here. It is optimisation, not a bare
+necessity, and the architecture discussion may retrain or re-scope the checker (language, richer
+hypotheses), which would require re-exporting it anyway.

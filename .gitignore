@@ -1,6 +1,7 @@
 # Virtual environments (recreate with: pip install -r requirements.txt)
 .venv/
 .venv312/
+.venv311/
 
 # Converted OpenVINO models - ~2.9 GB, and regenerable with benchmark/convert_slm.py.
 # GitHub rejects files over 100 MB, so these can never be committed anyway.
@@ -34,4 +35,5 @@ __pycache__/
 # local test artefacts
 ANDROID_TEST.wav
 benchmark/.stage_*_cache.json
+benchmark/.stage_a_llamacpp_*.json
 benchmark/.nli*_cache.json
