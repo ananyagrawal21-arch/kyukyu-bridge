@@ -379,3 +379,29 @@ scenario because it was conceptually a paraphrase of a dev-set failure case, eve
 the word check.
 **Leak check after changes:** 0 exact copies, 0 near-copies, 0 bad labels, 0 duplicates. CLEAN.
 **Founder: approved for training.**
+
+## 2026-10-12 — NLI-8 step C: baseline fine-tune — trained
+
+**Run by the founder in Cursor.** `benchmark/nli_finetune.py` (learner version, rewritten by Cursor's
+AI to the founder's spec: numbered steps, KNOBS block, DRY_RUN flag; same behaviour as the first
+version). Knobs at defaults: 3 epochs, lr 2e-5, batch 8, weight decay 0.01, 3 neutrals per
+sentence, 10% held back by SENTENCE, seed 42. Device: Apple GPU (mps). Saved to
+`models/nli-mdeberta-ft`.
+
+**Pairs:** train 1,134 (entailment 295 / 26%, contradiction 65 / 6%, neutral 774 / 68%);
+held-back 125 (34 / 4 / 87).
+
+| epoch | train loss | held-back loss | held-back accuracy |
+|---|---|---|---|
+| 1 | 0.4479 | 0.4124 | 0.8720 |
+| 2 | 0.2036 | 0.2680 | 0.9200 |
+| 3 | 0.1100 | 0.2419 | 0.9360 |
+
+**Reading:** training loss falls steadily; held-back loss is still falling at epoch 3, so it is not
+yet memorising. Held-back accuracy 93.6% against a 70% floor (a model that always answers
+"neutral" would score 87/125). **Limits:** the held-back set is 125 pairs in the same style as the
+training data, with only 4 contradiction pairs — it shows training worked, not that the checker beats
+Stage B. That is decided on test2 (step E).
+**Known imbalance, not yet acted on:** contradiction is 6% of training pairs, though time/negation
+is one of the three target weaknesses. Candidate follow-ups (one at a time, after step E): more
+`denied` sentences, or class-weighted loss.
