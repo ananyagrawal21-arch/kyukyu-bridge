@@ -13,6 +13,20 @@ the patient's medical history, and what is happening right now** — onto the di
 > the phone-to-dispatcher system is designed and partly built. Exactly what exists and what doesn't
 > is in [What's built](#whats-built--honestly).
 
+> **Update — 12 October 2026.** Three changes since this page was written; the full rewrite follows
+> once the final architecture is settled:
+> - **The AI will run on the caller's phone, not on an Intel server.** Audio never leaves the phone;
+>   the server only relays messages. Not built yet — a laptop stands in for the phone. The diagram
+>   and the "Intel server" steps below describe the earlier design.
+> - **Stage B was replaced by a fine-tuned meaning checker** (mDeBERTa, trained on 287
+>   human-reviewed sentences), and **Stage A now runs on llama.cpp** (Qwen2.5-3B, 4-bit, 2.1 GB), a
+>   runtime phones can use. OpenVINO remains the development backend on Intel machines.
+> - **What the app measures now:** on the locked test2 (run once with this setup) precision 0.923,
+>   recall 0.878, **F1 0.900**, 0 false cardiac-arrest alarms (the table below, F1 0.861, is the
+>   earlier setup). Original 52: F1 0.981. Probe: F1 0.902. The checker's gain over Stage B was
+>   consistent across sets but **not statistically significant** (11 vs 6 sentences, p = 0.33).
+>   Details: [`EXPERIMENT_LOG.md`](EXPERIMENT_LOG.md).
+
 ---
 
 ## How it works — in plain words
@@ -117,7 +131,7 @@ replaced](#how-the-design-changed) is part of the story.
 
 Every sentence in the newer sets had to pass one rule: **would a real caller actually say this?**
 
-### Results — OpenVINO INT8, the backend the app actually runs
+### Results — OpenVINO INT8, Stage A + Stage B (the app's setup until 12 October 2026; see the update at the top)
 
 | | Precision | Recall | F1 | False cardiac-arrest alarms |
 |---|---|---|---|---|
@@ -153,9 +167,9 @@ that; it's how it decides.
 | A ready-made "meaning checker" (NLI model) instead of Stage B | found every symptom Stage B threw away — but let through **3 false choking alarms**. Failed |
 | Stage B plus the checker rescuing what B removed | one case fixed, one broken. A draw. Not adopted |
 
-**In progress:** teaching that checker emergency language with 287 human-reviewed example
-sentences (fine-tuning), then testing it once on test2. Full record:
-[`EXPERIMENT_LOG.md`](EXPERIMENT_LOG.md).
+**Done since:** the checker was taught emergency language with 287 human-reviewed example
+sentences (fine-tuning) and tested once on test2. It beat Stage B and replaced it (see the update at
+the top). Full record: [`EXPERIMENT_LOG.md`](EXPERIMENT_LOG.md).
 
 ---
 
