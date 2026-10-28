@@ -24,6 +24,10 @@ import os  # noqa: E402
 _OV = _ROOT / "models" / "qwen2.5-3b-ov-int8"
 if _OV.is_dir():
     os.environ.setdefault("SLM_OV_DIR", str(_OV))
+# The saved results (.stage_a_cache.json, .stage_b_cache.json) are OpenVINO results, keyed only by
+# sentence. A llama.cpp answer must never be mixed into them, so the harness always runs OpenVINO.
+# llama.cpp results live in benchmark/runtime_test.py's own cache files.
+os.environ.pop("SLM_GGUF", None)
 
 import slm_classify as SC          # noqa: E402
 from ontology import load_ontology  # noqa: E402

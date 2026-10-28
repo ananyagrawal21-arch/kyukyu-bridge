@@ -6,7 +6,9 @@ SELECTS which ontology situations apply - it returns situation IDs, it does NOT
 generate Japanese. We look up the verified term for each ID afterwards, so this
 step can never hallucinate Japanese or a diagnosis.
 
-Plain PyTorch here (prove the flow first). OpenVINO conversion comes later.
+Runtimes, first one available wins: llama.cpp (SLM_GGUF, a GGUF file - the runtime the phone will
+use; chosen 2026-10-12 after R1/R2/T2-L in EXPERIMENT_LOG.md), then OpenVINO (SLM_OV_DIR), then
+plain PyTorch.
 """
 import difflib
 import json
@@ -36,7 +38,7 @@ SLM_DISCARD = {"conscious", "unconscious", "not_breathing"}
 SLM_EXCLUDE = set()  # nothing is hidden from the menu any more
 
 _pipe = None
-_backend = None      # "genai" | "optimum" | "pytorch" - which path actually loaded
+_backend = None      # "llamacpp" | "genai" | "optimum" | "pytorch" - which path actually loaded
 _tokenizer = None    # only the genai path needs it: it takes a prompt STRING, not messages
 _ALIAS_TIERS = None  # cached; rebuilt aliases on every parse otherwise
 
@@ -64,6 +66,24 @@ def _ensure_ov_tokenizer(ov_dir):
 def _load_pipe():
     global _pipe, _backend, _tokenizer
     if _pipe is None:
+        # ---- llama.cpp (GGUF) - the phone runtime ----
+        # Tested 2026-10-12 (R1, R2, T2-L): Q4_K_M, 2.1 GB, no worse than OpenVINO INT8 on the 52,
+        # probe, dev and test2, 0 cardiac-arrest false alarms. It reuses the fixed part of the
+        # prompt between calls by itself (its version of prefix caching), on any chip.
+        # n_gpu_layers=-1 = put every layer on the GPU if there is one (Metal on a Mac).
+        gguf = os.environ.get("SLM_GGUF")
+        if gguf and os.path.isfile(gguf):
+            from llama_cpp import Llama
+            _pipe = Llama(model_path=gguf, n_ctx=2048, n_gpu_layers=-1, verbose=False)
+            # Free the model before Python shuts down. Otherwise llama.cpp's Metal clean-up can
+            # run in the wrong order at exit and print a crash (GGML_ASSERT) AFTER all work is
+            # done - harmless, but it looks like a failure (seen 2026-10-12).
+            import atexit
+            atexit.register(_pipe.close)
+            _backend = "llamacpp"
+            print(f"[slm_classify] llama.cpp ({Path(gguf).name})", flush=True)
+            return _pipe
+
         from transformers import pipeline, AutoTokenizer
         ov_dir = os.environ.get("SLM_OV_DIR")
         if ov_dir and os.path.isdir(ov_dir):
@@ -138,6 +158,13 @@ def _complete(messages, max_new_tokens):
     takes MESSAGES and returns a list of dicts.
     """
     pipe = _load_pipe()
+    if _backend == "llamacpp":
+        # Greedy, like do_sample=False below: always the single most likely next token.
+        # Exactly the settings measured in benchmark/runtime_test.py.
+        out = pipe.create_chat_completion(
+            messages=messages, max_tokens=max_new_tokens, temperature=0.0, top_k=1,
+        )
+        return out["choices"][0]["message"]["content"]
     if _backend == "genai":
         import openvino_genai as og
         prompt = _tokenizer.apply_chat_template(
@@ -154,7 +181,8 @@ def _complete(messages, max_new_tokens):
 def backend_name():
     """Which runtime is live - for warm-up diagnostics and the benchmarks."""
     _load_pipe()
-    return {"genai": "OpenVINO GenAI + prefix caching",
+    return {"llamacpp": "llama.cpp (GGUF)",
+            "genai": "OpenVINO GenAI + prefix caching",
             "optimum": "OpenVINO INT8 (optimum-intel)",
             "pytorch": "plain PyTorch (unoptimized)"}.get(_backend, "unknown")
 
@@ -372,8 +400,20 @@ def classify(transcript, ontology=None, verify=True):
     candidates = _parse_ids(reply, valid_ids)
 
     if verify:
-        # Whole-list review pass: one call over the full candidate list to drop fabrications.
-        candidates = _review_list(pipe, transcript, candidates)
+        # Second pass: the fine-tuned NLI checker (src/nli_checker.py) - the combination tested on
+        # test2 (T2-L, EXPERIMENT_LOG.md 2026-10-12). Stage B (_review_list) is kept for the old
+        # benchmarks only (KYUKYU_SECOND_PASS=stage_b) and as the fallback if the checker's model
+        # files are missing. Stage B was never tested on llama.cpp, and dropped a real chest_pain
+        # there in the first check - so the fallback warns loudly.
+        import nli_checker
+        if os.environ.get("KYUKYU_SECOND_PASS", "nli") == "nli" and nli_checker.available():
+            candidates = nli_checker.keep(transcript, candidates, skip=SLM_DISCARD)
+        else:
+            if os.environ.get("KYUKYU_SECOND_PASS", "nli") == "nli":
+                print("[slm_classify] NLI checker model not found - FALLING BACK TO STAGE B "
+                      "(untested on llama.cpp)", flush=True)
+            # Whole-list review pass: one call over the full candidate list to drop fabrications.
+            candidates = _review_list(pipe, transcript, candidates)
     # Discard the critical binary statuses - the model may SELECT them (so the concept has a
     # home and doesn't displace onto no_pulse), but the deterministic step owns the answer.
     return [sid for sid in candidates if sid not in SLM_DISCARD]

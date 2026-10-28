@@ -36,6 +36,11 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 _MODEL_DIR = os.path.join(os.path.dirname(__file__), "models", "qwen2.5-3b-ov-int8")
 if os.path.isdir(_MODEL_DIR):
     os.environ.setdefault("SLM_OV_DIR", _MODEL_DIR)
+# ...but run it on llama.cpp when the GGUF is present: the runtime the phone will use, so the app
+# tests what ships (decided 2026-10-12 after R1/R2/T2-L, EXPERIMENT_LOG.md). OpenVINO is the fallback.
+_GGUF = os.path.join(os.path.dirname(__file__), "models", "gguf", "qwen2.5-3b-instruct-q4_k_m.gguf")
+if os.path.isfile(_GGUF):
+    os.environ.setdefault("SLM_GGUF", _GGUF)
 
 from pipeline import (  # noqa: E402
     build_briefing_chunks, slm_matches, _statement_from, _humanize, _find_entry,

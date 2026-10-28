@@ -6,6 +6,7 @@ ask the NLI model: does what the caller said imply this symptom's sentence? All 
 and step 6 only reads the file.
 Backend: mDeBERTa-v3-base-xnli, OpenVINO INT8 (models/nli-mdeberta-ov-int8), fixed shape 1 x 128.
 """
+import argparse
 import json
 import sys
 import time
@@ -28,9 +29,9 @@ MAX_TOKENS = 128  # see nli_sanity.py: this DeBERTa export only compiles with a 
 NLI_CACHE = BENCH / ".nli_cache.json"
 
 
-def load_model():
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_DIR)
-    model = OVModelForSequenceClassification.from_pretrained(MODEL_DIR, compile=False)
+def load_model(model_dir):
+    tokenizer = AutoTokenizer.from_pretrained(model_dir)
+    model = OVModelForSequenceClassification.from_pretrained(model_dir, compile=False)
     model.reshape(1, MAX_TOKENS)
     model.compile()
     return tokenizer, model
@@ -45,17 +46,27 @@ def score_pair(tokenizer, model, caller_said, hypothesis):
 
 
 def all_sentences():
-    """Every transcript in the three sets, each once."""
+    """Every transcript in the four sets (52, probe, dev, test2), each once."""
     sets = load_sets()  # {"52": [(transcript, expected)], "probe": [...]}
-    dev = json.loads((BENCH / "dev_set.json").read_text(encoding="utf-8"))["cases"]
-    texts = [t for cases in sets.values() for t, _ in cases] + [c["transcript"] for c in dev]
+    texts = [t for cases in sets.values() for t, _ in cases]
+    for filename in ("dev_set.json", "test2_set.json"):
+        cases = json.loads((BENCH / filename).read_text(encoding="utf-8"))["cases"]
+        texts += [c["transcript"] for c in cases]
     return list(dict.fromkeys(texts))  # removes duplicates, keeps the order
 
 
 def main():
+    # Which model to score with, and which file to save its scores in. The defaults are the
+    # original checker and its cache, so running with no options behaves exactly as before.
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--model-dir", type=Path, default=MODEL_DIR)
+    parser.add_argument("--cache", type=Path, default=NLI_CACHE)
+    args = parser.parse_args()
+    model_dir, cache_path = args.model_dir, args.cache
+
     hypotheses = json.loads((ROOT / "data" / "nli_hypotheses.json").read_text(encoding="utf-8"))
     stage_a = json.loads(A_CACHE.read_text(encoding="utf-8"))
-    cache = json.loads(NLI_CACHE.read_text(encoding="utf-8")) if NLI_CACHE.exists() else {}
+    cache = json.loads(cache_path.read_text(encoding="utf-8")) if cache_path.exists() else {}
 
     todo = []
     for t in all_sentences():
@@ -68,15 +79,15 @@ def main():
             if key not in cache:
                 todo.append((key, t, symptom))
 
-    print(f"{len(cache)} pairs already scored, {len(todo)} to score.")
+    print(f"Model: {model_dir.name}. {len(cache)} pairs already scored, {len(todo)} to score.")
     if todo:
-        tokenizer, model = load_model()
+        tokenizer, model = load_model(model_dir)
         start = time.time()
         for key, t, symptom in todo:
             cache[key] = score_pair(tokenizer, model, t, hypotheses[symptom])
         per_pair = (time.time() - start) / len(todo)
-        NLI_CACHE.write_text(json.dumps(cache, ensure_ascii=False, indent=1), encoding="utf-8")
-        print(f"Scored {len(todo)} pairs, {per_pair:.3f}s per pair. Saved to {NLI_CACHE.name}.")
+        cache_path.write_text(json.dumps(cache, ensure_ascii=False, indent=1), encoding="utf-8")
+        print(f"Scored {len(todo)} pairs, {per_pair:.3f}s per pair. Saved to {cache_path.name}.")
 
 
 if __name__ == "__main__":

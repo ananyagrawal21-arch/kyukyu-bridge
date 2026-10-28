@@ -10,6 +10,7 @@ Part 3  show every sentence where the two checkers disagree, and every cardiac-a
 Reads saved results only (Stage A, Stage B, NLI scores) - no model is loaded.
 Backend of the scores: Stage A/B Qwen2.5-3B OpenVINO INT8; NLI mDeBERTa OpenVINO INT8; Apple Silicon.
 """
+import argparse
 import json
 import sys
 from pathlib import Path
@@ -21,7 +22,10 @@ sys.path.insert(0, str(BENCH))
 from harness import A_CACHE, B_CACHE, CPA_IDS, load_sets, score  # noqa: E402
 from slm_classify import SLM_DISCARD                              # noqa: E402
 
-NLI = json.loads((BENCH / ".nli_cache.json").read_text(encoding="utf-8"))
+# The original checker's scores. hybrid_threshold.py imports from this file and needs these loaded
+# at import time; running this file with --cache replaces them (see main).
+NLI_CACHE = BENCH / ".nli_cache.json"
+NLI = json.loads(NLI_CACHE.read_text(encoding="utf-8"))
 STAGE_A = json.loads(A_CACHE.read_text(encoding="utf-8"))
 STAGE_B = json.loads(B_CACHE.read_text(encoding="utf-8"))
 THRESHOLDS = [round(0.05 * i, 2) for i in range(1, 20)]  # 0.05, 0.10, ... 0.95
@@ -59,28 +63,40 @@ def row(label, r):
 
 
 def choose_x(dev):
-    """Zero CPA false alarms first, then highest recall, then highest precision.
-    If several X tie, take the middle one - the furthest from both edges of the tied range."""
+    """Zero CPA false alarms first, then the best F1 (the balance of right and wrong).
+    If several X tie, take the middle one - the furthest from both edges of the tied range.
+    Was "best recall" until NLI-8: that rule always pushed X to the most lenient line (NLI-6)."""
     results = {x: evaluate(dev, lambda t, x=x: nli_keeps(t, x)) for x in THRESHOLDS}
     for x, r in results.items():
         print(row(f"dev  X = {x:.2f}", r))
     safe = [x for x, r in results.items() if r["cpa_fp"] == 0]
     if not safe:
         sys.exit("\nNo X avoids every cardiac-arrest false alarm on the dev set. That is the result.")
-    best = max((results[x]["recall"], results[x]["precision"]) for x in safe)
-    tied = [x for x in safe if (results[x]["recall"], results[x]["precision"]) == best]
+    best = max(results[x]["f1"] for x in safe)
+    tied = [x for x in safe if results[x]["f1"] == best]
     return tied[len(tied) // 2], tied
 
 
 def main():
+    # Which checker's saved scores to judge. Default = the original checker, as before.
+    global NLI
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--cache", type=Path, default=NLI_CACHE)
+    args = parser.parse_args()
+    NLI = json.loads(args.cache.read_text(encoding="utf-8"))
+    print(f"Scores from: {args.cache.name}\n")
+
     dev_cases = json.loads((BENCH / "dev_set.json").read_text(encoding="utf-8"))["cases"]
     dev = [(c["transcript"], c["expected"]) for c in dev_cases]
     tests = load_sets()  # {"52": [...], "probe": [...]}
+    # test2: the locked set, written before any training. The headline comparison.
+    test2_cases = json.loads((BENCH / "test2_set.json").read_text(encoding="utf-8"))["cases"]
+    tests["test2"] = [(c["transcript"], c["expected"]) for c in test2_cases]
 
     print("PART 1 - choosing X on the dev set only\n")
     x, tied = choose_x(dev)
     print(f"\nChosen X = {x:.2f}   (tied range: {tied[0]:.2f}-{tied[-1]:.2f})")
-    print("Chosen BEFORE looking at the 52 or the probe. Changing it afterwards is a new, logged run.")
+    print("Chosen BEFORE looking at the 52, the probe or test2. Changing it afterwards is a new, logged run.")
 
     print("\nPART 2 - the comparison, once\n")
     for name, cases in tests.items():
