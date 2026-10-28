@@ -37,3 +37,9 @@ ANDROID_TEST.wav
 benchmark/.stage_*_cache.json
 benchmark/.stage_a_llamacpp_*.json
 benchmark/.nli*_cache.json
+
+# PRIVATE planning notes. WARNING: this folder pushes to a PUBLIC GitHub repository
+# (ananyagrawal21-arch/kyukyu-bridge), so anything committed here is public. Keep personal and
+# competition strategy notes local-only.
+COMPETITIONS.md
+PROJECT_CONTEXT.md

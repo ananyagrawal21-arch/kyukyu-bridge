@@ -10,9 +10,7 @@ checklist), `POSITIONING.md` (regulatory pathway, §6 reference services incl. S
 ## 1. Where things stand
 
 - **Intel AI Global Impact Festival is over** — the project did not reach the interview stage.
-  **New external targets: GENIUS Olympiad 2027 and the Davidson Fellows Scholarship.** Verify each
-  one's current rules, eligibility (founder is 17) and theme fit from official sites before shaping
-  work for them. Possible issue to check: GENIUS Olympiad may require an environmental theme.
+  External validation plans are kept in local-only files (PROJECT_CONTEXT.md, COMPETITIONS.md).
 - **Target architecture is DECIDED (2026-10-12): local-first, tiered, thin relay.** AI runs on the
   phone (audio never leaves it; no cloud fallback); the server only relays (auth, validation, acks,
   retries, de-dup, durable delivery, minimal audit; no inference, no persistent medical profiles);
@@ -186,7 +184,17 @@ Claude's stated view, to keep unless the founder disagrees with reasons:
   → "no reliable result" state, Whisper's translate mode loses negation (a reason the checker might
   eventually read the caller's own language — which is why dictionary trimming was NOT done).
 
+**NEW 2026-10-13:** founder asked where the technical depth/moat is. Claude's full analysis and
+proposal = `OPEN_DECISIONS.md` #7 ("verified by construction", layers L1–L5), awaiting the founder's
+decision. The gap study (#4c) is its first step. First-pass evaluation: `ARCHITECTURE_EVALUATION.md`
+(founder wants pros/cons/tradeoffs/missing ideas, decided intentionally; cheap experiments X1, X3 proposed first).
+
+Deployment findings + speech plan: ARCHITECTURE_EVALUATION.md §11–15. Full working context: PROJECT_CONTEXT.md
+(LOCAL ONLY — gitignored).
+**PRIVACY: this folder pushes to a PUBLIC GitHub repo (verified 2026-10-18). Nothing personal or strategic in
+tracked files.**
+
 **Pending side items:** a spawned task card "Fix failing room_to_kana unit test" (tests/test_speak.py;
 pre-existing since commit 89a6cfa; unrelated; the function may be unused now) — the founder may or may
-not start it. Open: verify GENIUS/Davidson rules and eligibility; privacy/APPI question; whether the old
+not start it. Open: privacy/APPI question; whether the old
 example address in git history is real (ask before any history rewrite).

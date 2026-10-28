@@ -2039,7 +2039,7 @@ Research already done (sources in the 2026-09-26 session):
   for 口頭指導 and sends instruction videos back to the caller.
 - Dawn Corp also runs NET119 (677/719 departments). It is the natural partner AND the natural
   competitor.
-- The founder is 17 and cannot sign a trial agreement. Someone must sign: a company partner,
+- The founder is a minor and cannot sign a trial agreement. Someone must sign: a company partner,
   a university lab, or the school.
 
 Proposed and NOT adopted: switching to a dispatcher-sends-a-link model (Live119's pattern,
@@ -2149,3 +2149,118 @@ screen (just now / minutes ago / about an hour ago / earlier today). To be desig
 **Feature idea (founder, 2026-10-06): pre-select the "has stopped" option** when the caller's words
 say the symptom stopped, instead of making them choose. Today the caller always picks; the model
 never sets the aspect. Not part of the Stage B experiment.
+
+### 6. Architecture upgrade — external review analysed (2026-10-11), queued AFTER the MVP loop
+
+An external review proposed: (1) async dual-bus with an audio-keyword fast path over UDP, (2) a
+dynamic-batching orchestrator + zero-copy memory, (3) an FDMA protocol mapping engine, (4) crash
+recovery with a watchdog. Analysed against the code, verified constraints and primary sources.
+Adopted in corrected form:
+1. **Tiered delivery** instead of a keyword fast path: tier 0 = profile on dial (no AI, already in
+   PROTOCOL.md), tier 1 = "symptoms pending" + caller's own words, tier 2 = confirmed verified
+   symptoms. Rejected parts: continuous in-call audio is impossible (the call owns the mic — see #3);
+   keyword spotting cannot read negation (the replaced substring matcher) and would bypass caller
+   confirmation; UDP drops silently, while PROTOCOL.md's seq/ack exist to detect loss. Added:
+   chunked/streaming transcription while the caller speaks (OVMS supports streaming STT).
+2. **OpenVINO Model Server** with continuous batching for concurrent calls, admission control and
+   timeouts that delay tier 2 but NEVER degrade model output; load test, p95 per stage. Rejected:
+   shortening generation under load (changes medical output; parser fails open); "tuning" prefix
+   caching (output is byte-identical, nothing to trade); zero-copy (stage payloads are ~0.5 MB audio
+   and ~100-byte text; copying is <0.1% of inference time) — profile first (B3).
+3. **`src/fdma_adapter.py` + conformance tests** against FDMA S3-01 (JSON data items + screen
+   transfer, confirmed), with the security conditions as tests. Overclaim to avoid: "plugs into TFD
+   tomorrow" — needs a terminal, contract, conformance declaration and a supporting dispatch system.
+   First step: obtain the S3-01 specification itself.
+4. **Event sourcing** (SQLite WAL, replay on restart), models in separate long-lived workers,
+   chaos test proving 0 messages lost via the gapless seq. Rejected: "resume call audio" (the app
+   never carries the call — the voice call survives a server crash by design); an unmeasured
+   "<500 ms" target.
+The goal is measured system properties (latency SLOs, concurrency, recovery time, 0 message loss,
+conformance), not architectural vocabulary.
+
+### 7. Technical depth — "verified by construction" program (PROPOSED 2026-10-13, awaiting founder)
+
+Founder's concern: the project has no technical moat — off-the-shelf models plus a fine-tune. Analysis
+(Claude, 2026-10-13): correct about the parts; the depth for a safety-critical system lives in
+GUARANTEES, not in a bigger model. The seeds of every layer below already exist in the repo.
+Thesis: **the model is never trusted; every property that matters is guaranteed by something stronger.**
+- **L1 What can be said — a human-verified controlled language, enforced at decoding time.** Ontology →
+  grammar of verified pieces (finding × body part × side × status × onset, + "not said"/"nothing fits"
+  exits); Japanese built only from verified pieces and verified templates; caller confirms the English
+  form. Coverage grows by composition; reliability by construction. Precedents: Shin et al. EMNLP 2021
+  (LMs paraphrase into a controlled sublanguage via constrained decoding); IMO SMCP, res. A.918(22),
+  2001 (maritime controlled language for safety-critical communication). Seed: ontology + `forms`.
+  Vocabulary must come from the gap study (#4c). Mechanism check 2026-10-13: grammar works; a naive
+  grammar made output worse (EXPERIMENT_LOG.md) → needs exits + measurement.
+- **L2 Whether it is true — conformal risk control on the propose→verify cascade.** Thresholds with
+  finite-sample guarantees (false-fact rate, miss rate, stricter cardiac-arrest rate) instead of X=0.30
+  picked on 41 sentences. Learn-then-Test (Angelopoulos, Bates, Candès, Jordan, Lei; AoAS 2025 — multi-
+  label FDR control, calibrated detectron2); Conformal Risk Control (ICLR 2024); conformal factuality
+  (Mohri & Hashimoto, ICML 2024 — LM proposes claims, scorer filters, guarantee); conditional version
+  (Cherian, Gibbs, Candès, NeurIPS 2024). Answers the founder's objection to raw confidence scores: the
+  score is not trusted, it is calibrated with a proof. Needs labelled calibration data; the guarantee
+  covers calls like the calibration calls (drills with real speakers → real-caller guarantee).
+- **L3 What the AI is unsure of — ask the caller, only when needed.** Conformal set → send / drop / ask;
+  "did you mean stomach pain or headache?" from verified pieces. KnowNo (Ren et al., CoRL 2023, Princeton
+  + Google DeepMind). Generalises the project's "ask, don't infer" rule (modifier decision 2026-08-12).
+  Measured as error rate vs questions per call.
+- **L4 That nothing else reaches the dispatcher — enforced cryptographically.** Verified pieces signed
+  (EdDSA); console displays only verified signatures; payload end-to-end encrypted to the console's key
+  (ECDH + AES-GCM) so the relay is blind; hash-chained session log (tamper-evident, ≥1 year). All
+  primitives are on the CRYPTREC list (令和5年3月30日: EdDSA, ECDH, AES, GCM, HMAC, SHA-256) which the
+  FDMA conditions require. Seed: provenance check in `src/messages.py`. Shrinks relay liability (#1).
+- **L5 That the claims hold — evaluation as a product.** CheckList-style behavioural suite (Ribeiro et
+  al., ACL 2020 best paper): capabilities × test types (invariance, directional), contrast sets,
+  pre-registration and SHA-256 locks (already practised) → a public benchmark.
+Context: Danish RCT (Blomberg et al., JAMA Netw Open 2021, 5,242 alerted calls): ML alerts had higher
+sensitivity than dispatchers (85.0% vs 77.5%) but PPV 17.8% vs 55.8%, and dispatcher recognition did not
+improve significantly — accuracy alone did not change behaviour; trust/precision is the bottleneck.
+Not recommended: open generation/translation (breaks the core property); architecture vocabulary without
+a measured problem (#6); raw confidence thresholds; replacing Stage A with embeddings now (rejected
+2026-08-12) — revisit only as a measured cascade later. Later/optional: slot-sensitive verifier trained
+on counterfactual pairs; small fast model in front of the 3B (cascade); ASR uncertainty into L2/L3.
+Proposed order: gap study (#4c) → design L1+L3 on paper → build L1 → L2+L3 (test3 written once, in the
+new format) → L4 with the relay/console MVP (independent of the classifier) → L5 throughout.
+**How the ideas get judged (proposed 2026-10-13, founder wants intentional decisions, not "yes to all"):**
+1. Criteria first, ranked by the founder. Gates (fail = drop or change): never fails in the dangerous
+   direction / keeps the core safety property; fixes an OBSERVED problem or a stated external
+   requirement (FDMA conditions, APPI); testable with a pre-registered pass/fail. Then ranked criteria:
+   value to dispatcher/caller, caller burden in panic, cost (data, people, time), dependencies,
+   reversibility, credibility.
+2. Scenarios (ATAM, CMU SEI): ~8 concrete situations; each idea must name which ones it changes.
+3. One decision card per idea: problem + evidence, claim, scenarios fixed, pre-mortem (Klein, HBR 2007:
+   "it failed in 2027 — why?"), cost/dependencies, cheapest test that could kill it + kill line.
+4. Sort into Keep / Change / Discuss more / Drop; record the decision here with reasons and revisit triggers.
+Claude's starting positions (to be challenged): L1 discuss more; L2 keep, narrower first claim; L3 discuss
+more (panic burden); L4 change = split into signatures / blind relay / log chain; L5 keep.
+**First-pass evaluation (2026-10-13): `ARCHITECTURE_EVALUATION.md`** — problems × ideas, pros/cons/
+tradeoffs per idea, missing ideas M1–M7 (notably M1 send codes not Japanese; M3 dispatcher asks),
+experiments X1–X6. Correction: no outside Japanese speaker is needed — the founder verified all 29
+terms (2026-08-12); the per-pattern meaning check stays, done by the founder.
+
+## DECIDED 2026-10-12 (founder): TARGET ARCHITECTURE — local-first, tiered, thin relay
+
+Supersedes the 2026-09 "models run on an Intel server" plan. Chosen after an external AI review
+and Claude's critique of it.
+- **The AI runs on the phone** (Whisper → Stage A → checker). **Audio never leaves the phone, on any
+  device. No cloud-inference fallback.**
+- **The server is a thin, reliable relay:** authentication, schema/ID validation, acknowledgements,
+  retries, de-duplication, durable delivery, minimal audit records. No inference, no raw audio, no
+  persistent medical profiles. (Pseudonymous IDs do not remove APPI obligations.)
+- **The profile is stored encrypted on the phone** and sent at call time; re-confirmed periodically;
+  every message carries `profile_updated_at`.
+- **Tiered delivery:** tier 0 = profile the instant the caller dials (no AI); tier 1 = "symptoms
+  pending"; tier 2 = confirmed symptoms. **Tier 2 is optional — the dispatcher must be able to proceed
+  without it.** Delivery states shown to the caller: processed / sent / acknowledged by the
+  destination — never imply the dispatcher received something unconfirmed.
+- **Weak or unsupported phones:** tier 0 + a tap-based symptom picker. Never a cloud fallback.
+- **Size:** ~1.5 GB on-phone package is a target, not a requirement. Test Qwen 1.5B (judged by
+  recall) with the existing checker; never trade safety for size.
+- **OpenVINO** leaves the phone; it stays in development/evaluation. Production runtimes are chosen
+  after a phone benchmark.
+**Order:** (1) freeze this target; (2) build the laptop MVP with all three tiers + acknowledgements,
+inference replaceable — the laptop stands in for the phone; (3) benchmark one Android + one iPhone
+before porting; (4) find one fire department to discuss a pilot; (5) resolve APPI with that partner
+and legal advice before real users.
+**Remaining risks:** mobile feasibility, reliable delivery, deployment authorisation — not the
+server-vs-phone question, which is closed.

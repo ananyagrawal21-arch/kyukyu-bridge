@@ -740,3 +740,46 @@ trimming (lossless for kept tokens, but language-dependent → after the archite
 **Decision proposed to the founder:** stop checker compression here. It is optimisation, not a bare
 necessity, and the architecture discussion may retrain or re-scope the checker (language, richer
 hypotheses), which would require re-exporting it anyway.
+
+## 2026-10-13 — Mechanism check (NOT an experiment): grammar-constrained decoding in llama.cpp
+
+Purpose: verify that techniques proposed in OPEN_DECISIONS.md #7 actually exist in our runtime before
+recommending them. Two MADE-UP sentences, not in any test or training set; nothing tuned; no test set
+touched.
+- llama-cpp-python 0.3.36 supports: GBNF grammars and JSON-schema grammars (`LlamaGrammar`), per-token
+  log-probabilities (`logprobs`, `top_logprobs` — only if the model is loaded with `logits_all=True`),
+  and saving/restoring the model state (`save_state` / `load_state`).
+- A grammar built from the ontology (output may only be a JSON list of valid ids) produced valid output
+  for both sentences.
+- **Lesson 1 — a naive grammar can make things worse.** "my mum fell off a chair and now her wrist looks
+  bent and swollen": unconstrained Stage A (the app) proposes `fall`; with the naive grammar it produced
+  `fall_down, heavy_bleeding, pale_complexion` — two things never said. A grammar that does not match the
+  model's natural output format and has no "nothing fits / not said" exit FORCES the model onto labels.
+  Constrained decoding must be designed with an escape value and measured, not switched on.
+- **Lesson 2 — reading probabilities under a grammar needs care.** The reported values are the model's
+  raw (unconstrained) probabilities; some were hard to interpret (e.g. a closing token at 0.007 that was
+  still chosen). Turning them into a score is a measured design step, not a given.
+- **Lesson 3 — coverage gap, concretely.** Today's full pipeline returns NOTHING for the wrist sentence:
+  Stage A `fall`, checker entailment 0.074 → removed. Safe (nothing false) but the dispatcher learns
+  nothing about an obvious injury. (Also touches the known over-specific `fall` hypothesis.)
+
+## 2026-10-14 — Two more mechanism checks (NOT experiments; made-up sentences, no test set touched)
+
+**1. Uncertainty / self-correction (feasibility of L3, M2, M3).** App pipeline (llama.cpp Q4_K_M + fine-tuned checker):
+- "My father is having a stomach.. oh sorry headache" → Stage A `headache`, checker 0.994 → `headache` ✅.
+  This sentence FAILED on 2026-09-30 (OpenVINO + Stage B → nothing); it now works. Correct the 4d note.
+- "She hit her leg, no wait, her head, she hit her head" → `head_injury` (0.997) ✅.
+- "he's sweating a lot and his belly hurts, or maybe it's his chest, I'm not sure" → Stage A proposed
+  `heavy_bleeding, chest_pain, seizure` (never proposed abdominal pain or sweating); checker: bleeding
+  0.002, chest_pain 0.382, seizure 0.047 → final `chest_pain` only. Lessons: (a) the checker's score for a
+  hedged mention (0.38) sits far below clear statements (0.99) — usable for an "unsure" zone; (b) the
+  caller's OWN uncertainty ("I'm not sure") cannot be resolved by asking the caller — it must reach the
+  dispatcher as "unconfirmed"; (c) any asking/flagging depends on Stage A proposing the candidate at all
+  (recall) — the belly was never proposed.
+**2. Other languages (feasibility of M5).** Premise in zh/ko/vi/es (written by Claude), hypothesis English.
+Original checker: reads all five; but FAILED Chinese negation ("他胸口不痛…" → chest_pain 0.97).
+Fine-tuned checker: negation right in all five (0.00), but LOST true statements outside English
+("clutching chest" → chest_pain: zh 0.80, es 0.50, ko 0.06, vi 0.00). **Safety fact: never feed
+non-English text to the current fine-tuned checker — it would drop true symptoms.** The app does not do
+this today (the classifier reads Whisper's English translation). M5 needs multilingual training data and
+per-language tests before it can be used.

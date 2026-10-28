@@ -35,8 +35,13 @@ reached the briefing — precisely because consciousness comes from a button. Th
 caught a failure it was designed for, arriving by a route nobody anticipated.
 
 **Anti-fabrication verification.** Classification runs in two stages: candidate generation, then
-a per-candidate review pass that rejects anything unsupported by the caller's actual words.
-Measured effect: **precision 1.00, zero fabrications on clean English** across a 52-case set.
+a per-candidate check that rejects anything the caller's actual words do not imply. Since
+2026-10-12 the check is a separate, fine-tuned NLI model that judges each symptom on its own
+(it replaced a second pass of the language model). Measured with today's pipeline (Qwen2.5-3B on
+llama.cpp, then the checker): precision 0.964 on the 52-case set and 0.923 on test2, a locked set
+written before the checker was trained; **zero cardiac-arrest false alarms** on every set. The
+previously published "precision 1.00" belonged to the old second pass on the 52 cases; on the
+locked test2 the old pass reached 0.861 F1 against 0.900 now (EXPERIMENT_LOG.md, NLI-8 and T2-L).
 
 **Omit rather than guess.** Where a fact is unconfirmed, the briefing says nothing rather than
 saying something plausible. Applied to patient identity, unknown sex, unmatched symptoms and
@@ -134,7 +139,7 @@ trained by us. Marginal energy per call is that of a few seconds of laptop CPU.
 | Risk | How it is addressed |
 |---|---|
 | **Hallucinated content** | The model selects from a closed list. It cannot emit a term that does not exist. |
-| **Fabricated symptoms** | Second-stage per-candidate verification. Measured precision 1.00 on clean English; 0.96 under panic, disclosed above. |
+| **Fabricated symptoms** | Second-stage per-candidate check (fine-tuned NLI model). Measured precision 0.964 on the 52 cases and 0.923 on the locked test2; zero cardiac-arrest false alarms. |
 | **Confident wrong answers** | Omit-rather-than-guess, plus two human confirmation steps. |
 | **Automation bias** (trusting the machine over your own eyes) | The app never auto-plays. The caller presses each button, having seen what it will say. |
 | **Silent model drift** | Every spoken sentence is pre-rendered from verified text; changed wording misses the content-hash cache and is re-rendered, so stale audio cannot outlive the text it belongs to. |

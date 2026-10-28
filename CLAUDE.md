@@ -2,10 +2,16 @@
 
 ## What this is
 
-An offline, on-device assistant that lets a person in Japan who does not speak Japanese
-communicate with a 119 emergency dispatcher. Whisper (STT) + Qwen2.5-3B (classification into a
-closed clinical ontology) running locally via Intel OpenVINO. Built solo by a high-school founder
-in Tokyo.
+An assistant that lets a person in Japan who does not speak Japanese communicate with a 119
+emergency dispatcher. Whisper (STT) → Qwen2.5-3B (Stage A: propose symptoms, recall) → fine-tuned
+mDeBERTa NLI checker (precision), selecting from a closed, human-verified ontology. Built solo by a
+high-school founder in Tokyo.
+
+**Target architecture (decided 2026-10-12, see OPEN_DECISIONS.md):** the AI runs ON THE PHONE (audio
+never leaves it, no cloud fallback); the server is a thin, reliable relay with no inference and no
+persistent medical profiles; delivery is tiered (tier 0 = profile on dial, no AI). Today the laptop
+stands in for the phone. OpenVINO is used for development/evaluation; phone runtimes are chosen after
+a phone benchmark.
 
 ## Read these before proposing anything
 
@@ -69,12 +75,17 @@ in Tokyo.
 
 ## Where the project is now
 
-The two-device problem is resolved: the app no longer speaks into the call. Information reaches
-the dispatcher as **data**, via FDMA's 標準インターフェイス, onto their console. The voice call
-still happens in parallel so the dispatcher can hear the room and deliver 口頭指導.
+Full local working context (gitignored, loaded automatically if present): @PROJECT_CONTEXT.md
 
-Next: build the two-way demo — caller's phone ↔ server ↔ dispatcher console. See the end of
-`POSITIONING.md`.
+Then read `HANDOFF.md`, `ARCHITECTURE_EVALUATION.md` and the end of `EXPERIMENT_LOG.md`. In short: the
+target architecture is decided (local-first AI on the phone, tiered delivery, thin relay); the fine-tuned NLI
+checker replaces Stage B and runs in the app with Stage A on llama.cpp Q4_K_M; the technical-depth program
+(L1–L5, M1–M7, "possible" tag, uncertainty routing) is decided in ARCHITECTURE_EVALUATION.md; next is plan
+mode for the MVP build (phone app, relay + console, locked output). This GitHub repo is PUBLIC — never put
+personal details or competition strategy in tracked files.
+
+Information reaches the dispatcher as **data**, via FDMA's 標準インターフェイス, onto their console.
+The voice call still happens in parallel so the dispatcher can hear the room and deliver 口頭指導.
 
 ## Corrections — do not repeat these mistakes
 
