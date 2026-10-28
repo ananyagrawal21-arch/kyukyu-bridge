@@ -38,6 +38,17 @@ a phone benchmark.
 - When I push back on a claim, check it against the repo or a primary source before defending it.
   I have been right more than once and I would rather be corrected than agreed with.
 
+## How to answer me (every reply)
+
+- Answer like a colleague mid-discussion, not an exam: the **why**, a concrete example, the trade-off, and
+  what it changes for us — not just "status: decided".
+- For anything I must decide, use this shape: 1. the question, 2. what we found (with honest caveats),
+  3. what it means, 4. each decision → options with their costs → your marked recommendation → "what I
+  need from you".
+- Never use shorthand I may not remember (e.g. "the Gemini report", "M3") without saying in plain words
+  what it is. Re-give context when we return to an old topic.
+- Push back with evidence when I'm wrong; tell me what I'm overlooking.
+
 ## Non-negotiable
 
 - **`data/profile.json` and `data/audio/profile/` contain a real home address. Never commit

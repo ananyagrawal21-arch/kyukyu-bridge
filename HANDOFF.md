@@ -198,3 +198,9 @@ tracked files.**
 pre-existing since commit 89a6cfa; unrelated; the function may be unused now) — the founder may or may
 not start it. Open: privacy/APPI question; whether the old
 example address in git history is real (ask before any history rewrite).
+
+## 10. Working routine (2026-10-29)
+
+Sessions are organised per task: end a session with `/handoff` (skill in `.claude/skills/handoff`), start the next
+in the same folder with `/kickoff` (`.claude/skills/kickoff`). Local-only context files (gitignored):
+PROJECT_CONTEXT.md, FOUNDER_VOICE.md, COMPETITIONS.md. Next: MVP build plan in plan mode.
