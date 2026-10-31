@@ -44,3 +44,7 @@ benchmark/.nli*_cache.json
 COMPETITIONS.md
 PROJECT_CONTEXT.md
 FOUNDER_VOICE.md
+
+# Local-only tracking (real names and contacts)
+TRACKER.xlsx
+validation/

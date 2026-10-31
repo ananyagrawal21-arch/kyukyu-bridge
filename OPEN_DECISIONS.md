@@ -2264,3 +2264,18 @@ before porting; (4) find one fire department to discuss a pilot; (5) resolve APP
 and legal advice before real users.
 **Remaining risks:** mobile feasibility, reliable delivery, deployment authorisation — not the
 server-vs-phone question, which is closed.
+
+## DECIDED 2026-10-29 (founder): #8 Solution validation and positioning
+
+- **Problem:** the technical pipeline is tested on text, but the solution (pre-registered profile + on-phone AI + codes
+  on the console) has not been validated by any dispatcher, fire department or foreign resident. Meanwhile FDMA plans
+  AI in 119 call rooms (FY2027 model project; GENIAC matching, results ~April 2027) — ARCHITECTURE_EVALUATION.md §16.
+- **Decision:** interview sprint in parallel with the MVP plan (not after it). Role = contributor to the 119 system,
+  not a competitor to the government or its vendors. Deployment stays in scope (drills, trainings, pilots) as the way
+  the contribution reaches real use.
+- **UVP = AI safeguards. No new features; deepen and prove the safeguards.**
+- **Evidence standard:** specific third-party evidence (a confirmed summary, a written comment, a co-run drill), not
+  general praise. Pass lines for the interviews are written before the first one.
+- **Consequences to expect:** if dispatchers say the address is the main delay and symptoms are handled, tier 0 becomes
+  the MVP core and AI symptoms move to tier 2; if they would not read a screen mid-call, the console changes before it
+  is built.

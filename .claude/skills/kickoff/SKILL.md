@@ -10,3 +10,5 @@ description: Start-of-session routine for Kyūkyū-Bridge — load the working c
    and this session's task. Use the founder's answer style from CLAUDE.md (the why, an example, the trade-off).
 3. Ask the founder for this session's two lines: the goal, and how we'll know it worked. Then propose plan mode
    for anything bigger than a small change.
+4. Ask the founder in ONE line whether anything happened since the last session that belongs in `TRACKER.xlsx`
+   (outreach, evidence, a number). Then keep the "Impact tracking" rule from CLAUDE.md for the whole session.

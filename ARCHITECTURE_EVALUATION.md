@@ -338,3 +338,51 @@ larger Whisper model adds hundreds of MB. Build as a separate, switchable speech
   accented, stressed, noisy emergency speech + measured adaptation gains. Not before the MVP.
 - **Co-founder:** not needed to build; revisit at drills/pilot (an adult partner for accounts/contracts,
   Japanese-language relationships with fire departments, drill operations; ideally medical/emergency background).
+
+## 16. Eighth pass (2026-10-29): is the solution validated? Government AI in 119 rooms; UVP = safeguards
+
+- **Technical validation is partial.** test2: P 0.923, R 0.878, F1 0.900, 0 CPA false alarms — but every test set is
+  typed English text (`benchmark/slm_testset.json` holds only `transcript` + `expected`), written by one author; no
+  real audio, accents, noise or panic yet. Proposed: an early end-to-end test on accented/noisy audio, pass line first.
+- **The solution itself is not validated by anyone outside the project.** Four unchecked guesses: G1 dispatchers read
+  and trust a data card mid-call; G2 residents register beforehand; G3 AI symptoms add value beyond the profile
+  (tier 0); G4 a fire department has a route to adopt it. Decided: an interview sprint (dispatcher side, fire
+  departments, a few foreign residents) runs in parallel with the MVP plan; pass lines written before the first one.
+- **Government AI (primary sources).** Nikkei, 2026-07-10: the government's vertical-AI draft plans AI automatic
+  response for 119 calls by 2030, supporting dispatchers
+  (https://www.nikkei.com/article/DGXZQOUA105MD0Q6A710C2000000/). Kyodo, 2026-09-23: FDMA model project from FY2027 —
+  AI transcribes calls and shows dispatchers, in text, what still needs confirming (detailed address, consciousness)
+  (https://kumanichi.com/articles/2038756). FDMA, 2026-09-28: GENIAC × FDMA matching — 119 auto-response: Quick with
+  Toda, Nishio, Itano-tōbu, Chiba north-west centre (Matsudo), Tsu/Suzuka/Kameyama; 119 + #7119: General with
+  Yamagata; results meeting around April 2027
+  (https://www.fdma.go.jp/pressrelease/houdou/items/ec619b43e221b4e7d181a1a64d809f3d2a20db2b.pdf). None mention
+  foreign-language callers. In the US, Prepared and Intrado already offer AI translation of 911 calls on the dispatch
+  side (https://www.govtech.com/biz/prepared-ups-911-tech-slate-with-two-way-spanish-translation,
+  https://urgentcomm.com/911/intrado-unveils-plans-to-streamline-911-translation-with-ai).
+- **What it means.** Dispatch-side AI will probably cover foreign speech within years, needing no caller app; tier 0 is
+  not a moat either (a registration scheme like NET119 is always possible). In emergency services the government is
+  the customer, not a competitor: NET119, Live119, Smart911 and Prepared all sell to it. **Our role: contributor.**
+- **UVP = AI safeguards** — output verified by construction (closed vocabulary), a proven error limit (L2), zero
+  cardiac-arrest false alarms as a hard rule, tested with real dispatchers. Kept narrow on purpose: NEC×Yokohama does
+  measure accuracy (~85%), and conformal methods are an active field. **Rule: no new features; every piece of work
+  must make the output safer or prove it is safe.** L1, L2, the checker, the "possible" tag and uncertainty routing
+  are safeguards, so the program stands. Parked: hospital selection, registration gateways, reverse-direction
+  instructions, acoustic location (rejected — carrier location exists).
+- **Interview questions that steer the project:** Q1 trust (what makes dispatchers trust or ignore AI text; worst
+  mistake), Q2 proof (what an AI must show before helping on real calls), Q3 gap (where foreign calls lose time; is it
+  in their AI plans), Q4 reality (the last such call, step by step), Q5 the ask (review results / join a drill);
+  residents Q6 (real emergency behaviour, can they say their address). Q1, Q2, Q5 define "done".
+- **The pasted "AI for 119" summary analysed the same day** mapped "chest tight, clammy" to 心臓麻痺 / cardiac arrest —
+  exactly the unchecked false alarm the checker exists to prevent.
+- **Tentative (2026-10-31, may change):** awareness sessions run inside the interview sprint (interview first, then an anonymous
+  before/after quiz around a 5-minute lesson using only official multilingual 119 materials, partnering with existing
+  fire-department foreigner training); no pitching in interviews; researchers are a target group; an early real-audio
+  test joins the MVP plan. Official counts (3,427 interpreted ambulance calls in 2024) include only calls that reached
+  the interpreter, so they cannot show callers who never called or hung up — a gap to MEASURE (resident question:
+  "ever needed help and not called, or hung up?"), not to assume. No survey of foreign residents' 119 awareness was
+  found (2026-10-31).
+
+- **Claim-driven building (2026-10-31):** each gap residents recognise in sessions maps to one measurable claim (e.g.
+  "the room-level address reaches the dispatcher in X s", "the profile still arrives if the call drops", "0 false
+  cardiac-arrest alarms"), with a pass line set before measuring; we build only what those claims need. Sessions always
+  teach the official 119 method first and never claim the app is "more reliable" before drills measure it.

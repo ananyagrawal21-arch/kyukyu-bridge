@@ -204,3 +204,17 @@ example address in git history is real (ask before any history rewrite).
 Sessions are organised per task: end a session with `/handoff` (skill in `.claude/skills/handoff`), start the next
 in the same folder with `/kickoff` (`.claude/skills/kickoff`). Local-only context files (gitignored):
 PROJECT_CONTEXT.md, FOUNDER_VOICE.md, COMPETITIONS.md. Next: MVP build plan in plan mode.
+
+## 11. Where things stand (2026-10-29, late) — START HERE
+
+- **Decided (OPEN_DECISIONS.md #8, ARCHITECTURE_EVALUATION.md §16):** the solution is not yet validated outside the
+  project → an interview sprint runs in parallel with the MVP plan. FDMA plans AI in 119 call rooms from FY2027; we
+  contribute to that system. **UVP = AI safeguards; no new features.**
+- **Tracking:** `TRACKER.xlsx` (gitignored; tabs Log + Numbers) and `validation/` (gitignored) for evidence. Every
+  session reminds the founder in one line what to log (CLAUDE.md "Impact tracking").
+- **Next:** session "KB-03 · Solution validation": vocabulary from official sources, interview pass lines before the
+  first interview, intro message, two role-play rehearsals, first outreach. KB-02 (MVP plan) continues in parallel and
+  must treat dispatch-room AI as a risk.
+- **Open:** an early real-audio test milestone (proposed, not answered); `keep()` / `not_breathing` question; deny
+  rules for `data/profile.json` and git commit/push (offered).
+

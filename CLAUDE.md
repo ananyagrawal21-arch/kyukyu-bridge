@@ -95,6 +95,18 @@ checker replaces Stage B and runs in the app with Stage A on llama.cpp Q4_K_M; t
 mode for the MVP build (phone app, relay + console, locked output). This GitHub repo is PUBLIC — never put
 personal details or competition strategy in tracked files.
 
+**Since 2026-10-29:** the SOLUTION is not yet validated by anyone outside the project, so interviews with dispatchers,
+fire departments and foreign residents run in parallel with the MVP plan (ARCHITECTURE_EVALUATION.md §16). FDMA plans
+AI in 119 call rooms from FY2027 — we are a contributor to that system, not a competitor. **The UVP is the AI
+safeguards. Do not add features; every piece of work must make the AI's output safer or prove that it is safe.**
+
+## Impact tracking — every session
+
+Whenever a step produces an outreach action, a piece of evidence or a number, remind me in ONE line what to log in
+`TRACKER.xlsx` (local, gitignored: tab "Log" for actions, tab "Numbers" for headline metrics; evidence files go in
+`validation/`, also gitignored). One line at the moment it matters — no essays, no checklists. Real names and
+contacts never go in tracked files.
+
 Information reaches the dispatcher as **data**, via FDMA's 標準インターフェイス, onto their console.
 The voice call still happens in parallel so the dispatcher can hear the room and deliver 口頭指導.
 
