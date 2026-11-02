@@ -16,8 +16,8 @@ the patient's medical history, and what is happening right now** — onto the di
 > **Update — 12 October 2026.** Three changes since this page was written; the full rewrite follows
 > once the final architecture is settled:
 > - **The AI will run on the caller's phone, not on an Intel server.** Audio never leaves the phone;
->   the server only relays messages. Not built yet — a laptop stands in for the phone. The diagram
->   and the "Intel server" steps below describe the earlier design.
+>   the server only relays messages. Not built yet — a laptop stands in for the phone. (The diagram
+>   and steps below were updated to this design in November 2026.)
 > - **Stage B was replaced by a fine-tuned meaning checker** (mDeBERTa, trained on 287
 >   human-reviewed sentences), and **Stage A now runs on llama.cpp** (Qwen2.5-3B, 4-bit, 2.1 GB), a
 >   runtime phones can use. OpenVINO remains the development backend on Intel machines.
@@ -33,8 +33,8 @@ the patient's medical history, and what is happening right now** — onto the di
 
 ```mermaid
 flowchart LR
-    A["📱 Caller's phone<br/>speaks in their own language"] -->|their words + saved profile| B["🖥️ Intel server<br/>understands what was said<br/>(Whisper + Qwen, on OpenVINO)"]
-    B -->|checked Japanese only| C["🚒 Dispatcher's screen<br/>address · room · patient · symptoms"]
+    A["📱 Caller's phone<br/>speaks in their own language<br/>the AI runs here, audio never leaves"] -->|checked codes + saved profile| B["🔁 Relay server<br/>passes messages on<br/>no AI · no stored medical profiles"]
+    B -->|codes shown as pre-checked Japanese| C["🚒 Dispatcher's screen<br/>address · room · patient · symptoms"]
     C -->|pre-written questions,<br/>CPR guide| A
     A -. ordinary 119 voice call, all the way through .- C
 ```
@@ -45,9 +45,11 @@ number), who lives there, their medical conditions, and the language they speak.
 **In an emergency:**
 1. The caller presses one button and **says what's happening, in their own language** — *"my
    father collapsed and he's shaking"*.
-2. The app opens the phone's dialer with **119** filled in. The caller presses Call.
-3. While it rings, an **Intel server** works out what was said and matches it to a fixed list of
-   symptoms that a human has checked in Japanese.
+2. The AI **on the phone** works out what was said and matches it to a fixed list of symptoms
+   that a human has checked in Japanese. The recording never leaves the phone.
+3. The app opens the phone's dialer with **119** filled in, and the caller presses Call. The profile
+   and the checked symptoms travel to the dispatcher through a relay server that only passes
+   messages on.
 4. The **dispatcher's screen** shows the address down to the room, the patient's age and
    conditions, and the symptoms — all in Japanese, **before the caller has to say a word of it**.
 5. The **voice call continues as normal**, so the dispatcher can still hear the room and talk the
@@ -88,13 +90,13 @@ That is the gap: not translation quality, but turning panic into **verified, str
 
 | | Status |
 |---|---|
-| Understanding the caller: speech → symptoms (Whisper + two-stage Qwen2.5-3B, on OpenVINO) | ✅ **built and measured** |
+| Understanding the caller: speech → symptoms (Whisper + Qwen2.5-3B on llama.cpp + a fine-tuned meaning checker; runs on a laptop today) | ✅ **built and measured** |
 | The fixed list of 31 symptom sentences in Japanese, each checked by a fluent human | ✅ built |
 | Household setup: postal-code address lookup, building and room in Japanese reading | ✅ built |
 | An evaluation system: 4 test sets, including one **locked before any tuning** (below) | ✅ built |
 | The message layer between phone and console — with a check, in code, that **refuses any Japanese not taken from the verified list** | ✅ built, 19 tests |
 | The dispatcher console, pre-written questions, CPR guide | 🔨 designed, being built |
-| A phone app (today's prototype runs on a laptop beside the phone) | 🔨 designed |
+| A phone app with the AI running on the phone (today a laptop stands in for it) | 🔨 designed |
 | Connection to a real fire department | ⬜ not started — see [the pathway](#the-route-to-a-real-fire-department) |
 
 **The app in this repository today runs the original prototype:** a laptop that plays pre-recorded
@@ -191,8 +193,10 @@ Two AI models run in the emergency path: **Whisper** (speech → text) and **Qwe
 - The OpenVINO Whisper is converted but **switched off**: with the anti-hallucination settings the
   app needs, the library versions raise a `TypeError`. We kept the safety settings and left that
   speedup on the table, so the shipped footprint is ~3.9 GB, not ~3.1 GB.
-- In the new design the models run on an **Intel server**, not the caller's phone. OpenVINO is an
-  Intel runtime and doesn't run on phone chips; a server also gives one reproducible latency figure.
+- In the current design the models run **on the caller's phone**. OpenVINO is an Intel runtime and
+  doesn't run on phone chips, so it stays our development and evaluation backend on Intel machines.
+  Stage A already runs on llama.cpp, a runtime phones can use; the phone runtimes are chosen after
+  a benchmark on real phones.
 
 ---
 
@@ -243,13 +247,15 @@ found it **can't**:
 - **Holding the speaker to the phone:** fails silently on some handsets. The caller hears the
   audio; the dispatcher hears nothing.
 
-So the information goes to the dispatcher **as data on a screen** instead of as sound.
+So the information goes to the dispatcher **as data on a screen** instead of as sound. In October
+2026 we also moved the AI from a planned Intel server onto the caller's phone, so the recording never
+leaves it and the server only relays messages.
 
 **Two things said in the original demo video no longer hold, and we say so here:**
 
 | Said | Now |
 |---|---|
-| "Offline, on-device, 24/7" | True of the original prototype. The new design needs a network connection — as do NET119 and 救急ボイストラ. |
+| "Offline, on-device, 24/7" | The AI is on-device again in the current design. Delivering the information to the dispatcher needs a network connection — as do NET119 and 救急ボイストラ. |
 | "No fire department has to install this today" | **Withdrawn.** It depended on the audio route above, which was never verified. The new design needs a terminal at the fire department. |
 
 ---
