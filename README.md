@@ -269,7 +269,7 @@ leaves it and the server only relays messages.
 - **Self-corrections aren't reliable:** *"my father has a stomach… oh sorry, headache"* returned nothing.
 - **Time is lost:** *"the bleeding stopped an hour ago"* becomes "heavy bleeding — has stopped";
   the "hour" isn't carried.
-- **27 medical-condition terms** (心臓病, 高血圧…) are not yet human-verified.
+- **27 medical-condition terms** (心疾患, 高血圧…) were checked against official sources (FDMA 119 protocol, MHLW ICD-10) in November 2026; a paramedic review is still to come.
 - **Real panicked speech is untested** — panic is only simulated so far.
 - **The interface is in English;** speech works in several languages through Whisper.
 - **No fire department has seen it yet.** That conversation is the most valuable missing piece.

@@ -24,7 +24,11 @@
     "confirmed each is natural, clear, non-diagnostic, and dispatcher-appropriate. The 13",
     "added from the 緊急度判定プロトコル were reviewed 2026-08-12 as RENDERED OUTPUT (term +",
     "frame wrapper), not as raw strings - that review is what caught the polite-form-before-",
-    "と言っています bug and the 脈がありません over-claim. 転倒/転落 signed off 2026-08-20."
+    "と言っています bug and the 脈がありません over-claim. 転倒/転落 signed off 2026-08-20.",
+    "",
+    "CONDITIONS (27): verified 2026-11-02 against official sources (see each entry's 'source'), founder-approved",
+    "rule: worst case must still deliver the correct message. Medical-history terms follow FDMA/MHLW wording",
+    "(心疾患, 喘息…), unlike symptom terms, which stay in everyday words. A paramedic review is still to come."
   ],
   "sex_terms": {
     "male": "男性",
@@ -573,192 +577,219 @@
   "conditions": [
     {
       "id": "heart_disease",
-      "japanese_term": "心臓病",
+      "japanese_term": "心疾患",
       "group": "circulatory",
       "label_en": "Heart disease",
-      "verified": false
+      "verified": true,
+      "source": "FDMA 緊急度判定プロトコルVer.3 119番通報; MHLW ICD-10(2013) 基本分類表"
     },
     {
       "id": "arrhythmia",
       "japanese_term": "不整脈",
       "group": "circulatory",
       "label_en": "Irregular heartbeat",
-      "verified": false
+      "verified": true,
+      "source": "FDMA 緊急度判定プロトコルVer.3 119番通報; MHLW ICD-10(2013) 基本分類表"
     },
     {
       "id": "hypertension",
       "japanese_term": "高血圧",
       "group": "circulatory",
       "label_en": "High blood pressure",
-      "verified": false
+      "verified": true,
+      "source": "FDMA 緊急度判定プロトコルVer.3 119番通報; MHLW ICD-10(2013) 基本分類表"
     },
     {
       "id": "hypotension",
       "japanese_term": "低血圧",
       "group": "circulatory",
       "label_en": "Low blood pressure",
-      "verified": false
+      "verified": true,
+      "source": "MHLW ICD-10(2013) 基本分類表"
     },
     {
       "id": "prior_heart_attack",
       "japanese_term": "心筋梗塞の既往",
       "group": "circulatory",
       "label_en": "Previous heart attack",
-      "verified": false
+      "verified": true,
+      "source": "FDMA 緊急度判定プロトコルVer.3 119番通報; MHLW ICD-10(2013) 基本分類表"
     },
     {
       "id": "pacemaker",
       "japanese_term": "ペースメーカー",
       "group": "device",
       "label_en": "Pacemaker",
-      "verified": false
+      "verified": true,
+      "source": "not found in official sources checked; judged safe by worst-case review (message stays correct)"
     },
     {
       "id": "home_oxygen",
       "japanese_term": "在宅酸素療法",
       "group": "device",
       "label_en": "Home oxygen therapy",
-      "verified": false
+      "verified": true,
+      "source": "MHLW documents"
     },
     {
       "id": "anticoagulant",
-      "japanese_term": "血液をサラサラにする薬（抗凝固薬）",
+      "japanese_term": "抗血栓薬（血液をサラサラにする薬）",
       "group": "blood",
-      "label_en": "Blood thinners (anticoagulants)",
-      "verified": false
+      "label_en": "Blood thinners (anticoagulant or antiplatelet)",
+      "verified": true,
+      "source": "MHLW ICD-10(2013) 基本分類表 (抗凝固薬); widened to 抗血栓薬 so antiplatelet users are not mislabelled"
     },
     {
       "id": "bleeding_disorder",
       "japanese_term": "出血しやすい体質",
       "group": "blood",
       "label_en": "Bleeds easily",
-      "verified": false
+      "verified": true,
+      "source": "not found in official sources checked; judged safe by worst-case review (message stays correct)"
     },
     {
       "id": "prior_stroke",
       "japanese_term": "脳卒中の既往",
       "group": "neuro",
       "label_en": "Previous stroke",
-      "verified": false
+      "verified": true,
+      "source": "FDMA 緊急度判定プロトコルVer.3 119番通報; MHLW ICD-10(2013) 基本分類表"
     },
     {
       "id": "epilepsy",
       "japanese_term": "てんかん",
       "group": "neuro",
       "label_en": "Epilepsy",
-      "verified": false
+      "verified": true,
+      "source": "FDMA 緊急度判定プロトコルVer.3 119番通報; MHLW ICD-10(2013) 基本分類表"
     },
     {
       "id": "parkinsons",
       "japanese_term": "パーキンソン病",
       "group": "neuro",
       "label_en": "Parkinson's disease",
-      "verified": false
+      "verified": true,
+      "source": "MHLW ICD-10(2013) 基本分類表"
     },
     {
       "id": "dementia",
       "japanese_term": "認知症",
       "group": "neuro",
       "label_en": "Dementia",
-      "verified": false
+      "verified": true,
+      "source": "MHLW ICD-10(2013) 基本分類表"
     },
     {
       "id": "diabetes",
       "japanese_term": "糖尿病",
       "group": "metabolic",
       "label_en": "Diabetes",
-      "verified": false
+      "verified": true,
+      "source": "FDMA 緊急度判定プロトコルVer.3 119番通報; MHLW ICD-10(2013) 基本分類表"
     },
     {
       "id": "thyroid_disease",
-      "japanese_term": "甲状腺の病気",
+      "japanese_term": "甲状腺障害",
       "group": "metabolic",
       "label_en": "Thyroid condition",
-      "verified": false
+      "verified": true,
+      "source": "MHLW ICD-10(2013) 基本分類表"
     },
     {
       "id": "asthma",
-      "japanese_term": "ぜんそく",
+      "japanese_term": "喘息",
       "group": "respiratory",
       "label_en": "Asthma",
-      "verified": false
+      "verified": true,
+      "source": "FDMA 緊急度判定プロトコルVer.3 119番通報"
     },
     {
       "id": "copd",
       "japanese_term": "慢性閉塞性肺疾患（COPD）",
       "group": "respiratory",
       "label_en": "COPD",
-      "verified": false
+      "verified": true,
+      "source": "MHLW ICD-10(2013) 基本分類表"
     },
     {
       "id": "kidney_disease",
-      "japanese_term": "腎臓病",
+      "japanese_term": "慢性腎臓病",
       "group": "renal",
       "label_en": "Kidney disease",
-      "verified": false
+      "verified": true,
+      "source": "MHLW ICD-10(2013) 基本分類表"
     },
     {
       "id": "dialysis",
       "japanese_term": "人工透析",
       "group": "renal",
       "label_en": "On dialysis",
-      "verified": false
+      "verified": true,
+      "source": "MHLW documents"
     },
     {
       "id": "liver_disease",
-      "japanese_term": "肝臓病",
+      "japanese_term": "肝疾患",
       "group": "digestive",
       "label_en": "Liver disease",
-      "verified": false
+      "verified": true,
+      "source": "MHLW ICD-10(2013) 基本分類表"
     },
     {
       "id": "ulcer",
       "japanese_term": "胃・十二指腸潰瘍",
       "group": "digestive",
       "label_en": "Stomach/duodenal ulcer",
-      "verified": false
+      "verified": true,
+      "source": "MHLW ICD-10(2013) 基本分類表"
     },
     {
       "id": "drug_allergy",
-      "japanese_term": "薬のアレルギー",
+      "japanese_term": "薬物アレルギー",
       "group": "allergy",
       "label_en": "Drug allergy",
-      "verified": false
+      "verified": true,
+      "source": "MHLW ICD-10(2013) 基本分類表"
     },
     {
       "id": "food_allergy",
       "japanese_term": "食物アレルギー",
       "group": "allergy",
       "label_en": "Food allergy",
-      "verified": false
+      "verified": true,
+      "source": "not found in official sources checked; judged safe by worst-case review (message stays correct)"
     },
     {
       "id": "psychiatric",
       "japanese_term": "精神疾患",
       "group": "psychiatric",
       "label_en": "Psychiatric condition",
-      "verified": false
+      "verified": true,
+      "source": "not found in official sources checked; judged safe by worst-case review (message stays correct)"
     },
     {
       "id": "cancer",
       "japanese_term": "がん",
       "group": "oncology",
       "label_en": "Cancer",
-      "verified": false
+      "verified": true,
+      "source": "everyday/policy term (ICD: 悪性新生物)"
     },
     {
       "id": "pregnancy",
       "japanese_term": "妊娠中",
       "group": "obstetric",
       "label_en": "Pregnant",
-      "verified": false
+      "verified": true,
+      "source": "FDMA 緊急度判定プロトコルVer.3 119番通報; MHLW ICD-10(2013) 基本分類表"
     },
     {
       "id": "infectious",
       "japanese_term": "感染症",
       "group": "infectious",
       "label_en": "Infectious disease",
-      "verified": false
+      "verified": true,
+      "source": "MHLW ICD-10(2013) 基本分類表"
     }
   ]
 }
