@@ -218,3 +218,13 @@ PROJECT_CONTEXT.md, FOUNDER_VOICE.md, COMPETITIONS.md. Next: MVP build plan in p
 - **Open:** an early real-audio test milestone (proposed, not answered); `keep()` / `not_breathing` question; deny
   rules for `data/profile.json` and git commit/push (offered).
 
+
+## 12. Where things stand (2026-11-05) — START HERE
+
+- **Done since 2026-10-29:** README shows the on-phone design; the 27 medical-condition terms were checked against
+  official sources (`data/ontology.json`, all `verified: true` with a `source`); expert outreach started
+  (OPEN_DECISIONS.md #8 update, 2026-11-05). Contacts, drafts and replies are local only (`validation/`, gitignored).
+- **Next:** session "KB-03 · Solution validation" — continue outreach (pending emails, prepare the first expert call,
+  summary email within 24 h after it). KB-02 (MVP plan) continues in parallel.
+- **Still open:** early real-audio test milestone (tentatively yes); `keep()` / `not_breathing` question; deny rules
+  offer; failing `tests/test_speak.py::test_room_to_kana`; `.agents/` folder of unknown origin (untracked).

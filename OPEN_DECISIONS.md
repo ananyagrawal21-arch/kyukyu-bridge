@@ -2279,3 +2279,22 @@ server-vs-phone question, which is closed.
 - **Consequences to expect:** if dispatchers say the address is the main delay and symptoms are handled, tier 0 becomes
   the MVP core and AI symptoms move to tier 2; if they would not read a screen mid-call, the console changes before it
   is built.
+
+### #8 update (2026-11-05): first expert outreach
+
+- **Method:** researchers are contacted first (one specific question each, tied to their published work; short ask:
+  reply or a 15–20 minute call; honest stage: tested on typed English text only). Researchers abroad are asked only
+  questions that do not depend on Japan (how dispatchers react to AI alerts; how to design a timed simulation).
+  Japan-specific questions (where foreign-language calls lose time, adoption) go to people inside Japan's 119 system.
+- **First expert feedback (one researcher in dispatcher communication, Japan; one view, not a measurement):** calls
+  in other languages go through a phone-interpretation company in a three-way call — "that part takes time"; medical
+  terms are often hard to convey. Both match the design (profile on dial; closed, verified vocabulary), but cannot be
+  quoted as evidence until measured or confirmed in writing.
+- **Published evidence noted for the drill and safeguards:** a randomized 119/911-style simulation (US, 2015) found
+  interpreter services added almost two minutes; a randomized trial of machine-learning cardiac-arrest alerts
+  (Copenhagen, JAMA Netw Open 2021) found the model more sensitive than dispatchers (85.0% vs 77.5%) but with far
+  lower precision (17.8% vs 55.8%), dispatchers often did not follow alerts, and recognition did not improve
+  significantly (93.1% vs 90.5%, P = .15). Japanese simulated-119-call research (社会安全学研究 vol. 14, 2024) reports
+  that knowing the calling procedure beforehand makes calls faster and more accurate — relevant to awareness sessions.
+- **Consequences:** the drill randomizes which arm each practice call gets; precision-first and the zero-false-cardiac-
+  arrest rule are reinforced; the mock dispatcher gets a short briefing and we measure whether it matters.
